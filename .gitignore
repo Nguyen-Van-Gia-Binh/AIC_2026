@@ -1,0 +1,6 @@
+.venv
+.claude
+data/AIC25.lnk
+data
+**/__pycache__/
+*.pyc

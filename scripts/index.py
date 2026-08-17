@@ -1,0 +1,90 @@
+"""
+Dựng "index" tìm kiếm từ dữ liệu BTC cung cấp.
+
+Cấu trúc dữ liệu (đã xác nhận bằng cách đọc file thật):
+  data/extracted/clip-features-32/{video_id}.npy   -> (num_keyframes, 512) float16, đã L2-normalize
+  data/extracted/map-keyframes/{video_id}.csv      -> cột: n, pts_time, fps, frame_idx
+  data/extracted/media-info/{video_id}.json        -> metadata YouTube (title, author, ...)
+  data/extracted/keyframes/{video_id}/{n:03d}.jpg  -> ảnh keyframe thật (chỉ có cho batch đã tải,
+                                                       hiện tại mới có L23)
+
+video_id ví dụ: "L23_V001" (L = batch/"level", V = số thứ tự video trong batch).
+
+Vì clip-features-32 và map-keyframes là 2 zip PHỦ TOÀN BỘ dataset (không chỉ riêng L23),
+index này sẽ tìm đúng trên toàn bộ ~873 video ngay cả khi máy mới chỉ có ảnh jpg của L23.
+Với video chưa tải ảnh, kết quả vẫn trả về đúng video_id/timestamp, chỉ là chưa có ảnh xem trước.
+"""
+
+from pathlib import Path
+import numpy as np
+import pandas as pd
+
+DATA_DIR = Path(__file__).resolve().parent.parent / "data" / "extracted"
+FEATURES_DIR = DATA_DIR / "clip-features-32"
+MAPKF_DIR = DATA_DIR / "map-keyframes"
+KEYFRAMES_DIR = DATA_DIR / "keyframes"
+
+
+def build_index() -> tuple[np.ndarray, pd.DataFrame]:
+    """Quét toàn bộ npy + csv có sẵn, ghép thành 1 ma trận embedding + 1 bảng metadata.
+
+    Trả về:
+      matrix: (N, 512) float32, mỗi dòng đã L2-normalize -> cosine similarity = dot product
+      meta:   DataFrame N dòng, cột: video_id, n, pts_time, frame_idx, jpg_path (hoặc None)
+              cùng thứ tự với matrix (dòng i của meta khớp dòng i của matrix)
+    """
+    npy_files = sorted(FEATURES_DIR.glob("*.npy"))
+    if not npy_files:
+        raise FileNotFoundError(f"Không thấy file .npy nào trong {FEATURES_DIR}")
+
+    vec_chunks = []
+    meta_rows = []
+
+    for npy_path in npy_files:
+        video_id = npy_path.stem
+        csv_path = MAPKF_DIR / f"{video_id}.csv"
+        if not csv_path.exists():
+            print(f"[WARN] thiếu map-keyframes cho {video_id}, bỏ qua")
+            continue
+
+        feats = np.load(npy_path).astype(np.float32)
+        df = pd.read_csv(csv_path)
+
+        n_rows = min(len(df), len(feats))
+        if len(df) != len(feats):
+            print(f"[WARN] {video_id}: số dòng csv ({len(df)}) != số vector npy ({len(feats)}), "
+                  f"cắt còn {n_rows}")
+
+        # đảm bảo norm = 1 dù dữ liệu gốc có sai lệch nhỏ do float16
+        chunk = feats[:n_rows]
+        norms = np.linalg.norm(chunk, axis=1, keepdims=True)
+        norms[norms == 0] = 1.0
+        chunk = chunk / norms
+        vec_chunks.append(chunk)
+
+        kf_dir = KEYFRAMES_DIR / video_id
+        for i in range(n_rows):
+            row = df.iloc[i]
+            n = int(row["n"])
+            jpg_path = kf_dir / f"{n:03d}.jpg"
+            meta_rows.append({
+                "video_id": video_id,
+                "n": n,
+                "pts_time": float(row["pts_time"]),
+                "frame_idx": int(row["frame_idx"]),
+                "jpg_path": str(jpg_path) if jpg_path.exists() else None,
+            })
+
+    matrix = np.concatenate(vec_chunks, axis=0)
+    meta = pd.DataFrame(meta_rows)
+    assert len(meta) == matrix.shape[0], "meta và matrix lệch số dòng"
+    return matrix, meta
+
+
+if __name__ == "__main__":
+    m, meta = build_index()
+    n_with_jpg = meta["jpg_path"].notna().sum()
+    print(f"Tổng số keyframe trong index: {len(meta)}")
+    print(f"Số video: {meta['video_id'].nunique()}")
+    print(f"Số keyframe đã có ảnh jpg thật (để hiển thị): {n_with_jpg}")
+    print(f"Kích thước ma trận embedding: {m.shape}, dtype={m.dtype}")
