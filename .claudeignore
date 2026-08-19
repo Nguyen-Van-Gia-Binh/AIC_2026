@@ -1,0 +1,69 @@
+# ==============================================================================
+# .claudeignore — Cấu hình bỏ qua các tệp/thư mục không cần thiết cho Claude/LLM
+# Mục đích: Tiết kiệm token context, tăng tốc độ phân tích và tập trung vào code cốt lõi
+# ==============================================================================
+
+# 1. Virtual Environment & Dependencies
+.venv/
+venv/
+env/
+site-packages/
+*.egg-info/
+dist/
+build/
+
+# 2. Dataset & Large Binary Files (GBs dữ liệu không đưa vào context)
+data/
+*.npy
+*.npz
+*.pkl
+*.parquet
+*.pt
+*.pth
+*.bin
+*.onnx
+
+# 3. Media & Keyframes (Video, ảnh nặng)
+*.mp4
+*.avi
+*.mkv
+*.mov
+*.jpg
+*.jpeg
+*.png
+*.webp
+*.gif
+*.lnk
+
+# 4. Tài liệu tham khảo nặng (PDF, Slides, Papers)
+docs/paper/
+docs/slide/
+*.pdf
+*.pptx
+*.ppt
+*.docx
+
+# 5. Output, Submissions & Archive
+submissions/
+*.zip
+*.tar.gz
+*.rar
+*.7z
+
+# 6. Python bytecode & Caches
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.coverage
+
+# 7. Git & IDE metadata
+.git/
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# 8. Secret environment keys
+.env

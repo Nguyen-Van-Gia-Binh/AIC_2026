@@ -4,3 +4,9 @@ data/AIC25.lnk
 data
 **/__pycache__/
 *.pyc
+
+# API keys — KHÔNG commit
+.env
+
+# Submissions (giữ log, không giữ zip thật)
+submissions/*.zip
