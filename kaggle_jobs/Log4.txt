@@ -1,0 +1,43 @@
+4.6s 1 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.5/1.5 MB 30.2 MB/s eta 0:00:00
+4.7s 2 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 6.9/6.9 MB 98.8 MB/s eta 0:00:00
+4.7s 3 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 44.8/44.8 kB 3.1 MB/s eta 0:00:00
+7.8s 4 ERROR: pip's dependency resolver does not currently take into account all the packages that are installed. This behaviour is the source of the following dependency conflicts.
+7.8s 5 dopamine-rl 4.1.2 requires gym<=0.25.2, but you have gym 0.26.2 which is incompatible.
+7.8s 6 gradio 5.50.0 requires pillow<12.0,>=8.0, but you have pillow 12.3.0 which is incompatible.
+35.8s 7 [encode_dfn] device=cuda
+230.9s 8 [encode_dfn] tải model ViT-H-14-quickgelu (pretrained=dfn5b) ...
+231.0s 9 Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+231.0s 10 WARNING:huggingface_hub.utils._http:Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+265.2s 11 /usr/local/lib/python3.12/dist-packages/torch/cuda/__init__.py:435: UserWarning:
+265.2s 12 Found GPU0 Tesla P100-PCIE-16GB which is of cuda capability 6.0.
+265.2s 13 Minimum and Maximum cuda capability supported by this version of PyTorch is
+265.2s 14 (7.0) - (12.0)
+265.2s 15 
+265.2s 16 queued_call()
+265.2s 17 /usr/local/lib/python3.12/dist-packages/torch/cuda/__init__.py:435: UserWarning:
+265.2s 18 Please install PyTorch with a following CUDA
+265.2s 19 configurations:  12.6 following instructions at
+265.2s 20 https://pytorch.org/get-started/locally/
+265.2s 21 
+265.2s 22 queued_call()
+265.2s 23 /usr/local/lib/python3.12/dist-packages/torch/cuda/__init__.py:435: UserWarning:
+265.2s 24 Tesla P100-PCIE-16GB with CUDA capability sm_60 is not compatible with the current PyTorch installation.
+265.2s 25 The current PyTorch install supports CUDA capabilities sm_70 sm_75 sm_80 sm_86 sm_90 sm_100 sm_120.
+265.2s 26 If you want to use the Tesla P100-PCIE-16GB GPU with PyTorch, please check the instructions at https://pytorch.org/get-started/locally/
+265.2s 27 
+265.2s 28 queued_call()
+266.3s 29 Traceback (most recent call last):
+266.3s 30 File "/kaggle/src/script.py", line 188, in <module>
+266.3s 31 main()
+266.3s 32 File "/kaggle/src/script.py", line 142, in main
+266.3s 33 videos = list_videos(INPUT_ROOT)
+266.3s 34 ^^^^^^^^^^^^^^^^^^^^^^^
+266.3s 35 File "/kaggle/src/script.py", line 91, in list_videos
+266.3s 36 raise FileNotFoundError(
+266.3s 37 FileNotFoundError: Không thấy /kaggle/input/aic26-frames/keyframes — kiểm tra lại dataset_sources / FRAMES_DATASET_DIRNAME trong kernel-metadata.json có đúng tên dataset keyframes không.
+271.2s 38 /usr/local/lib/python3.12/dist-packages/mistune.py:435: SyntaxWarning: invalid escape sequence '\|'
+271.2s 39 cells[i][c] = re.sub('\\\\\|', '|', cell)
+271.4s 40 /usr/local/lib/python3.12/dist-packages/nbconvert/filters/filter_links.py:36: SyntaxWarning: invalid escape sequence '\_'
+271.4s 41 text = re.sub(r'_', '\_', text) # Escape underscores in display text
+272.0s 42 [NbConvertApp] Converting notebook __script__.ipynb to html
+273.2s 43 [NbConvertApp] Writing 304322 bytes to __results__.html

@@ -1,0 +1,16 @@
+{
+  "id": "vngiabnhnguyn/aic2026-encode-01-vit-l14",
+  "title": "AIC2026 Encode 01 ViT-L14",
+  "code_file": "main.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": true,
+  "enable_gpu": true,
+  "machine_shape": "NvidiaTeslaT4",
+  "enable_tpu": false,
+  "enable_internet": true,
+  "dataset_sources": ["kiet1106/aic26-frames"],
+  "competition_sources": [],
+  "kernel_sources": [],
+  "model_sources": []
+}

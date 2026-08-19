@@ -1,0 +1,46 @@
+5.1s 1 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 11.7/11.7 MB 83.7 MB/s eta 0:00:00
+5.2s 2 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 6.9/6.9 MB 98.7 MB/s eta 0:00:00
+5.2s 3 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 389.2/389.2 kB 25.4 MB/s eta 0:00:00
+5.3s 4 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 516.0/516.0 kB 34.2 MB/s eta 0:00:00
+18.8s 5 ERROR: pip's dependency resolver does not currently take into account all the packages that are installed. This behaviour is the source of the following dependency conflicts.
+18.8s 6 dopamine-rl 4.1.2 requires gym<=0.25.2, but you have gym 0.26.2 which is incompatible.
+18.8s 7 gradio 5.50.0 requires pillow<12.0,>=8.0, but you have pillow 12.3.0 which is incompatible.
+41.5s 8 [encode_siglip] device=cuda
+415.2s 9 [encode_siglip] tải model google/siglip-so400m-patch14-384 ...
+415.4s 10 Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+415.6s 11 [transformers] Model config: bos_token_id must be `None` or an integer within the vocabulary (between 0 and 31999), got 49406. This may result in unexpected behavior.
+415.6s 12 [transformers] Model config: eos_token_id must be `None` or an integer within the vocabulary (between 0 and 31999), got 49407. This may result in unexpected behavior.
+429.8s 13 Loading weights:   0%|          | 0/888 [00:00<?, ?it/s]Loading weights:  29%|██▉       | 261/888 [00:00<00:00, 2579.84it/s]Loading weights:  58%|█████▊    | 519/888 [00:00<00:00, 2542.06it/s]Loading weights:  87%|████████▋ | 774/888 [00:00<00:00, 2519.50it/s]Loading weights: 100%|██████████| 888/888 [00:00<00:00, 2530.94it/s]
+429.8s 14 /usr/local/lib/python3.12/dist-packages/torch/cuda/__init__.py:435: UserWarning:
+429.8s 15 Found GPU0 Tesla P100-PCIE-16GB which is of cuda capability 6.0.
+429.8s 16 Minimum and Maximum cuda capability supported by this version of PyTorch is
+429.8s 17 (7.0) - (12.0)
+429.8s 18 
+429.8s 19 queued_call()
+429.8s 20 /usr/local/lib/python3.12/dist-packages/torch/cuda/__init__.py:435: UserWarning:
+429.8s 21 Please install PyTorch with a following CUDA
+429.8s 22 configurations:  12.6 following instructions at
+429.8s 23 https://pytorch.org/get-started/locally/
+429.8s 24 
+429.8s 25 queued_call()
+429.8s 26 /usr/local/lib/python3.12/dist-packages/torch/cuda/__init__.py:435: UserWarning:
+429.8s 27 Tesla P100-PCIE-16GB with CUDA capability sm_60 is not compatible with the current PyTorch installation.
+429.8s 28 The current PyTorch install supports CUDA capabilities sm_70 sm_75 sm_80 sm_86 sm_90 sm_100 sm_120.
+429.8s 29 If you want to use the Tesla P100-PCIE-16GB GPU with PyTorch, please check the instructions at https://pytorch.org/get-started/locally/
+429.8s 30 
+429.8s 31 queued_call()
+431.1s 32 Traceback (most recent call last):
+431.1s 33 File "/kaggle/src/script.py", line 195, in <module>
+431.1s 34 main()
+431.1s 35 File "/kaggle/src/script.py", line 149, in main
+431.1s 36 videos = list_videos(INPUT_ROOT)
+431.1s 37 ^^^^^^^^^^^^^^^^^^^^^^^
+431.1s 38 File "/kaggle/src/script.py", line 98, in list_videos
+431.1s 39 raise FileNotFoundError(
+431.1s 40 FileNotFoundError: Không thấy /kaggle/input/aic26-frames/keyframes — kiểm tra lại dataset_sources / FRAMES_DATASET_DIRNAME trong kernel-metadata.json có đúng tên dataset keyframes không.
+435.9s 41 /usr/local/lib/python3.12/dist-packages/mistune.py:435: SyntaxWarning: invalid escape sequence '\|'
+435.9s 42 cells[i][c] = re.sub('\\\\\|', '|', cell)
+436.2s 43 /usr/local/lib/python3.12/dist-packages/nbconvert/filters/filter_links.py:36: SyntaxWarning: invalid escape sequence '\_'
+436.2s 44 text = re.sub(r'_', '\_', text) # Escape underscores in display text
+441.7s 45 [NbConvertApp] Converting notebook __script__.ipynb to html
+442.9s 46 [NbConvertApp] Writing 305349 bytes to __results__.html

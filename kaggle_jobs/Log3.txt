@@ -1,0 +1,69 @@
+5.2s 1 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 40.8/40.8 kB 2.4 MB/s eta 0:00:00
+6.0s 2 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 11.7/11.7 MB 96.1 MB/s eta 0:00:00
+6.1s 3 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 6.9/6.9 MB 118.4 MB/s eta 0:00:00
+6.2s 4 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.6/2.6 MB 86.6 MB/s eta 0:00:00
+6.2s 5 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 389.2/389.2 kB 28.0 MB/s eta 0:00:00
+6.2s 6 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 516.0/516.0 kB 22.7 MB/s eta 0:00:00
+21.7s 7 ERROR: pip's dependency resolver does not currently take into account all the packages that are installed. This behaviour is the source of the following dependency conflicts.
+21.7s 8 dopamine-rl 4.1.2 requires gym<=0.25.2, but you have gym 0.26.2 which is incompatible.
+21.7s 9 gradio 5.50.0 requires pillow<12.0,>=8.0, but you have pillow 12.3.0 which is incompatible.
+46.9s 10 [encode_jina] device=cuda
+485.4s 11 [encode_jina] tải model jinaai/jina-clip-v2 ...
+485.6s 12 Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+485.8s 13 [transformers] A new version of the following files was downloaded from https://huggingface.co/jinaai/jina-clip-implementation:
+485.8s 14 - configuration_clip.py
+485.8s 15 . Make sure to double-check they do not contain any added malicious code. To avoid downloading new versions of the code file, you can pin a revision.
+486.0s 16 Traceback (most recent call last):
+486.0s 17 File "/kaggle/src/script.py", line 101, in load_model
+486.0s 18 model = AutoModel.from_pretrained(
+486.0s 19 ^^^^^^^^^^^^^^^^^^^^^^^^^^
+486.0s 20 File "/usr/local/lib/python3.12/dist-packages/transformers/models/auto/auto_factory.py", line 336, in from_pretrained
+486.0s 21 config, kwargs = AutoConfig.from_pretrained(
+486.0s 22 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+486.0s 23 File "/usr/local/lib/python3.12/dist-packages/transformers/models/auto/configuration_auto.py", line 409, in from_pretrained
+486.0s 24 return config_class.from_pretrained(pretrained_model_name_or_path, **kwargs)
+486.0s 25 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+486.0s 26 File "/usr/local/lib/python3.12/dist-packages/transformers/configuration_utils.py", line 725, in from_pretrained
+486.0s 27 return cls.from_dict(config_dict, **kwargs)
+486.0s 28 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+486.0s 29 File "/usr/local/lib/python3.12/dist-packages/transformers/configuration_utils.py", line 902, in from_dict
+486.0s 30 config = cls(**config_dict)
+486.0s 31 ^^^^^^^^^^^^^^^^^^
+486.0s 32 File "/root/.cache/huggingface/modules/transformers_modules/jinaai/jina_hyphen_clip_hyphen_implementation/39e6a55ae971b59bea6e44675d237c99762e7ee2/configuration_clip.py", line 291, in __init__
+486.0s 33 and hasattr(torch, torch_dtype)
+486.0s 34 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+486.0s 35 TypeError: attribute name must be string, not 'torch.dtype'
+486.0s 36 
+486.0s 37 During handling of the above exception, another exception occurred:
+486.0s 38 
+486.0s 39 Traceback (most recent call last):
+486.0s 40 File "/kaggle/src/script.py", line 178, in <module>
+486.0s 41 main()
+486.0s 42 File "/kaggle/src/script.py", line 131, in main
+486.0s 43 model = load_model()
+486.0s 44 ^^^^^^^^^^^^
+486.0s 45 File "/kaggle/src/script.py", line 106, in load_model
+486.0s 46 model = AutoModel.from_pretrained(MODEL_ID, trust_remote_code=True, torch_dtype=dtype)
+486.0s 47 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+486.0s 48 File "/usr/local/lib/python3.12/dist-packages/transformers/models/auto/auto_factory.py", line 336, in from_pretrained
+486.0s 49 config, kwargs = AutoConfig.from_pretrained(
+486.0s 50 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+486.0s 51 File "/usr/local/lib/python3.12/dist-packages/transformers/models/auto/configuration_auto.py", line 409, in from_pretrained
+486.0s 52 return config_class.from_pretrained(pretrained_model_name_or_path, **kwargs)
+486.0s 53 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+486.0s 54 File "/usr/local/lib/python3.12/dist-packages/transformers/configuration_utils.py", line 725, in from_pretrained
+486.0s 55 return cls.from_dict(config_dict, **kwargs)
+486.0s 56 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+486.0s 57 File "/usr/local/lib/python3.12/dist-packages/transformers/configuration_utils.py", line 902, in from_dict
+486.0s 58 config = cls(**config_dict)
+486.0s 59 ^^^^^^^^^^^^^^^^^^
+486.0s 60 File "/root/.cache/huggingface/modules/transformers_modules/jinaai/jina_hyphen_clip_hyphen_implementation/39e6a55ae971b59bea6e44675d237c99762e7ee2/configuration_clip.py", line 291, in __init__
+486.0s 61 and hasattr(torch, torch_dtype)
+486.0s 62 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+486.0s 63 TypeError: attribute name must be string, not 'torch.dtype'
+490.6s 64 /usr/local/lib/python3.12/dist-packages/mistune.py:435: SyntaxWarning: invalid escape sequence '\|'
+490.6s 65 cells[i][c] = re.sub('\\\\\|', '|', cell)
+490.9s 66 /usr/local/lib/python3.12/dist-packages/nbconvert/filters/filter_links.py:36: SyntaxWarning: invalid escape sequence '\_'
+490.9s 67 text = re.sub(r'_', '\_', text) # Escape underscores in display text
+491.6s 68 [NbConvertApp] Converting notebook __script__.ipynb to html
+492.8s 69 [NbConvertApp] Writing 301071 bytes to __results__.html

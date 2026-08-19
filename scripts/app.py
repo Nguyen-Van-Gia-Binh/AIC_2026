@@ -102,14 +102,14 @@ def kis_search(query: str, top_k: int, auto_translate: bool) -> tuple:
         try:
             from agent.tools.rewrite import rewrite_query
             query_used = rewrite_query(query)
-            status_parts.append(f"🌐 Translated: **{query_used}**")
+            status_parts.append(f"🌐 Đã dịch: **{query_used}**")
         except Exception as e:
-            status_parts.append(f"⚠️ Translate failed: {e}. Using original.")
+            status_parts.append(f"⚠️ Dịch thất bại: {e}. Dùng câu gốc.")
 
     hits = fast_retrieve(query_used, top_k=int(top_k))
     gallery = _hits_to_gallery(hits)
     df = _hits_to_df(hits)
-    status_parts.append(f"✅ Found **{len(hits)}** results | top score = {hits[0]['score']:.4f}")
+    status_parts.append(f"✅ Tìm thấy **{len(hits)}** kết quả | điểm cao nhất = {hits[0]['score']:.4f}")
     return gallery, df, "\n\n".join(status_parts)
 
 
@@ -124,7 +124,7 @@ def kis_add_to_queue(df: pd.DataFrame, query_id: str, queue: list) -> tuple:
         return queue, f"⚠️ {e}"
     queue = [q for q in queue if q.get("_query_id") != query_id]  # replace if exists
     queue.append({"_query_id": query_id, "_type": "kis", "_rows": rows})
-    return queue, f"✅ Đã thêm **{query_id}** ({len(rows)} rows) vào queue. Tổng: {len(queue)} query."
+    return queue, f"✅ Đã thêm **{query_id}** ({len(rows)} dòng) vào queue. Tổng: {len(queue)} query."
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -144,9 +144,9 @@ def qa_run(query: str, question: str, top_k: int) -> tuple:
         answer = out["answer"]
         conf = out["confidence"]
         status = (
-            f"✅ Answer: **{answer}** | Confidence: {conf:.0%} | "
-            f"Method: {out['best_hit'].get('method', '?') if isinstance(out.get('best_hit'), dict) else '?'} | "
-            f"Loops: {out['n_loops']}"
+            f"✅ Câu trả lời: **{answer}** | Độ tin cậy: {conf:.0%} | "
+            f"Phương pháp: {out['best_hit'].get('method', '?') if isinstance(out.get('best_hit'), dict) else '?'} | "
+            f"Số vòng: {out['n_loops']}"
         )
         return gallery, df, answer, conf, status
     except Exception as e:
@@ -164,7 +164,7 @@ def qa_add_to_queue(df: pd.DataFrame, answer: str, query_id: str, queue: list) -
         return queue, f"⚠️ {e}"
     queue = [q for q in queue if q.get("_query_id") != query_id]
     queue.append({"_query_id": query_id, "_type": "qa", "_rows": rows, "_answer": answer})
-    return queue, f"✅ Đã thêm **{query_id}** QA ({len(rows)} rows). Tổng: {len(queue)} query."
+    return queue, f"✅ Đã thêm **{query_id}** QA ({len(rows)} dòng). Tổng: {len(queue)} query."
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -200,10 +200,10 @@ def trake_run(global_query: str, events_text: str, top_k_video: int) -> tuple:
         df = pd.DataFrame(rows)
         best = out["best"]
         status = (
-            f"✅ Best: **{best.get('video_id')}** | "
-            f"Frames: {best.get('frame_ids')} | "
-            f"Score: {best.get('score', 0):.4f} | "
-            f"{len(events)} events aligned"
+            f"✅ Tốt nhất: **{best.get('video_id')}** | "
+            f"Frame_id: {best.get('frame_ids')} | "
+            f"Điểm: {best.get('score', 0):.4f} | "
+            f"Đã căn {len(events)} khoảnh khắc"
         )
         return df, status
     except Exception as e:
@@ -245,7 +245,7 @@ def trake_add_to_queue(df: pd.DataFrame, query_id: str, events_text: str, queue:
 
     queue = [q for q in queue if q.get("_query_id") != query_id]
     queue.append({"_query_id": query_id, "_type": "trake", "_rows": submission_rows})
-    return queue, f"✅ Đã thêm **{query_id}** TRAKE ({len(submission_rows)} rows). Tổng: {len(queue)} query."
+    return queue, f"✅ Đã thêm **{query_id}** TRAKE ({len(submission_rows)} dòng). Tổng: {len(queue)} query."
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -313,8 +313,8 @@ def export_zip(queue: list) -> tuple:
     ok = validate_file(zip_path)
     msg_parts = [
         f"{'✅' if ok else '⚠️'} ZIP: `{zip_path.name}`",
-        f"📁 Path: `{zip_path}`",
-        f"📊 {len(csv_files)} CSVs | Validate: {'PASS' if ok else 'FAIL'}",
+        f"📁 Đường dẫn: `{zip_path}`",
+        f"📊 {len(csv_files)} CSV | Kiểm tra: {'Hợp lệ' if ok else 'Lỗi'}",
     ]
     if errors:
         msg_parts.append("⚠️ Lỗi:\n" + "\n".join(errors))
@@ -351,7 +351,7 @@ with gr.Blocks(title="AIC2026 Search & Submit") as demo:
         # ════════════════════════════════════════════════════════════
         # TAB 1: KIS
         # ════════════════════════════════════════════════════════════
-        with gr.TabItem("🔍 KIS — Textual Search"):
+        with gr.TabItem("🔍 KIS — Tìm kiếm văn bản"):
             gr.Markdown("### Tìm keyframe theo mô tả văn bản")
             with gr.Row():
                 with gr.Column(scale=4):
@@ -362,7 +362,7 @@ with gr.Blocks(title="AIC2026 Search & Submit") as demo:
                     )
                 with gr.Column(scale=1):
                     kis_topk    = gr.Slider(5, 100, value=20, step=5, label="Top-k")
-                    kis_auto_tr = gr.Checkbox(value=True, label="🌐 Auto-translate VN→EN")
+                    kis_auto_tr = gr.Checkbox(value=True, label="🌐 Tự động dịch VN→EN")
 
             kis_search_btn = gr.Button("🔍 Search", variant="primary", size="lg")
 
@@ -374,7 +374,7 @@ with gr.Blocks(title="AIC2026 Search & Submit") as demo:
             )
             kis_status = gr.Markdown("_Nhấn Search để bắt đầu._")
             kis_df = gr.Dataframe(
-                label="📋 Kết quả (chỉnh sửa được — xóa/reorder trước khi Add)",
+                label="📋 Kết quả (chỉnh sửa được — xóa/sắp xếp lại trước khi Thêm)",
                 interactive=True,
                 wrap=True,
             )
@@ -407,7 +407,7 @@ with gr.Blocks(title="AIC2026 Search & Submit") as demo:
         # ════════════════════════════════════════════════════════════
         # TAB 2: Q&A
         # ════════════════════════════════════════════════════════════
-        with gr.TabItem("❓ Q&A — Question Answering"):
+        with gr.TabItem("❓ Q&A — Trả lời câu hỏi"):
             gr.Markdown("### Tìm keyframe + trả lời câu hỏi về nội dung")
             with gr.Row():
                 with gr.Column(scale=3):
@@ -417,33 +417,33 @@ with gr.Blocks(title="AIC2026 Search & Submit") as demo:
                         lines=2,
                     )
                     qa_question = gr.Textbox(
-                        label="Câu hỏi cụ thể (để trích xuất answer)",
+                        label="Câu hỏi cụ thể (để trích xuất câu trả lời)",
                         placeholder="VD: Màu sắc của bó hoa mà người đó cầm là gì?",
                         lines=2,
                     )
                 with gr.Column(scale=1):
-                    qa_topk = gr.Slider(5, 50, value=20, step=5, label="Top-k retrieve")
+                    qa_topk = gr.Slider(5, 50, value=20, step=5, label="Top-k truy xuất")
 
             qa_run_btn = gr.Button("🤖 Run Q&A Pipeline", variant="primary", size="lg")
 
             with gr.Row():
                 with gr.Column(scale=2):
                     qa_gallery = gr.Gallery(
-                        label="Top frames",
+                        label="Frame nổi bật",
                         columns=3,
                         height=300,
                     )
                 with gr.Column(scale=1):
                     qa_answer_box = gr.Textbox(
-                        label="💡 Answer (chỉnh sửa được)",
+                        label="💡 Câu trả lời (chỉnh sửa được)",
                         lines=3,
                         interactive=True,
                     )
-                    qa_conf = gr.Number(label="Confidence", precision=2, interactive=False)
+                    qa_conf = gr.Number(label="Độ tin cậy", precision=2, interactive=False)
                     qa_status = gr.Markdown("_Nhấn Run để bắt đầu._")
 
             qa_df = gr.Dataframe(
-                label="📋 Top-100 rows để nộp (có thể xóa/reorder)",
+                label="📋 Top-100 dòng để nộp (có thể xóa/sắp xếp lại)",
                 interactive=True,
                 wrap=True,
             )
@@ -467,7 +467,7 @@ with gr.Blocks(title="AIC2026 Search & Submit") as demo:
         # ════════════════════════════════════════════════════════════
         # TAB 3: TRAKE
         # ════════════════════════════════════════════════════════════
-        with gr.TabItem("🎬 TRAKE — Event Sequence"):
+        with gr.TabItem("🎬 TRAKE — Chuỗi sự kiện"):
             gr.Markdown(
                 "### Tìm video + căn chỉnh chuỗi khoảnh khắc theo thứ tự thời gian\n"
                 "_Mỗi dòng trong ô Events = 1 khoảnh khắc ngữ nghĩa, theo thứ tự xảy ra._"
@@ -489,12 +489,12 @@ with gr.Blocks(title="AIC2026 Search & Submit") as demo:
                         lines=6,
                     )
                 with gr.Column(scale=1):
-                    trake_topk_video = gr.Slider(3, 10, value=5, step=1, label="Top-k videos")
+                    trake_topk_video = gr.Slider(3, 10, value=5, step=1, label="Top-k video")
 
             trake_run_btn = gr.Button("🎬 Run TRAKE Pipeline", variant="primary", size="lg")
             trake_status  = gr.Markdown("_Nhấn Run để bắt đầu._")
             trake_df = gr.Dataframe(
-                label="📋 Video candidates + aligned frame_ids (chỉnh sửa được)",
+                label="📋 Video ứng viên + frame_id đã căn (chỉnh sửa được)",
                 interactive=True,
                 wrap=True,
             )
@@ -530,7 +530,7 @@ with gr.Blocks(title="AIC2026 Search & Submit") as demo:
 
             export_refresh_btn = gr.Button("🔄 Refresh Queue", variant="secondary")
             export_queue_df = gr.Dataframe(
-                label="📋 Submission Queue",
+                label="📋 Hàng đợi Submission",
                 interactive=False,
                 wrap=True,
             )
