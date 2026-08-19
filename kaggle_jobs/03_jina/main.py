@@ -1,4 +1,5 @@
 """
+ban moi
 Kaggle GPU job — encode toàn bộ keyframe AIC2026 bằng Jina CLIP v2 (jinaai/jina-clip-v2, qua
 HuggingFace transformers với trust_remote_code=True). Xem kaggle_jobs/README.md để biết bức tranh
 chung 4 job encode SOTA.
@@ -40,11 +41,14 @@ from pathlib import Path
 
 
 def _pip_install(*pkgs):
-    subprocess.run([sys.executable, "-m", "pip", "install", "-q", "-U", *pkgs], check=True)
+    subprocess.run([sys.executable, "-m", "pip", "install", "-q", *pkgs], check=True)
 
 
-# jina-clip-v2 cần transformers mới + einops/timm cho phần vision tower tuỳ biến
-_pip_install("transformers", "pillow", "einops", "timm", "accelerate")
+# PIN CỨNG transformers==4.57.3 (phát hành 2025-11-25, bản 4.x ổn định cuối cùng — xác nhận thật
+# qua PyPI 2026-08-20, KHÔNG đoán). Trước đây cài "-U" (luôn kéo bản mới nhất) đã dính lỗi thiếu
+# clip_loss vì transformers lên major version 5.x (xem README mục "Cập nhật 3"). Pin về 4.x —
+# _patch_missing_clip_loss() bên dưới vẫn giữ lại phòng hờ (tự bỏ qua nếu 4.57.3 đã có sẵn).
+_pip_install("transformers==4.57.3", "pillow", "einops", "timm", "accelerate")
 
 import torch
 import numpy as np
@@ -54,12 +58,21 @@ from transformers import AutoModel
 MODEL_ID = "jinaai/jina-clip-v2"
 TAG = "jina"
 
+# ── CHẾ ĐỘ SMOKE-TEST: đổi SMOKE_TEST = True rồi push để chạy thử nhanh (vài phút GPU) trước khi
+# chạy full 873 video — chỉ encode SMOKE_TEST_NUM_VIDEOS video đầu, mỗi video
+# SMOKE_TEST_NUM_IMAGES ảnh đầu. Ghi ra file RIÊNG (tiền tố "smoketest_") để không đụng output
+# thật / không hỏng cơ chế resume của lần chạy full sau. Nhớ đổi lại False trước khi chạy thật.
+SMOKE_TEST = False
+SMOKE_TEST_NUM_VIDEOS = 2
+SMOKE_TEST_NUM_IMAGES = 4
+
 FRAMES_DATASET_REF = "kiet1106/aic26-frames"  # "owner/slug" trong dataset_sources — đổi nếu dùng dataset khác
 _FRAMES_OWNER, FRAMES_DATASET_SLUG = FRAMES_DATASET_REF.split("/")
 INPUT_BASE = Path("/kaggle/input")
-OUTPUT_DIR = Path(f"/kaggle/working/features_{TAG}")
-MANIFEST_PATH = Path(f"/kaggle/working/manifest_{TAG}.csv")
-ZIP_PATH = Path(f"/kaggle/working/features_{TAG}.zip")
+_RUN_TAG = f"smoketest_{TAG}" if SMOKE_TEST else TAG
+OUTPUT_DIR = Path(f"/kaggle/working/features_{_RUN_TAG}")
+MANIFEST_PATH = Path(f"/kaggle/working/manifest_{_RUN_TAG}.csv")
+ZIP_PATH = Path(f"/kaggle/working/features_{_RUN_TAG}.zip")
 
 BATCH_SIZE = 32  # model ~865M tham số, hạ batch để an toàn VRAM trên GPU Kaggle (~16GB)
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
@@ -149,8 +162,39 @@ def list_videos(root: Path):
     return videos
 
 
+def _patch_missing_clip_loss():
+    """LƯU Ý (phát hiện 2026-08-19 qua log job 03, sau khi lỗi torch_dtype đã hết): code tuỳ biến
+    của jina-clip-v2 (trust_remote_code=True, modeling_clip.py) làm
+    `from transformers.models.clip.modeling_clip import (CLIPOutput, CLIPTextModelOutput,
+    CLIPVisionModelOutput, clip_loss)` — bản `transformers` mới nhất (cài bằng -U, không pin
+    version) đã bỏ hàm nội bộ `clip_loss` (3 tên kia vẫn còn) -> ImportError ngay khi
+    AutoModel.from_pretrained() import module này. `clip_loss` chỉ dùng để tính loss lúc HUẤN
+    LUYỆN (return_loss=True) — pipeline này chỉ gọi encode_image() để trích embedding, không bao
+    giờ chạy nhánh đó, nên chỉ cần "vá" lại đúng tên hàm (công thức gốc, ổn định nhiều năm của
+    CLIP) vào module trước khi Jina import, không cần pin version transformers (rủi ro hơn vì các
+    file custom khác của Jina — transform.py/rope_embeddings.py/eva_model.py/hf_model.py — có thể
+    cần bản mới hơn)."""
+    import transformers.models.clip.modeling_clip as _clip_modeling
+    if hasattr(_clip_modeling, "clip_loss"):
+        return
+    import torch.nn.functional as F
+
+    def _contrastive_loss(logits):
+        return F.cross_entropy(logits, torch.arange(len(logits), device=logits.device))
+
+    def _clip_loss(similarity):
+        caption_loss = _contrastive_loss(similarity)
+        image_loss = _contrastive_loss(similarity.t())
+        return (caption_loss + image_loss) / 2.0
+
+    _clip_modeling.clip_loss = _clip_loss
+    print(f"[encode_{TAG}] đã vá clip_loss còn thiếu trong transformers.models.clip.modeling_clip "
+          f"(chỉ cần cho import, không dùng tới khi chỉ encode ảnh)")
+
+
 def load_model():
     print(f"[encode_{TAG}] tải model {MODEL_ID} ...")
+    _patch_missing_clip_loss()
     # LƯU Ý (phát hiện 2026-08-19 qua Log3.txt): configuration_clip.py tuỳ biến của model này làm
     # `hasattr(torch, torch_dtype)` -> torch_dtype PHẢI là string ("float16"/"float32"), truyền
     # thẳng object torch.float16 sẽ crash với TypeError: attribute name must be string.
@@ -180,6 +224,10 @@ def encode_video(model, jpg_paths):
 
 
 def main():
+    if SMOKE_TEST:
+        print(f"[encode_{TAG}] === SMOKE_TEST=True — chỉ chạy {SMOKE_TEST_NUM_VIDEOS} video x "
+              f"{SMOKE_TEST_NUM_IMAGES} ảnh để kiểm tra logic, KHÔNG PHẢI encode thật. "
+              f"Output ghi vào features_{_RUN_TAG}/ (tách riêng, không đụng output thật) ===")
     print(f"[encode_{TAG}] device={DEVICE}")
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     restored = restore_resume_cache()
@@ -191,6 +239,10 @@ def main():
     print(f"[encode_{TAG}] keyframes root: {input_root}")
     videos = list_videos(input_root)
     print(f"[encode_{TAG}] tổng số video tìm thấy: {len(videos)}")
+    if SMOKE_TEST:
+        videos = [(vid, jpgs[:SMOKE_TEST_NUM_IMAGES]) for vid, jpgs in videos[:SMOKE_TEST_NUM_VIDEOS]]
+        print(f"[encode_{TAG}] SMOKE_TEST: rút xuống {len(videos)} video, "
+              f"{[len(j) for _, j in videos]} ảnh/video")
 
     manifest_rows = []
     done_now = 0
@@ -225,7 +277,7 @@ def main():
     print(f"[encode_{TAG}] nén kết quả vào {ZIP_PATH} ...")
     with zipfile.ZipFile(ZIP_PATH, "w", zipfile.ZIP_DEFLATED) as zf:
         for f in sorted(OUTPUT_DIR.glob("*.npy")):
-            zf.write(f, arcname=f"features_{TAG}/{f.name}")
+            zf.write(f, arcname=f"features_{_RUN_TAG}/{f.name}")
         if MANIFEST_PATH.exists():
             zf.write(MANIFEST_PATH, arcname=MANIFEST_PATH.name)
 
