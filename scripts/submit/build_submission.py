@@ -1,14 +1,19 @@
 """
 build_submission.py — Tạo file CSV + ZIP đúng format BTC AIC2026.
 
-Rules từ tài liệu BTC (Thong tin vong So tuyen AIC2026.md):
+Rules từ tài liệu BTC (docs/Thong tin vong So tuyen AIC2026.md §4):
   - video_id:  KHÔNG có .mp4 (ví dụ: "L21_V001")
   - frame_id:  bắt đầu từ 1 (không phải 0)
   - Tối đa:    100 câu trả lời mỗi query
   - Encoding:  UTF-8
   - Format KIS:   video_id, frame_id
   - Format Q&A:   video_id, frame_id, answer
-  - Format TRAKE: video_id, frame_id1, frame_id2, ..., frame_idN
+  - Format TRAKE: video_id, frame_id1, frame_id2, ..., frame_idN (1 dòng = 1 phương án
+    trọn vẹn cho cả N mốc, không phải 1 dòng/mốc)
+  - Tên file CSV PHẢI giữ nguyên tên file truy vấn gốc BTC cấp, chỉ đổi đuôi
+    (vd. "query-1-kis.txt" -> "query-1-kis.csv") — không tự ghép hậu tố.
+  - ZIP nộp bài bắt buộc có thư mục con "submission/" chứa toàn bộ CSV, không được nén
+    CSV thẳng vào gốc ZIP.
 
 Sử dụng:
     python scripts/submit/build_submission.py
@@ -33,8 +38,25 @@ SUBMISSIONS_DIR.mkdir(exist_ok=True)
 
 # ─── Builder Functions ─────────────────────────────────────────────────────────
 
+def _resolve_csv_filename(filename: str) -> str:
+    """
+    Chuẩn hoá tên file CSV đích theo đúng yêu cầu BTC: giữ NGUYÊN tên file truy vấn
+    gốc, chỉ đổi đuôi thành .csv — không tự ghép hậu tố loại truy vấn.
+
+    Chấp nhận cả tên đã có đuôi (".txt" — lỡ dán nguyên tên BTC cấp, hoặc ".csv") lẫn
+    tên không đuôi, luôn trả về đúng 1 đuôi ".csv" duy nhất.
+    Ví dụ: "query-1-kis" -> "query-1-kis.csv"; "query-1-kis.txt" -> "query-1-kis.csv".
+    """
+    stem = filename
+    for ext in (".txt", ".csv"):
+        if stem.lower().endswith(ext):
+            stem = stem[: -len(ext)]
+            break
+    return f"{stem}.csv"
+
+
 def build_kis_csv(
-    query_id: str,
+    filename: str,
     results: list[dict],
     output_dir: Path = SUBMISSIONS_DIR,
 ) -> Path:
@@ -42,7 +64,9 @@ def build_kis_csv(
     Tạo CSV cho truy vấn KIS.
 
     Args:
-        query_id: Tên câu hỏi, ví dụ "query_001" — sẽ là tên file.
+        filename: Tên file truy vấn gốc BTC cấp, ví dụ "query-1-kis" (có hoặc không
+                  đuôi .txt/.csv đều được) — CSV xuất ra sẽ giữ đúng tên này, chỉ đổi
+                  đuôi thành .csv, theo yêu cầu BTC.
         results:  list[dict] từ run_kis(), mỗi item có video_id và frame_id.
                   Tối đa 100 dòng sẽ được ghi (theo rule BTC).
         output_dir: Thư mục đầu ra.
@@ -51,7 +75,7 @@ def build_kis_csv(
         Path tới file CSV đã tạo.
     """
     output_dir.mkdir(exist_ok=True)
-    out_path = output_dir / f"{query_id}_kis.csv"
+    out_path = output_dir / _resolve_csv_filename(filename)
 
     rows = results[:100]  # hard cap
     with open(out_path, "w", newline="", encoding="utf-8") as f:
@@ -66,17 +90,20 @@ def build_kis_csv(
 
 
 def build_qa_csv(
-    query_id: str,
+    filename: str,
     results: list[dict],
     output_dir: Path = SUBMISSIONS_DIR,
 ) -> Path:
     """
     Tạo CSV cho truy vấn Q&A.
 
-    results phải có thêm key 'answer' (str).
+    Args:
+        filename: Tên file truy vấn gốc BTC cấp, ví dụ "query-2-qa" — xem
+                  `build_kis_csv` để biết quy tắc đổi đuôi.
+        results:  list[dict], phải có thêm key 'answer' (str).
     """
     output_dir.mkdir(exist_ok=True)
-    out_path = output_dir / f"{query_id}_qa.csv"
+    out_path = output_dir / _resolve_csv_filename(filename)
 
     rows = results[:100]
     with open(out_path, "w", newline="", encoding="utf-8") as f:
@@ -92,19 +119,23 @@ def build_qa_csv(
 
 
 def build_trake_csv(
-    query_id: str,
+    filename: str,
     results: list[dict],
     output_dir: Path = SUBMISSIONS_DIR,
 ) -> Path:
     """
     Tạo CSV cho truy vấn TRAKE.
 
-    results: list[dict], mỗi item là 1 câu trả lời gồm:
-      video_id (str): video được chọn
-      frame_ids (list[int]): danh sách frame_id cho từng khoảnh khắc theo thứ tự
+    Args:
+        filename: Tên file truy vấn gốc BTC cấp, ví dụ "query-3-trake" — xem
+                  `build_kis_csv` để biết quy tắc đổi đuôi.
+        results:  list[dict], mỗi item là 1 phương án dự đoán TRỌN VẸN cho cả chuỗi
+                  N sự kiện (1 dòng CSV = 1 phương án, không phải 1 dòng/event):
+          video_id (str): video được chọn
+          frame_ids (list[int]): danh sách frame_id cho từng khoảnh khắc theo thứ tự
     """
     output_dir.mkdir(exist_ok=True)
-    out_path = output_dir / f"{query_id}_trake.csv"
+    out_path = output_dir / _resolve_csv_filename(filename)
 
     rows = results[:100]
     with open(out_path, "w", newline="", encoding="utf-8") as f:
@@ -126,6 +157,9 @@ def build_zip_submission(
     """
     Gom các file CSV vào 1 file ZIP để nộp.
 
+    BTC bắt buộc CSV nằm trong 1 thư mục con "submission/" bên trong ZIP — không được
+    nén CSV thẳng vào gốc ZIP (docs/Thong tin vong So tuyen AIC2026.md §4.4).
+
     Args:
         csv_files: Danh sách path tới các file CSV.
         tag:       Nhãn tùy chọn thêm vào tên file (ví dụ "v1", "day1").
@@ -140,7 +174,7 @@ def build_zip_submission(
 
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
         for csv_path in csv_files:
-            zf.write(csv_path, arcname=csv_path.name)
+            zf.write(csv_path, arcname=f"submission/{csv_path.name}")
 
     size_kb = zip_path.stat().st_size / 1024
     print(f"[build] ZIP: {zip_path}  ({len(csv_files)} files, {size_kb:.1f} KB)")
@@ -159,8 +193,8 @@ if __name__ == "__main__":
     from agent.pipeline_kis import run_kis
 
     demo_queries = [
-        ("demo_query_001", "a person giving a speech at a podium"),
-        ("demo_query_002", "children playing soccer on a green field"),
+        ("query-1-kis", "a person giving a speech at a podium"),
+        ("query-2-kis", "children playing soccer on a green field"),
     ]
 
     csv_files = []

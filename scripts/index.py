@@ -5,14 +5,17 @@ Cấu trúc dữ liệu (đã xác nhận bằng cách đọc file thật):
   data/extracted/clip-features-32/{video_id}.npy   -> (num_keyframes, 512) float16, đã L2-normalize
   data/extracted/map-keyframes/{video_id}.csv      -> cột: n, pts_time, fps, frame_idx
   data/extracted/media-info/{video_id}.json        -> metadata YouTube (title, author, ...)
-  data/extracted/keyframes/{video_id}/{n:03d}.jpg  -> ảnh keyframe thật (chỉ có cho batch đã tải,
-                                                       hiện tại mới có L23)
+  data/extracted/keyframes/{batch}/{video_id}/{n:03d}.jpg  -> ảnh keyframe thật (đã xác nhận đủ
+                                                       10 batch L21–L30, 177.321 keyframe, 2026-08-20;
+                                                       lồng thêm 1 cấp thư mục batch so với
+                                                       {video_id}/{n}.jpg — build_index() bên dưới
+                                                       tự dò cả 2 kiểu, ưu tiên kiểu lồng batch)
 
 video_id ví dụ: "L23_V001" (L = batch/"level", V = số thứ tự video trong batch).
 
-Vì clip-features-32 và map-keyframes là 2 zip PHỦ TOÀN BỘ dataset (không chỉ riêng L23),
-index này sẽ tìm đúng trên toàn bộ ~873 video ngay cả khi máy mới chỉ có ảnh jpg của L23.
-Với video chưa tải ảnh, kết quả vẫn trả về đúng video_id/timestamp, chỉ là chưa có ảnh xem trước.
+Vì clip-features-32 và map-keyframes là 2 zip PHỦ TOÀN BỘ dataset, index này tìm đúng trên toàn bộ
+~873 video. Với video chưa tải ảnh (nếu có), kết quả vẫn trả về đúng video_id/timestamp, chỉ là
+chưa có ảnh xem trước.
 """
 
 from pathlib import Path
@@ -62,7 +65,14 @@ def build_index() -> tuple[np.ndarray, pd.DataFrame]:
         chunk = chunk / norms
         vec_chunks.append(chunk)
 
-        kf_dir = KEYFRAMES_DIR / video_id
+        # Dữ liệu thật (10 batch L21–L30, xác nhận 2026-08-20) lồng thêm 1 cấp thư mục batch:
+        # data/extracted/keyframes/{batch}/{video_id}/{n}.jpg — không phải .../{video_id}/{n}.jpg
+        # như giả định ban đầu. Thử đường dẫn lồng batch trước, fallback về đường dẫn phẳng cũ
+        # (phòng trường hợp máy khác/lần tải khác vẫn còn cấu trúc cũ).
+        batch = video_id.split("_")[0]
+        kf_dir_nested = KEYFRAMES_DIR / batch / video_id
+        kf_dir_flat = KEYFRAMES_DIR / video_id
+        kf_dir = kf_dir_nested if kf_dir_nested.is_dir() else kf_dir_flat
         for i in range(n_rows):
             row = df.iloc[i]
             n = int(row["n"])

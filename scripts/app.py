@@ -380,8 +380,8 @@ with gr.Blocks(title="AIC2026 Search & Submit") as demo:
             )
             with gr.Row():
                 kis_qid = gr.Textbox(
-                    label="Query ID (tên file CSV, khớp với file BTC cung cấp)",
-                    placeholder="VD: query_1_kis",
+                    label="Query ID (giữ NGUYÊN tên file BTC cấp, vd. query-1-kis — có dán cả .txt cũng tự đổi đuôi)",
+                    placeholder="VD: query-1-kis",
                     scale=3,
                 )
                 kis_add_btn = gr.Button("➕ Add to Submission Queue", scale=1)
@@ -448,7 +448,11 @@ with gr.Blocks(title="AIC2026 Search & Submit") as demo:
                 wrap=True,
             )
             with gr.Row():
-                qa_qid     = gr.Textbox(label="Query ID", placeholder="VD: query_2_qa", scale=3)
+                qa_qid     = gr.Textbox(
+                    label="Query ID (giữ NGUYÊN tên file BTC cấp, vd. query-2-qa)",
+                    placeholder="VD: query-2-qa",
+                    scale=3,
+                )
                 qa_add_btn = gr.Button("➕ Add to Queue", scale=1)
             qa_queue_status = gr.Markdown()
 
@@ -503,7 +507,11 @@ with gr.Blocks(title="AIC2026 Search & Submit") as demo:
                 "tương ứng với từng khoảnh khắc. Sửa tay nếu cần._"
             )
             with gr.Row():
-                trake_qid     = gr.Textbox(label="Query ID", placeholder="VD: query_3_trake", scale=3)
+                trake_qid     = gr.Textbox(
+                    label="Query ID (giữ NGUYÊN tên file BTC cấp, vd. query-3-trake)",
+                    placeholder="VD: query-3-trake",
+                    scale=3,
+                )
                 trake_add_btn = gr.Button("➕ Add to Queue", scale=1)
             trake_queue_status = gr.Markdown()
 
