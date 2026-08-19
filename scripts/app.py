@@ -67,10 +67,14 @@ def _hits_to_gallery(hits: list[dict], max_img: int = 30) -> list[tuple]:
 def _df_to_submission_rows(df: pd.DataFrame, query_type: str, answer: str = "") -> list[dict]:
     """Convert edited DataFrame to submission queue rows."""
     rows = []
-    for _, r in df.iterrows():
+    for i, (_, r) in enumerate(df.iterrows(), 1):
+        try:
+            frame_id = int(r["frame_id"])
+        except (TypeError, ValueError):
+            raise ValueError(f"Dòng {i} (video_id={r.get('video_id')}): frame_id không hợp lệ.")
         row = {
             "video_id":   str(r["video_id"]).replace(".mp4", ""),
-            "frame_id":   int(r["frame_id"]),
+            "frame_id":   frame_id,
             "query_type": query_type,
         }
         if query_type == "qa":
@@ -111,7 +115,10 @@ def kis_add_to_queue(df: pd.DataFrame, query_id: str, queue: list) -> tuple:
     if df is None or len(df) == 0:
         return queue, "⚠️ Chưa có kết quả để thêm."
     query_id = query_id.strip() or "kis_query_001"
-    rows = _df_to_submission_rows(df, "kis")
+    try:
+        rows = _df_to_submission_rows(df, "kis")
+    except ValueError as e:
+        return queue, f"⚠️ {e}"
     queue = [q for q in queue if q.get("_query_id") != query_id]  # replace if exists
     queue.append({"_query_id": query_id, "_type": "kis", "_rows": rows})
     return queue, f"✅ Đã thêm **{query_id}** ({len(rows)} rows) vào queue. Tổng: {len(queue)} query."
@@ -148,7 +155,10 @@ def qa_add_to_queue(df: pd.DataFrame, answer: str, query_id: str, queue: list) -
     if df is None or len(df) == 0:
         return queue, "⚠️ Chưa có kết quả."
     query_id = query_id.strip() or "qa_query_001"
-    rows = _df_to_submission_rows(df, "qa", answer=answer)
+    try:
+        rows = _df_to_submission_rows(df, "qa", answer=answer)
+    except ValueError as e:
+        return queue, f"⚠️ {e}"
     queue = [q for q in queue if q.get("_query_id") != query_id]
     queue.append({"_query_id": query_id, "_type": "qa", "_rows": rows, "_answer": answer})
     return queue, f"✅ Đã thêm **{query_id}** QA ({len(rows)} rows). Tổng: {len(queue)} query."
