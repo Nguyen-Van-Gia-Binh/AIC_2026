@@ -30,38 +30,47 @@ Success: `run_qa()` và `run_trake()` chạy hết pipeline, sinh được CSV h
 
 Success: thao tác search → sửa kết quả trên UI → add to queue → export zip chạy được thủ công.
 
-## Phase 4: Hardening trước ngày thi (🔄 In Progress)
+## Phase 4: Hardening trước ngày thi (✅ Done)
 Việc phát sinh từ code review (2026-08-19) + rà soát thủ công — ưu tiên theo mức rủi ro điểm số/bảo mật:
 
 - [x] **[BẢO MẬT — đã fix]** `.env.example` chứa key thật (Gemini + Groq) thay vì placeholder, và
       không nằm trong `.gitignore` → đã thay bằng placeholder. **Cần làm thêm:** cân nhắc
       rotate 2 key đó ở Google/Groq console vì đã tồn tại ở dạng plaintext trên máy một thời gian.
-- [ ] `scripts/agent/pipeline_qa.py:_enrich_hits_with_n` build lại toàn bộ lookup
+- [x] `scripts/agent/pipeline_qa.py:_enrich_hits_with_n` build lại toàn bộ lookup
       `(video_id, frame_idx)->n` bằng `.iterrows()` trên cả `_META` (~177K dòng) mỗi lần gọi Q&A,
-      dù `fast_retrieve`/`fast_retrieve_for_video` đã trả sẵn `n` trong mỗi hit — bỏ hẳn hàm này,
+      dù `fast_retrieve`/`fast_retrieve_for_video` đã trả sẵn `n` trong mỗi hit — đã bỏ hẳn hàm này,
       dùng `n` có sẵn từ hit.
-- [ ] `scripts/app.py:_df_to_submission_rows` gọi `int(r["frame_id"])` không try/except — nếu user
+- [x] `scripts/app.py:_df_to_submission_rows` gọi `int(r["frame_id"])` không try/except — nếu user
       xóa trống ô `frame_id` trên bảng Gradio rồi bấm "Add to Queue" thì `int(nan)` crash cả app
-      thay vì báo lỗi thân thiện như chỗ khác trong file. Cần bọc try/except + thông báo ⚠️.
-- [ ] `scripts/app.py` (TRAKE tab) — `trake_add_to_queue` lọc âm thầm token không phải số nguyên
+      thay vì báo lỗi thân thiện như chỗ khác trong file. Đã bọc try/except + thông báo ⚠️.
+- [x] `scripts/app.py` (TRAKE tab) — `trake_add_to_queue` lọc âm thầm token không phải số nguyên
       khi parse `frame_ids` (`"40530 | 40727 | 40895"`), có thể làm mất 1 event mà không cảnh báo,
-      dẫn tới submit thiếu mốc so với N event của câu hỏi. Cần validate đủ N phần tử, báo lỗi nếu thiếu.
-- [ ] `scripts/agent/config.py` bị import theo 2 identity khác nhau (`config` từ `rewrite.py`/
+      dẫn tới submit thiếu mốc so với N event của câu hỏi. Đã validate đủ N phần tử, chặn + báo lỗi
+      nếu thiếu.
+- [x] `scripts/agent/config.py` bị import theo 2 identity khác nhau (`config` từ `rewrite.py`/
       `answer_qa.py` qua `sys.path` trỏ vào `scripts/agent`, và `agent.config` từ `pipeline_qa.py`
-      qua `sys.path` trỏ vào `scripts`) → module bị load/khởi tạo 2 lần, state tách rời. Chuẩn hóa
-      import path về 1 kiểu duy nhất (khuyến nghị: luôn `from agent.config import ...`, chỉ thêm
-      `scripts/` vào `sys.path`).
-- [ ] Comment/docstring mới trong `scripts/app.py` viết bằng tiếng Anh, vi phạm quy ước
-      "UI text và code comment viết tiếng Việt" ghi trong `CLAUDE.md`. Dịch lại sang tiếng Việt.
-- [ ] `requirements.txt` chưa liệt kê `litellm`, `python-dotenv` (đang comment "chưa cài" dù đã cài
+      qua `sys.path` trỏ vào `scripts`) → module bị load/khởi tạo 2 lần, state tách rời. Đã chuẩn hóa
+      import path về 1 kiểu duy nhất (`from agent.config import ...`, chỉ thêm `scripts/` vào
+      `sys.path`) — cùng lúc fix luôn `ocr_lookup.py` bị dính bug tương tự.
+- [x] Comment/docstring trong `scripts/app.py` viết bằng tiếng Anh, vi phạm quy ước
+      "UI text và code comment viết tiếng Việt" ghi trong `CLAUDE.md`. Đã dịch lại sang tiếng Việt
+      (toàn file — banner section, docstring hàm, comment inline).
+- [x] `requirements.txt` chưa liệt kê `litellm`, `python-dotenv` (đang comment "chưa cài" dù đã cài
       và đang dùng thật trong `config.py`) → clone máy mới / môi trường Kaggle sẽ thiếu dependency.
-      Cập nhật `requirements.txt` khớp với `.venv` thật (`pip freeze` rồi chọn lọc).
-- [ ] Toàn bộ Phase 1–3 hiện chưa hề commit (tất cả nằm ở trạng thái `??`/`M` trên `main`, chưa có
-      branch riêng). Tạo branch (vd. `feat/agent-pipeline`), commit theo từng Phase, mở PR — tránh
-      mất trắng nếu máy có sự cố trước ngày thi.
+      Đã pin đúng version thật từ `.venv` (`litellm==1.97.0`, `python-dotenv==1.2.3`), bỏ luôn đoạn
+      caveat lỗi thời trong `CLAUDE.md` Quick Start.
+- [x] Toàn bộ Phase 1–3 hiện chưa hề commit (tất cả nằm ở trạng thái `??`/`M` trên `main`, chưa có
+      branch riêng). Đã tạo branch `feat/agent-pipeline`, commit theo từng Phase, push lên origin,
+      mở PR về `main`.
 
 Success: code review PASS lại (0 finding mức cao), `requirements.txt` cài lại từ đầu chạy được app,
 toàn bộ thay đổi đã nằm trong git history trên 1 branch.
+
+**Phát sinh thêm (chưa nằm trong phạm vi Phase 4 gốc, để dành xét sau):** ngoài comment/docstring,
+`scripts/app.py` còn một số label tiếng Anh trong status message runtime (vd. "Method:",
+"Confidence:", "Best:", "Frames:", "ZIP:", "Path:", "Validate: PASS/FAIL") — cùng vi phạm quy ước
+Vietnamese-UI-text nhưng là text hiển thị runtime chứ không phải comment/docstring, nên không nằm
+trong phạm vi mục đã duyệt ở trên. Cần quyết định có dịch nốt hay không ở phiên sau.
 
 ## Phase 5: Sẵn sàng thi (⏳ Todo)
 - [ ] Đối chiếu format CSV/ZIP hiện tại với validator chính thức của BTC trên Codabench khi có (hạn
