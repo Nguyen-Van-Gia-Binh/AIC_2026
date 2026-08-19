@@ -48,6 +48,7 @@ def fast_retrieve(query_text: str, top_k: int = 100) -> list[dict]:
 
     Returns list of dict:
       video_id  (str):   "L21_V001" (không .mp4)
+      n         (int):   keyframe sequence no trong map-keyframes (dùng cho ocr_lookup)
       frame_idx (int):   index gốc từ 0
       frame_id  (int):   frame_idx + 1  — dùng trong submission (BTC tính từ 1)
       pts_time  (float): timestamp giây

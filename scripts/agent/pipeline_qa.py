@@ -62,9 +62,6 @@ def run_qa(
     hits = fast_retrieve(query_en, top_k=top_k)
     print(f"[qa]   Retrieved: {len(hits)} hits, top score={hits[0]['score']:.4f}")
 
-    # Gan truong 'n' tu meta neu chua co (can cho ocr_lookup)
-    _enrich_hits_with_n(hits)
-
     qa_result = answer_from_hits(question, hits, top_n=5)
     print(f"[qa]   Answer (vong 1): {qa_result['answer']!r}  conf={qa_result['confidence']:.2f}  method={qa_result['method']}")
 
@@ -79,7 +76,6 @@ def run_qa(
         print(f"[qa]   query_en_v2: {query_en_v2!r}")
 
         hits_v2 = fast_retrieve(query_en_v2, top_k=top_k)
-        _enrich_hits_with_n(hits_v2)
 
         qa_result_v2 = answer_from_hits(question, hits_v2, top_n=5)
         print(f"[qa]   Answer (vong 2): {qa_result_v2['answer']!r}  conf={qa_result_v2['confidence']:.2f}")
@@ -113,25 +109,6 @@ def run_qa(
         "n_loops":  n_loops,
         "confidence": qa_result["confidence"],
     }
-
-
-def _enrich_hits_with_n(hits: list[dict]) -> None:
-    """
-    Them truong 'n' vao moi hit tu global META (de ocr_lookup dung).
-    Sua doi in-place.
-    """
-    try:
-        from agent.tools.retrieve import _META
-        if _META is None:
-            return
-        # Tao lookup: (video_id, frame_idx) -> n
-        lookup = {(row["video_id"], int(row["frame_idx"])): int(row["n"])
-                  for _, row in _META.iterrows()}
-        for h in hits:
-            key = (h["video_id"], h["frame_idx"])
-            h["n"] = lookup.get(key)
-    except Exception:
-        pass  # Khong co n thi ocr_lookup se tra []
 
 
 def _summarize_top_objects(hits: list[dict]) -> str:
