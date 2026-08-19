@@ -152,19 +152,31 @@ class KeyframeDataset(Dataset):
 
 
 def list_videos(root: Path):
-    """Quét toàn bộ batch/video, trả về list (video_id, [jpg_path đã sort theo n tăng dần])."""
-    videos = []
+    """Quét toàn bộ batch/video bằng rglob, gom theo video_id (tên thư mục chứa ảnh)."""
     if not root.exists():
-        raise FileNotFoundError(f"Không thấy {root}")
-    for batch_dir in sorted(root.iterdir()):
-        if not batch_dir.is_dir():
-            continue
-        for video_dir in sorted(batch_dir.iterdir()):
-            if not video_dir.is_dir():
-                continue
-            jpgs = sorted(video_dir.glob("*.jpg"), key=lambda p: int(p.stem))
-            if jpgs:
-                videos.append((video_dir.name, jpgs))
+        root = resolve_keyframes_root()
+    if not root.exists():
+        contents = [str(x) for x in list(INPUT_BASE.rglob("*"))[:30]] if INPUT_BASE.exists() else []
+        raise FileNotFoundError(
+            f"Không thấy ảnh trong {INPUT_BASE}. Các file tìm thấy: {contents}"
+        )
+
+    found_map = {}
+    for jpg in root.rglob("*.jpg"):
+        vid_id = jpg.parent.name
+        if vid_id not in found_map:
+            found_map[vid_id] = []
+        found_map[vid_id].append(jpg)
+
+    videos = []
+    for vid_id in sorted(found_map.keys()):
+        jpgs = sorted(found_map[vid_id], key=lambda p: int(p.stem) if p.stem.isdigit() else p.stem)
+        videos.append((vid_id, jpgs))
+
+    if not videos:
+        contents = [str(x) for x in list(INPUT_BASE.rglob("*"))[:30]] if INPUT_BASE.exists() else []
+        raise FileNotFoundError(f"Không tìm thấy file .jpg nào trong {root}. Nội dung: {contents}")
+
     return videos
 
 
