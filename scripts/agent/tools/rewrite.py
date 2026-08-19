@@ -14,11 +14,11 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-_AGENT_DIR = Path(__file__).resolve().parent.parent
-if str(_AGENT_DIR) not in sys.path:
-    sys.path.insert(0, str(_AGENT_DIR))
+_ROOT = Path(__file__).resolve().parent.parent.parent
+if str(_ROOT) not in sys.path:
+    sys.path.insert(0, str(_ROOT))
 
-from config import call_llm  # noqa: E402
+from agent.config import call_llm  # noqa: E402
 
 REWRITE_PROMPT = """\
 You are a visual search query optimizer for a video retrieval system using CLIP (image-text matching).

@@ -18,12 +18,12 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-_AGENT_DIR = Path(__file__).resolve().parent.parent
-if str(_AGENT_DIR) not in sys.path:
-    sys.path.insert(0, str(_AGENT_DIR))
+_ROOT = Path(__file__).resolve().parent.parent.parent
+if str(_ROOT) not in sys.path:
+    sys.path.insert(0, str(_ROOT))
 
-from config import call_llm
-from tools.ocr_lookup import get_objects, objects_contain_keywords
+from agent.config import call_llm
+from agent.tools.ocr_lookup import get_objects, objects_contain_keywords
 
 # ─── Prompts ───────────────────────────────────────────────────────────────────
 
