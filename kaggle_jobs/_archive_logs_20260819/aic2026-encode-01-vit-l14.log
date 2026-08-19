@@ -1,0 +1,44 @@
+6.0s 1 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 11.7/11.7 MB 98.7 MB/s eta 0:00:00
+6.1s 2 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 6.9/6.9 MB 96.7 MB/s eta 0:00:00
+6.1s 3 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 389.2/389.2 kB 23.3 MB/s eta 0:00:00
+6.1s 4 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 516.0/516.0 kB 33.8 MB/s eta 0:00:00
+21.1s 5 ERROR: pip's dependency resolver does not currently take into account all the packages that are installed. This behaviour is the source of the following dependency conflicts.
+21.1s 6 dopamine-rl 4.1.2 requires gym<=0.25.2, but you have gym 0.26.2 which is incompatible.
+21.1s 7 gradio 5.50.0 requires pillow<12.0,>=8.0, but you have pillow 12.3.0 which is incompatible.
+48.7s 8 [encode_vitl14] device=cuda
+48.7s 9 [encode_vitl14] tải model openai/clip-vit-large-patch14 ...
+49.9s 10 Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+57.2s 11 Loading weights:   0%|          | 0/590 [00:00<?, ?it/s]Loading weights:  38%|███▊      | 223/590 [00:00<00:00, 2217.88it/s]Loading weights:  76%|███████▌  | 449/590 [00:00<00:00, 2233.33it/s]Loading weights: 100%|██████████| 590/590 [00:00<00:00, 2253.46it/s]
+58.1s 12 [encode_vitl14] keyframes root: /kaggle/input/datasets/kiet1106/aic26-frames/keyframes
+576.9s 13 [encode_vitl14] tổng số video tìm thấy: 873
+581.3s 14 Traceback (most recent call last):
+581.3s 15 File "/kaggle/src/script.py", line 295, in <module>
+581.3s 16 main()
+581.3s 17 File "/kaggle/src/script.py", line 262, in main
+581.3s 18 feats = encode_video(model, jpgs)
+581.3s 19 ^^^^^^^^^^^^^^^^^^^^^^^^^
+581.3s 20 File "/usr/local/lib/python3.12/dist-packages/torch/utils/_contextlib.py", line 124, in decorate_context
+581.3s 21 return func(*args, **kwargs)
+581.3s 22 ^^^^^^^^^^^^^^^^^^^^^
+581.3s 23 File "/kaggle/src/script.py", line 224, in encode_video
+581.3s 24 out = _get_image_embeds(model, batch_imgs)
+581.3s 25 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+581.3s 26 File "/kaggle/src/script.py", line 210, in _get_image_embeds
+581.3s 27 return projection(pooled) if projection is not None else pooled
+581.3s 28 ^^^^^^^^^^^^^^^^^^
+581.3s 29 File "/usr/local/lib/python3.12/dist-packages/torch/nn/modules/module.py", line 1776, in _wrapped_call_impl
+581.3s 30 return self._call_impl(*args, **kwargs)
+581.3s 31 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+581.3s 32 File "/usr/local/lib/python3.12/dist-packages/torch/nn/modules/module.py", line 1787, in _call_impl
+581.3s 33 return forward_call(*args, **kwargs)
+581.3s 34 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+581.3s 35 File "/usr/local/lib/python3.12/dist-packages/torch/nn/modules/linear.py", line 134, in forward
+581.3s 36 return F.linear(input, self.weight, self.bias)
+581.3s 37 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+581.3s 38 RuntimeError: mat1 and mat2 shapes cannot be multiplied (64x768 and 1024x768)
+587.0s 39 /usr/local/lib/python3.12/dist-packages/mistune.py:435: SyntaxWarning: invalid escape sequence '\|'
+587.0s 40 cells[i][c] = re.sub('\\\\\|', '|', cell)
+587.3s 41 /usr/local/lib/python3.12/dist-packages/nbconvert/filters/filter_links.py:36: SyntaxWarning: invalid escape sequence '\_'
+587.3s 42 text = re.sub(r'_', '\_', text) # Escape underscores in display text
+587.9s 43 [NbConvertApp] Converting notebook __script__.ipynb to html
+589.3s 44 [NbConvertApp] Writing 322744 bytes to __results__.html

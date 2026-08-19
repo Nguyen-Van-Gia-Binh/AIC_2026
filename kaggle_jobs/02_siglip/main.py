@@ -30,11 +30,14 @@ from pathlib import Path
 
 
 def _pip_install(*pkgs):
-    subprocess.run([sys.executable, "-m", "pip", "install", "-q", "-U", *pkgs], check=True)
+    subprocess.run([sys.executable, "-m", "pip", "install", "-q", *pkgs], check=True)
 
 
-# SigLIP cần transformers đủ mới (>=4.37) — nâng cấp cho chắc
-_pip_install("transformers", "pillow", "accelerate")
+# PIN CỨNG transformers==4.57.3 (phát hành 2025-11-25, bản 4.x ổn định cuối cùng — xác nhận thật
+# qua PyPI 2026-08-20, KHÔNG đoán). Trước đây cài "-U" (luôn kéo bản mới nhất) đã dính lỗi vì
+# transformers lên major version 5.x (đổi hành vi get_image_features() — xem
+# kaggle_jobs/README.md mục "Cập nhật 2"). Pin về 4.x để môi trường ổn định giữa các lần push.
+_pip_install("transformers==4.57.3", "pillow", "accelerate")
 
 import torch
 from torch.utils.data import Dataset, DataLoader
@@ -48,12 +51,21 @@ MODEL_ID = "google/siglip-so400m-patch14-384"
 TAG = "siglip"
 IMG_SIZE = 384
 
+# ── CHẾ ĐỘ SMOKE-TEST: đổi SMOKE_TEST = True rồi push để chạy thử nhanh (vài phút GPU) trước khi
+# chạy full 873 video — chỉ encode SMOKE_TEST_NUM_VIDEOS video đầu, mỗi video
+# SMOKE_TEST_NUM_IMAGES ảnh đầu. Ghi ra file RIÊNG (tiền tố "smoketest_") để không đụng output
+# thật / không hỏng cơ chế resume của lần chạy full sau. Nhớ đổi lại False trước khi chạy thật.
+SMOKE_TEST = False
+SMOKE_TEST_NUM_VIDEOS = 2
+SMOKE_TEST_NUM_IMAGES = 4
+
 FRAMES_DATASET_REF = "kiet1106/aic26-frames"  # "owner/slug" trong dataset_sources — đổi nếu dùng dataset khác
 _FRAMES_OWNER, FRAMES_DATASET_SLUG = FRAMES_DATASET_REF.split("/")
 INPUT_BASE = Path("/kaggle/input")
-OUTPUT_DIR = Path(f"/kaggle/working/features_{TAG}")
-MANIFEST_PATH = Path(f"/kaggle/working/manifest_{TAG}.csv")
-ZIP_PATH = Path(f"/kaggle/working/features_{TAG}.zip")
+_RUN_TAG = f"smoketest_{TAG}" if SMOKE_TEST else TAG
+OUTPUT_DIR = Path(f"/kaggle/working/features_{_RUN_TAG}")
+MANIFEST_PATH = Path(f"/kaggle/working/manifest_{_RUN_TAG}.csv")
+ZIP_PATH = Path(f"/kaggle/working/features_{_RUN_TAG}.zip")
 
 BATCH_SIZE = 48  # so400m to hơn ViT-L, hạ batch để an toàn VRAM trên GPU Kaggle (~16GB)
 NUM_WORKERS = 4
@@ -136,18 +148,31 @@ class KeyframeDataset(Dataset):
 
 
 def list_videos(root: Path):
-    videos = []
+    """Quét toàn bộ batch/video bằng rglob, gom theo video_id (tên thư mục chứa ảnh)."""
     if not root.exists():
-        raise FileNotFoundError(f"Không thấy {root}")
-    for batch_dir in sorted(root.iterdir()):
-        if not batch_dir.is_dir():
-            continue
-        for video_dir in sorted(batch_dir.iterdir()):
-            if not video_dir.is_dir():
-                continue
-            jpgs = sorted(video_dir.glob("*.jpg"), key=lambda p: int(p.stem))
-            if jpgs:
-                videos.append((video_dir.name, jpgs))
+        root = resolve_keyframes_root()
+    if not root.exists():
+        contents = [str(x) for x in list(INPUT_BASE.rglob("*"))[:30]] if INPUT_BASE.exists() else []
+        raise FileNotFoundError(
+            f"Không thấy ảnh trong {INPUT_BASE}. Các file tìm thấy: {contents}"
+        )
+
+    found_map = {}
+    for jpg in root.rglob("*.jpg"):
+        vid_id = jpg.parent.name
+        if vid_id not in found_map:
+            found_map[vid_id] = []
+        found_map[vid_id].append(jpg)
+
+    videos = []
+    for vid_id in sorted(found_map.keys()):
+        jpgs = sorted(found_map[vid_id], key=lambda p: int(p.stem) if p.stem.isdigit() else p.stem)
+        videos.append((vid_id, jpgs))
+
+    if not videos:
+        contents = [str(x) for x in list(INPUT_BASE.rglob("*"))[:30]] if INPUT_BASE.exists() else []
+        raise FileNotFoundError(f"Không tìm thấy file .jpg nào trong {root}. Nội dung: {contents}")
+
     return videos
 
 
@@ -156,6 +181,27 @@ def load_model():
     model = SiglipModel.from_pretrained(MODEL_ID)
     model.eval().to(DEVICE)
     return model
+
+
+def _get_image_embeds(model, pixel_values):
+    """Gọi get_image_features() nhưng phòng trường hợp bản `transformers` nào đó (do
+    _pip_install(..., "-U") kéo bản mới nhất, không pin version) đổi hành vi trả về
+    ModelOutput thô (BaseModelOutputWithPooling) thay vì tensor cuối như trước — phát hiện thật
+    2026-08-19 (job 01 & 02 cùng lỗi `AttributeError: ... object has no attribute 'float'`).
+    SigLIP không có visual_projection riêng (pooler_output của vision_model đã là embedding
+    cuối), nên khác job 01 (CLIP) ở chỗ không cần áp thêm projection nào."""
+    try:
+        out = model.get_image_features(pixel_values=pixel_values, return_dict=False)
+    except TypeError:
+        out = model.get_image_features(pixel_values=pixel_values)
+    if isinstance(out, torch.Tensor):
+        return out
+    pooled = getattr(out, "image_embeds", None)
+    if pooled is None:
+        pooled = getattr(out, "pooler_output", None)
+    if pooled is None:
+        pooled = out[1] if len(out) > 1 else out[0]
+    return pooled
 
 
 @torch.no_grad()
@@ -167,7 +213,11 @@ def encode_video(model, jpg_paths):
     for batch_imgs, batch_n in loader:
         batch_imgs = batch_imgs.to(DEVICE, non_blocking=True)
         with torch.autocast(device_type="cuda", dtype=torch.float16, enabled=(DEVICE == "cuda")):
-            out = model.get_image_features(pixel_values=batch_imgs)
+            out = _get_image_embeds(model, batch_imgs)
+        if out.dim() != 2:
+            raise RuntimeError(f"[encode_{TAG}] embedding bất thường sau get_image_features(): "
+                                f"shape={tuple(out.shape)} (cần (batch, D)) — kiểm tra lại "
+                                f"_get_image_embeds(), có thể API transformers đổi khác nữa.")
         out = out.float()
         out = out / out.norm(dim=-1, keepdim=True).clamp_min(1e-12)
         out = out.cpu().numpy()
@@ -179,6 +229,10 @@ def encode_video(model, jpg_paths):
 
 
 def main():
+    if SMOKE_TEST:
+        print(f"[encode_{TAG}] === SMOKE_TEST=True — chỉ chạy {SMOKE_TEST_NUM_VIDEOS} video x "
+              f"{SMOKE_TEST_NUM_IMAGES} ảnh để kiểm tra logic, KHÔNG PHẢI encode thật. "
+              f"Output ghi vào features_{_RUN_TAG}/ (tách riêng, không đụng output thật) ===")
     print(f"[encode_{TAG}] device={DEVICE}")
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     restored = restore_resume_cache()
@@ -190,6 +244,10 @@ def main():
     print(f"[encode_{TAG}] keyframes root: {input_root}")
     videos = list_videos(input_root)
     print(f"[encode_{TAG}] tổng số video tìm thấy: {len(videos)}")
+    if SMOKE_TEST:
+        videos = [(vid, jpgs[:SMOKE_TEST_NUM_IMAGES]) for vid, jpgs in videos[:SMOKE_TEST_NUM_VIDEOS]]
+        print(f"[encode_{TAG}] SMOKE_TEST: rút xuống {len(videos)} video, "
+              f"{[len(j) for _, j in videos]} ảnh/video")
 
     manifest_rows = []
     done_now = 0
@@ -224,7 +282,7 @@ def main():
     print(f"[encode_{TAG}] nén kết quả vào {ZIP_PATH} ...")
     with zipfile.ZipFile(ZIP_PATH, "w", zipfile.ZIP_DEFLATED) as zf:
         for f in sorted(OUTPUT_DIR.glob("*.npy")):
-            zf.write(f, arcname=f"features_{TAG}/{f.name}")
+            zf.write(f, arcname=f"features_{_RUN_TAG}/{f.name}")
         if MANIFEST_PATH.exists():
             zf.write(MANIFEST_PATH, arcname=MANIFEST_PATH.name)
 

@@ -1,0 +1,63 @@
+5.1s 1 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 40.8/40.8 kB 2.4 MB/s eta 0:00:00
+5.9s 2 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 11.7/11.7 MB 98.0 MB/s eta 0:00:00
+5.9s 3 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 6.9/6.9 MB 104.1 MB/s eta 0:00:00
+6.0s 4 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.6/2.6 MB 75.0 MB/s eta 0:00:00
+6.0s 5 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 389.2/389.2 kB 31.1 MB/s eta 0:00:00
+6.0s 6 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 516.0/516.0 kB 36.2 MB/s eta 0:00:00
+21.4s 7 ERROR: pip's dependency resolver does not currently take into account all the packages that are installed. This behaviour is the source of the following dependency conflicts.
+21.4s 8 dopamine-rl 4.1.2 requires gym<=0.25.2, but you have gym 0.26.2 which is incompatible.
+21.4s 9 gradio 5.50.0 requires pillow<12.0,>=8.0, but you have pillow 12.3.0 which is incompatible.
+47.7s 10 [encode_jina] device=cuda
+47.7s 11 [encode_jina] tải model jinaai/jina-clip-v2 ...
+47.8s 12 Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+48.1s 13 [transformers] A new version of the following files was downloaded from https://huggingface.co/jinaai/jina-clip-implementation:
+48.1s 14 - configuration_clip.py
+48.1s 15 . Make sure to double-check they do not contain any added malicious code. To avoid downloading new versions of the code file, you can pin a revision.
+48.1s 16 [transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+51.8s 17 [transformers] A new version of the following files was downloaded from https://huggingface.co/jinaai/jina-clip-implementation:
+51.8s 18 - transform.py
+51.8s 19 . Make sure to double-check they do not contain any added malicious code. To avoid downloading new versions of the code file, you can pin a revision.
+52.0s 20 [transformers] A new version of the following files was downloaded from https://huggingface.co/jinaai/jina-clip-implementation:
+52.0s 21 - rope_embeddings.py
+52.0s 22 . Make sure to double-check they do not contain any added malicious code. To avoid downloading new versions of the code file, you can pin a revision.
+52.0s 23 [transformers] A new version of the following files was downloaded from https://huggingface.co/jinaai/jina-clip-implementation:
+52.0s 24 - eva_model.py
+52.0s 25 - rope_embeddings.py
+52.0s 26 . Make sure to double-check they do not contain any added malicious code. To avoid downloading new versions of the code file, you can pin a revision.
+52.1s 27 [transformers] A new version of the following files was downloaded from https://huggingface.co/jinaai/jina-clip-implementation:
+52.1s 28 - hf_model.py
+52.1s 29 . Make sure to double-check they do not contain any added malicious code. To avoid downloading new versions of the code file, you can pin a revision.
+52.1s 30 [transformers] A new version of the following files was downloaded from https://huggingface.co/jinaai/jina-clip-implementation:
+52.1s 31 - modeling_clip.py
+52.1s 32 - transform.py
+52.1s 33 - eva_model.py
+52.1s 34 - hf_model.py
+52.1s 35 . Make sure to double-check they do not contain any added malicious code. To avoid downloading new versions of the code file, you can pin a revision.
+52.7s 36 Traceback (most recent call last):
+52.7s 37 File "/kaggle/src/script.py", line 238, in <module>
+52.7s 38 main()
+52.7s 39 File "/kaggle/src/script.py", line 189, in main
+52.7s 40 model = load_model()
+52.7s 41 ^^^^^^^^^^^^
+52.7s 42 File "/kaggle/src/script.py", line 159, in load_model
+52.7s 43 model = AutoModel.from_pretrained(
+52.7s 44 ^^^^^^^^^^^^^^^^^^^^^^^^^^
+52.7s 45 File "/usr/local/lib/python3.12/dist-packages/transformers/models/auto/auto_factory.py", line 378, in from_pretrained
+52.7s 46 model_class = get_class_from_dynamic_module(
+52.7s 47 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+52.7s 48 File "/usr/local/lib/python3.12/dist-packages/transformers/dynamic_module_utils.py", line 623, in get_class_from_dynamic_module
+52.7s 49 return get_class_in_module(class_name, final_module, force_reload=force_download)
+52.7s 50 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+52.7s 51 File "/usr/local/lib/python3.12/dist-packages/transformers/dynamic_module_utils.py", line 309, in get_class_in_module
+52.7s 52 module_spec.loader.exec_module(module)
+52.7s 53 File "<frozen importlib._bootstrap_external>", line 999, in exec_module
+52.7s 54 File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+52.7s 55 File "/root/.cache/huggingface/modules/transformers_modules/jinaai/jina_hyphen_clip_hyphen_implementation/39e6a55ae971b59bea6e44675d237c99762e7ee2/modeling_clip.py", line 29, in <module>
+52.7s 56 from transformers.models.clip.modeling_clip import (
+52.7s 57 ImportError: cannot import name 'clip_loss' from 'transformers.models.clip.modeling_clip' (/usr/local/lib/python3.12/dist-packages/transformers/models/clip/modeling_clip.py)
+57.6s 58 /usr/local/lib/python3.12/dist-packages/mistune.py:435: SyntaxWarning: invalid escape sequence '\|'
+57.6s 59 cells[i][c] = re.sub('\\\\\|', '|', cell)
+57.8s 60 /usr/local/lib/python3.12/dist-packages/nbconvert/filters/filter_links.py:36: SyntaxWarning: invalid escape sequence '\_'
+57.8s 61 text = re.sub(r'_', '\_', text) # Escape underscores in display text
+58.4s 62 [NbConvertApp] Converting notebook __script__.ipynb to html
+59.7s 63 [NbConvertApp] Writing 311917 bytes to __results__.html

@@ -31,10 +31,14 @@ from pathlib import Path
 
 
 def _pip_install(*pkgs):
-    subprocess.run([sys.executable, "-m", "pip", "install", "-q", "-U", *pkgs], check=True)
+    subprocess.run([sys.executable, "-m", "pip", "install", "-q", *pkgs], check=True)
 
 
-_pip_install("open_clip_torch", "pillow")
+# PIN CỨNG open_clip_torch==2.32.0 (phát hành 2025-04-05, bản 2.x ổn định cuối cùng — xác nhận
+# thật qua PyPI 2026-08-20). Job này KHÔNG dùng transformers nên không dính 2 lỗi đã gặp ở job
+# 01/02/03, nhưng open_clip_torch cũng vừa lên major version 3.x — pin về 2.x cho nhất quán với
+# 3 job kia (môi trường ổn định giữa các lần push, không bất ngờ giữa chừng).
+_pip_install("open_clip_torch==2.32.0", "pillow")
 
 import torch
 from torch.utils.data import Dataset, DataLoader
@@ -47,12 +51,21 @@ MODEL_NAME = "ViT-H-14-quickgelu"
 PRETRAINED = "dfn5b"
 TAG = "dfn"
 
+# ── CHẾ ĐỘ SMOKE-TEST: đổi SMOKE_TEST = True rồi push để chạy thử nhanh (vài phút GPU) trước khi
+# chạy full 873 video — chỉ encode SMOKE_TEST_NUM_VIDEOS video đầu, mỗi video
+# SMOKE_TEST_NUM_IMAGES ảnh đầu. Ghi ra file RIÊNG (tiền tố "smoketest_") để không đụng output
+# thật / không hỏng cơ chế resume của lần chạy full sau. Nhớ đổi lại False trước khi chạy thật.
+SMOKE_TEST = False
+SMOKE_TEST_NUM_VIDEOS = 2
+SMOKE_TEST_NUM_IMAGES = 4
+
 FRAMES_DATASET_REF = "kiet1106/aic26-frames"  # "owner/slug" trong dataset_sources — đổi nếu dùng dataset khác
 _FRAMES_OWNER, FRAMES_DATASET_SLUG = FRAMES_DATASET_REF.split("/")
 INPUT_BASE = Path("/kaggle/input")
-OUTPUT_DIR = Path(f"/kaggle/working/features_{TAG}")
-MANIFEST_PATH = Path(f"/kaggle/working/manifest_{TAG}.csv")
-ZIP_PATH = Path(f"/kaggle/working/features_{TAG}.zip")
+_RUN_TAG = f"smoketest_{TAG}" if SMOKE_TEST else TAG
+OUTPUT_DIR = Path(f"/kaggle/working/features_{_RUN_TAG}")
+MANIFEST_PATH = Path(f"/kaggle/working/manifest_{_RUN_TAG}.csv")
+ZIP_PATH = Path(f"/kaggle/working/features_{_RUN_TAG}.zip")
 
 BATCH_SIZE = 32  # ViT-H/14 to, hạ batch để an toàn VRAM trên GPU Kaggle (~16GB)
 NUM_WORKERS = 4
@@ -129,18 +142,31 @@ class KeyframeDataset(Dataset):
 
 
 def list_videos(root: Path):
-    videos = []
+    """Quét toàn bộ batch/video bằng rglob, gom theo video_id (tên thư mục chứa ảnh)."""
     if not root.exists():
-        raise FileNotFoundError(f"Không thấy {root}")
-    for batch_dir in sorted(root.iterdir()):
-        if not batch_dir.is_dir():
-            continue
-        for video_dir in sorted(batch_dir.iterdir()):
-            if not video_dir.is_dir():
-                continue
-            jpgs = sorted(video_dir.glob("*.jpg"), key=lambda p: int(p.stem))
-            if jpgs:
-                videos.append((video_dir.name, jpgs))
+        root = resolve_keyframes_root()
+    if not root.exists():
+        contents = [str(x) for x in list(INPUT_BASE.rglob("*"))[:30]] if INPUT_BASE.exists() else []
+        raise FileNotFoundError(
+            f"Không thấy ảnh trong {INPUT_BASE}. Các file tìm thấy: {contents}"
+        )
+
+    found_map = {}
+    for jpg in root.rglob("*.jpg"):
+        vid_id = jpg.parent.name
+        if vid_id not in found_map:
+            found_map[vid_id] = []
+        found_map[vid_id].append(jpg)
+
+    videos = []
+    for vid_id in sorted(found_map.keys()):
+        jpgs = sorted(found_map[vid_id], key=lambda p: int(p.stem) if p.stem.isdigit() else p.stem)
+        videos.append((vid_id, jpgs))
+
+    if not videos:
+        contents = [str(x) for x in list(INPUT_BASE.rglob("*"))[:30]] if INPUT_BASE.exists() else []
+        raise FileNotFoundError(f"Không tìm thấy file .jpg nào trong {root}. Nội dung: {contents}")
+
     return videos
 
 
@@ -172,6 +198,10 @@ def encode_video(model, preprocess, jpg_paths):
 
 
 def main():
+    if SMOKE_TEST:
+        print(f"[encode_{TAG}] === SMOKE_TEST=True — chỉ chạy {SMOKE_TEST_NUM_VIDEOS} video x "
+              f"{SMOKE_TEST_NUM_IMAGES} ảnh để kiểm tra logic, KHÔNG PHẢI encode thật. "
+              f"Output ghi vào features_{_RUN_TAG}/ (tách riêng, không đụng output thật) ===")
     print(f"[encode_{TAG}] device={DEVICE}")
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     restored = restore_resume_cache()
@@ -183,6 +213,10 @@ def main():
     print(f"[encode_{TAG}] keyframes root: {input_root}")
     videos = list_videos(input_root)
     print(f"[encode_{TAG}] tổng số video tìm thấy: {len(videos)}")
+    if SMOKE_TEST:
+        videos = [(vid, jpgs[:SMOKE_TEST_NUM_IMAGES]) for vid, jpgs in videos[:SMOKE_TEST_NUM_VIDEOS]]
+        print(f"[encode_{TAG}] SMOKE_TEST: rút xuống {len(videos)} video, "
+              f"{[len(j) for _, j in videos]} ảnh/video")
 
     manifest_rows = []
     done_now = 0
@@ -217,7 +251,7 @@ def main():
     print(f"[encode_{TAG}] nén kết quả vào {ZIP_PATH} ...")
     with zipfile.ZipFile(ZIP_PATH, "w", zipfile.ZIP_DEFLATED) as zf:
         for f in sorted(OUTPUT_DIR.glob("*.npy")):
-            zf.write(f, arcname=f"features_{TAG}/{f.name}")
+            zf.write(f, arcname=f"features_{_RUN_TAG}/{f.name}")
         if MANIFEST_PATH.exists():
             zf.write(MANIFEST_PATH, arcname=MANIFEST_PATH.name)
 

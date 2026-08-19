@@ -41,10 +41,16 @@ from pathlib import Path
 
 # ── cài thêm dependency (image Kaggle có sẵn torch/transformers nhưng có thể là bản cũ) ──
 def _pip_install(*pkgs):
-    subprocess.run([sys.executable, "-m", "pip", "install", "-q", "-U", *pkgs], check=True)
+    subprocess.run([sys.executable, "-m", "pip", "install", "-q", *pkgs], check=True)
 
 
-_pip_install("transformers", "pillow", "accelerate")
+# PIN CỨNG transformers==4.57.3 (phát hành 2025-11-25, bản 4.x ổn định cuối cùng — xác nhận thật
+# qua PyPI 2026-08-20, KHÔNG đoán). Trước đây cài "-U" (luôn kéo bản mới nhất) đã dính liên tiếp 2
+# lỗi vì transformers lên major version 5.x (đổi hành vi get_image_features(), bỏ hàm nội bộ
+# clip_loss — xem kaggle_jobs/README.md mục "Cập nhật 2/3"). Pin về 4.x để môi trường ổn định
+# giữa các lần push, không còn bất ngờ giữa chừng. Vẫn giữ _get_image_embeds() phòng hờ bên dưới
+# (không hại gì nếu 4.57.3 đã trả đúng tensor như kỳ vọng).
+_pip_install("transformers==4.57.3", "pillow", "accelerate")
 
 import torch
 from torch.utils.data import Dataset, DataLoader
@@ -57,12 +63,23 @@ from transformers import CLIPModel
 MODEL_ID = "openai/clip-vit-large-patch14"
 TAG = "vitl14"
 
+# ── CHẾ ĐỘ SMOKE-TEST: đổi SMOKE_TEST = True rồi push để chạy thử nhanh (vài phút GPU, không tốn
+# nhiều quota) trước khi chạy full 873 video — chỉ encode SMOKE_TEST_NUM_VIDEOS video đầu tìm
+# thấy, mỗi video chỉ lấy SMOKE_TEST_NUM_IMAGES ảnh đầu. Ghi ra file RIÊNG (tiền tố "smoketest_")
+# để không đụng tới output thật và không làm hỏng cơ chế resume của lần chạy full sau này (nếu
+# ghi chung, lần full sau sẽ tưởng 2 video đó đã xong dù chỉ mới encode vài ảnh). Nhớ đổi lại
+# False + push lại trước khi chạy thật.
+SMOKE_TEST = False  # đã smoke-test PASS 2026-08-20 (xem README "Cập nhật 7") — sẵn sàng chạy thật
+SMOKE_TEST_NUM_VIDEOS = 2
+SMOKE_TEST_NUM_IMAGES = 4
+
 FRAMES_DATASET_REF = "kiet1106/aic26-frames"  # "owner/slug" trong dataset_sources — đổi nếu dùng dataset khác
 _FRAMES_OWNER, FRAMES_DATASET_SLUG = FRAMES_DATASET_REF.split("/")
 INPUT_BASE = Path("/kaggle/input")
-OUTPUT_DIR = Path(f"/kaggle/working/features_{TAG}")
-MANIFEST_PATH = Path(f"/kaggle/working/manifest_{TAG}.csv")
-ZIP_PATH = Path(f"/kaggle/working/features_{TAG}.zip")
+_RUN_TAG = f"smoketest_{TAG}" if SMOKE_TEST else TAG
+OUTPUT_DIR = Path(f"/kaggle/working/features_{_RUN_TAG}")
+MANIFEST_PATH = Path(f"/kaggle/working/manifest_{_RUN_TAG}.csv")
+ZIP_PATH = Path(f"/kaggle/working/features_{_RUN_TAG}.zip")
 
 BATCH_SIZE = 64
 NUM_WORKERS = 4
@@ -152,19 +169,31 @@ class KeyframeDataset(Dataset):
 
 
 def list_videos(root: Path):
-    """Quét toàn bộ batch/video, trả về list (video_id, [jpg_path đã sort theo n tăng dần])."""
-    videos = []
+    """Quét toàn bộ batch/video bằng rglob, gom theo video_id (tên thư mục chứa ảnh)."""
     if not root.exists():
-        raise FileNotFoundError(f"Không thấy {root}")
-    for batch_dir in sorted(root.iterdir()):
-        if not batch_dir.is_dir():
-            continue
-        for video_dir in sorted(batch_dir.iterdir()):
-            if not video_dir.is_dir():
-                continue
-            jpgs = sorted(video_dir.glob("*.jpg"), key=lambda p: int(p.stem))
-            if jpgs:
-                videos.append((video_dir.name, jpgs))
+        root = resolve_keyframes_root()
+    if not root.exists():
+        contents = [str(x) for x in list(INPUT_BASE.rglob("*"))[:30]] if INPUT_BASE.exists() else []
+        raise FileNotFoundError(
+            f"Không thấy ảnh trong {INPUT_BASE}. Các file tìm thấy: {contents}"
+        )
+
+    found_map = {}
+    for jpg in root.rglob("*.jpg"):
+        vid_id = jpg.parent.name
+        if vid_id not in found_map:
+            found_map[vid_id] = []
+        found_map[vid_id].append(jpg)
+
+    videos = []
+    for vid_id in sorted(found_map.keys()):
+        jpgs = sorted(found_map[vid_id], key=lambda p: int(p.stem) if p.stem.isdigit() else p.stem)
+        videos.append((vid_id, jpgs))
+
+    if not videos:
+        contents = [str(x) for x in list(INPUT_BASE.rglob("*"))[:30]] if INPUT_BASE.exists() else []
+        raise FileNotFoundError(f"Không tìm thấy file .jpg nào trong {root}. Nội dung: {contents}")
+
     return videos
 
 
@@ -173,6 +202,54 @@ def load_model():
     model = CLIPModel.from_pretrained(MODEL_ID)
     model.eval().to(DEVICE)
     return model
+
+
+_debug_dumped = False  # in cấu trúc ModelOutput thật đúng 1 lần, tránh spam log 873 video
+
+
+def _get_image_embeds(model, pixel_values):
+    """Gọi get_image_features() nhưng phòng trường hợp bản `transformers` nào đó (do
+    _pip_install(..., "-U") kéo bản mới nhất, không pin version) đổi hành vi trả về
+    ModelOutput thô thay vì tensor cuối như trước — phát hiện thật 2026-08-19 (job 01 & 02
+    cùng lỗi `AttributeError: 'BaseModelOutputWithPooling' object has no attribute 'float'`).
+
+    LỊCH SỬ SỬA SAI 2 LẦN (2026-08-19, 2026-08-20) — cả 2 lần đều ĐOÁN nhầm field nào đã qua
+    visual_projection: lần 1 áp projection() vô điều kiện -> double-projection khi field lấy
+    được đã là 768 chiều. Lần 2 tưởng `pooler_output` luôn là 1024 chiều THÔ nên vẫn áp
+    projection() -> vẫn double-projection (RuntimeError 64x768/1024x768 y hệt) vì bản
+    `transformers` chạy thật hoá ra trả `pooler_output` ĐÃ là 768 chiều, không phải giả định.
+    -> ĐỔI CHIẾN LƯỢC: không đoán field nào ứng với giai đoạn nào nữa — chỉ dựa vào SHAPE THẬT
+    lúc runtime: nếu chiều cuối đã khớp projection_dim (768) thì dùng thẳng, chỉ áp projection
+    khi chiều cuối CHƯA khớp. Đồng thời in cấu trúc ModelOutput thật 1 lần đầu để có dữ liệu
+    thật cho lần sau, không phải đoán nữa nếu vẫn còn sai."""
+    global _debug_dumped
+    try:
+        out = model.get_image_features(pixel_values=pixel_values, return_dict=False)
+    except TypeError:
+        out = model.get_image_features(pixel_values=pixel_values)
+    if isinstance(out, torch.Tensor):
+        return out
+
+    if not _debug_dumped:
+        _debug_dumped = True
+        try:
+            info = {k: (tuple(v.shape) if hasattr(v, "shape") else type(v).__name__)
+                     for k, v in out.items()}
+        except Exception:
+            info = repr(out)[:300]
+        print(f"[encode_{TAG}] DEBUG get_image_features() trả về {type(out).__name__}: {info}")
+
+    candidate = getattr(out, "image_embeds", None)
+    if candidate is None:
+        candidate = getattr(out, "pooler_output", None)
+    if candidate is None:
+        candidate = out[1] if len(out) > 1 else out[0]
+
+    expected_dim = getattr(model.config, "projection_dim", None)
+    projection = getattr(model, "visual_projection", None)
+    if projection is not None and expected_dim is not None and candidate.shape[-1] != expected_dim:
+        candidate = projection(candidate)  # chỉ chiếu khi chiều THỰC SỰ chưa khớp — không đoán nữa
+    return candidate
 
 
 @torch.no_grad()
@@ -186,7 +263,12 @@ def encode_video(model, jpg_paths):
     for batch_imgs, batch_n in loader:
         batch_imgs = batch_imgs.to(DEVICE, non_blocking=True)
         with torch.autocast(device_type="cuda", dtype=torch.float16, enabled=(DEVICE == "cuda")):
-            out = model.get_image_features(pixel_values=batch_imgs)
+            out = _get_image_embeds(model, batch_imgs)
+        expected_dim = getattr(model.config, "projection_dim", None)
+        if out.dim() != 2 or (expected_dim is not None and out.shape[-1] != expected_dim):
+            raise RuntimeError(f"[encode_{TAG}] embedding bất thường sau get_image_features(): "
+                                f"shape={tuple(out.shape)} (cần (batch, {expected_dim})) — kiểm tra "
+                                f"lại _get_image_embeds(), có thể API transformers đổi khác nữa.")
         out = out.float()
         out = out / out.norm(dim=-1, keepdim=True).clamp_min(1e-12)
         out = out.cpu().numpy()
@@ -198,6 +280,10 @@ def encode_video(model, jpg_paths):
 
 
 def main():
+    if SMOKE_TEST:
+        print(f"[encode_{TAG}] === SMOKE_TEST=True — chỉ chạy {SMOKE_TEST_NUM_VIDEOS} video x "
+              f"{SMOKE_TEST_NUM_IMAGES} ảnh để kiểm tra logic, KHÔNG PHẢI encode thật. "
+              f"Output ghi vào features_{_RUN_TAG}/ (tách riêng, không đụng output thật) ===")
     print(f"[encode_{TAG}] device={DEVICE}")
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     restored = restore_resume_cache()
@@ -209,6 +295,10 @@ def main():
     print(f"[encode_{TAG}] keyframes root: {input_root}")
     videos = list_videos(input_root)
     print(f"[encode_{TAG}] tổng số video tìm thấy: {len(videos)}")
+    if SMOKE_TEST:
+        videos = [(vid, jpgs[:SMOKE_TEST_NUM_IMAGES]) for vid, jpgs in videos[:SMOKE_TEST_NUM_VIDEOS]]
+        print(f"[encode_{TAG}] SMOKE_TEST: rút xuống {len(videos)} video, "
+              f"{[len(j) for _, j in videos]} ảnh/video")
 
     manifest_rows = []
     done_now = 0
@@ -243,7 +333,7 @@ def main():
     print(f"[encode_{TAG}] nén kết quả vào {ZIP_PATH} ...")
     with zipfile.ZipFile(ZIP_PATH, "w", zipfile.ZIP_DEFLATED) as zf:
         for f in sorted(OUTPUT_DIR.glob("*.npy")):
-            zf.write(f, arcname=f"features_{TAG}/{f.name}")
+            zf.write(f, arcname=f"features_{_RUN_TAG}/{f.name}")
         if MANIFEST_PATH.exists():
             zf.write(MANIFEST_PATH, arcname=MANIFEST_PATH.name)
 
