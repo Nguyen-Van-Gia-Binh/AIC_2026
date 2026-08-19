@@ -168,11 +168,16 @@ def qa_add_to_queue(df: pd.DataFrame, answer: str, query_id: str, queue: list) -
 # TAB 3 — TRAKE
 # ═══════════════════════════════════════════════════════════════════════════════
 
+def _parse_events(events_text: str) -> list[str]:
+    """Tách ô Events (mỗi dòng = 1 khoảnh khắc) thành list, bỏ dòng trống."""
+    return [e.strip() for e in events_text.strip().splitlines() if e.strip()]
+
+
 def trake_run(global_query: str, events_text: str, top_k_video: int) -> tuple:
     """Run TRAKE pipeline. events_text: one event per line."""
     if not global_query.strip():
         return pd.DataFrame(), "⚠️ Nhập global query trước."
-    events = [e.strip() for e in events_text.strip().splitlines() if e.strip()]
+    events = _parse_events(events_text)
     if not events:
         return pd.DataFrame(), "⚠️ Nhập ít nhất 1 event."
     try:
@@ -202,22 +207,33 @@ def trake_run(global_query: str, events_text: str, top_k_video: int) -> tuple:
         return pd.DataFrame(), f"❌ Lỗi: {e}"
 
 
-def trake_add_to_queue(df: pd.DataFrame, query_id: str, queue: list) -> tuple:
+def trake_add_to_queue(df: pd.DataFrame, query_id: str, events_text: str, queue: list) -> tuple:
     """Add TRAKE result to queue (top-1 video only, with all frame_ids)."""
     if df is None or len(df) == 0:
         return queue, "⚠️ Chưa có kết quả."
+    n_events = len(_parse_events(events_text))
+    if n_events == 0:
+        return queue, "⚠️ Không xác định được số mốc kỳ vọng (ô Events trống) — không thể thêm vào hàng đợi."
     query_id = query_id.strip() or "trake_query_001"
 
-    # Parse frame_ids từ cột "frame_ids" (string "1 | 2 | 3")
+    # Parse frame_ids từ cột "frame_ids" (string "1 | 2 | 3"), chặn nếu thiếu mốc so với số event
     submission_rows = []
+    problems = []
     for _, r in df.iterrows():
+        video_id = str(r["video_id"]).replace(".mp4", "")
         fids_raw = str(r.get("frame_ids", ""))
         fids = [int(f.strip()) for f in fids_raw.split("|") if f.strip().isdigit()]
+        if len(fids) != n_events:
+            problems.append(f"{video_id} có {len(fids)}/{n_events} frame_id hợp lệ")
+            continue
         submission_rows.append({
-            "video_id":  str(r["video_id"]).replace(".mp4", ""),
+            "video_id":  video_id,
             "frame_ids": fids,
             "query_type": "trake",
         })
+
+    if problems:
+        return queue, "⚠️ Thiếu mốc, chưa thêm vào hàng đợi:\n" + "\n".join(f"- {p}" for p in problems)
 
     queue = [q for q in queue if q.get("_query_id") != query_id]
     queue.append({"_query_id": query_id, "_type": "trake", "_rows": submission_rows})
@@ -491,7 +507,7 @@ with gr.Blocks(title="AIC2026 Search & Submit") as demo:
             )
             trake_add_btn.click(
                 trake_add_to_queue,
-                inputs=[trake_df, trake_qid, submission_queue],
+                inputs=[trake_df, trake_qid, trake_events, submission_queue],
                 outputs=[submission_queue, trake_queue_status],
             )
 
