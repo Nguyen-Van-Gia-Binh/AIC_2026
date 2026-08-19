@@ -69,7 +69,10 @@ def _df_to_submission_rows(df: pd.DataFrame, query_type: str, answer: str = "") 
     rows = []
     for i, (_, r) in enumerate(df.iterrows(), 1):
         try:
-            frame_id = int(r["frame_id"])
+            frame_id_raw = r["frame_id"]
+            frame_id = int(frame_id_raw)
+            if float(frame_id_raw) != frame_id:  # vd. "40530.7" — không phải số nguyên, tránh int() cắt lẻ âm thầm
+                raise ValueError("not an integer")
         except (TypeError, ValueError):
             raise ValueError(f"Dòng {i} (video_id={r.get('video_id')}): frame_id không hợp lệ.")
         row = {
@@ -216,19 +219,24 @@ def trake_add_to_queue(df: pd.DataFrame, query_id: str, events_text: str, queue:
         return queue, "⚠️ Không xác định được số mốc kỳ vọng (ô Events trống) — không thể thêm vào hàng đợi."
     query_id = query_id.strip() or "trake_query_001"
 
-    # Tách frame_ids từ cột "frame_ids" (dạng "1 | 2 | 3"), chặn nếu thiếu mốc so với số event
+    # Tách frame_ids từ cột "frame_ids" (dạng "1 | 2 | 3"), chặn nếu thiếu mốc hoặc token không hợp lệ.
+    # Kiểm tra trên danh sách token thô (chưa lọc) — nếu lọc token hỏng rồi mới đếm, số lượng còn lại
+    # có thể trùng hợp bằng n_events dù các mốc đã bị lệch vị trí so với thứ tự event gốc.
     submission_rows = []
     problems = []
     for _, r in df.iterrows():
         video_id = str(r["video_id"]).replace(".mp4", "")
         fids_raw = str(r.get("frame_ids", ""))
-        fids = [int(f.strip()) for f in fids_raw.split("|") if f.strip().isdigit()]
-        if len(fids) != n_events:
-            problems.append(f"{video_id} có {len(fids)}/{n_events} frame_id hợp lệ")
+        raw_tokens = [t.strip() for t in fids_raw.split("|") if t.strip()]
+        if len(raw_tokens) != n_events:
+            problems.append(f"{video_id} có {len(raw_tokens)}/{n_events} frame_id")
+            continue
+        if not all(t.lstrip("-").isdigit() for t in raw_tokens):
+            problems.append(f"{video_id} có frame_id không phải số nguyên: {fids_raw}")
             continue
         submission_rows.append({
             "video_id":  video_id,
-            "frame_ids": fids,
+            "frame_ids": [int(t) for t in raw_tokens],
             "query_type": "trake",
         })
 
