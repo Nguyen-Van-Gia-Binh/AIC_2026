@@ -1,14 +1,14 @@
 """
-AIC2026 Search & Submit Tool — Human-in-the-loop submission UI.
+AIC2026 Search & Submit Tool — Công cụ tìm kiếm + nộp bài human-in-the-loop.
 
 Chạy:  .venv\\Scripts\\python.exe scripts\\app.py
 Mở:    http://127.0.0.1:7860
 
-4 tabs:
-  KIS    — Textual KIS search + gallery + editable results
-  Q&A    — Pipeline Q&A + answer + editable
-  TRAKE  — Multi-event alignment + editable frame IDs
-  Export — Queue manager → Export ZIP 1-click
+4 tab:
+  KIS    — Tìm kiếm KIS bằng văn bản + gallery + kết quả sửa được
+  Q&A    — Pipeline Q&A + answer + sửa được
+  TRAKE  — Căn chỉnh nhiều mốc sự kiện + frame_id sửa được
+  Export — Quản lý hàng đợi → Export ZIP 1-click
 """
 from __future__ import annotations
 
@@ -17,17 +17,17 @@ import warnings
 import logging
 from pathlib import Path
 
-# ─── Suppress noisy warnings ───────────────────────────────────────────────────
+# ─── Tắt warning gây nhiễu ──────────────────────────────────────────────────────
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 logging.getLogger("litellm").setLevel(logging.ERROR)
 logging.getLogger("httpx").setLevel(logging.ERROR)
 
-# ─── Path setup ────────────────────────────────────────────────────────────────
+# ─── Thiết lập đường dẫn ────────────────────────────────────────────────────────
 _SCRIPTS = Path(__file__).resolve().parent
 if str(_SCRIPTS) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS))
 
-# ─── Imports (heavy — load once at startup) ────────────────────────────────────
+# ─── Import (nặng — chỉ load 1 lần lúc khởi động) ───────────────────────────────
 import gradio as gr
 import pandas as pd
 
@@ -35,10 +35,10 @@ print("[app] Loading index + CLIP model (one-time)...")
 from agent.tools.retrieve import fast_retrieve, fast_retrieve_for_video
 print("[app] Ready.")
 
-# ─── Helpers ───────────────────────────────────────────────────────────────────
+# ─── Hàm hỗ trợ ──────────────────────────────────────────────────────────────────
 
 def _hits_to_df(hits: list[dict], extra_cols: dict | None = None) -> pd.DataFrame:
-    """Convert retrieve hits to display DataFrame."""
+    """Chuyển hits từ retrieve thành DataFrame để hiển thị."""
     rows = []
     for h in hits:
         row = {
@@ -54,7 +54,7 @@ def _hits_to_df(hits: list[dict], extra_cols: dict | None = None) -> pd.DataFram
 
 
 def _hits_to_gallery(hits: list[dict], max_img: int = 30) -> list[tuple]:
-    """Build gallery items (image_path, caption) from hits."""
+    """Dựng danh sách gallery (image_path, caption) từ hits."""
     items = []
     for i, h in enumerate(hits[:max_img], 1):
         cap = f"#{i} {h['video_id']} | frame {h['frame_id']} | t={h['pts_time']:.1f}s | {h['score']:.3f}"
@@ -65,7 +65,7 @@ def _hits_to_gallery(hits: list[dict], max_img: int = 30) -> list[tuple]:
 
 
 def _df_to_submission_rows(df: pd.DataFrame, query_type: str, answer: str = "") -> list[dict]:
-    """Convert edited DataFrame to submission queue rows."""
+    """Chuyển DataFrame đã sửa tay thành các dòng cho submission queue."""
     rows = []
     for i, (_, r) in enumerate(df.iterrows(), 1):
         try:
@@ -88,7 +88,7 @@ def _df_to_submission_rows(df: pd.DataFrame, query_type: str, answer: str = "") 
 # ═══════════════════════════════════════════════════════════════════════════════
 
 def kis_search(query: str, top_k: int, auto_translate: bool) -> tuple:
-    """Run KIS search and return gallery + dataframe."""
+    """Chạy tìm kiếm KIS, trả về gallery + dataframe."""
     if not query.strip():
         return [], pd.DataFrame(), "⚠️ Nhập query trước."
 
@@ -111,7 +111,7 @@ def kis_search(query: str, top_k: int, auto_translate: bool) -> tuple:
 
 
 def kis_add_to_queue(df: pd.DataFrame, query_id: str, queue: list) -> tuple:
-    """Add KIS results to submission queue."""
+    """Thêm kết quả KIS vào submission queue."""
     if df is None or len(df) == 0:
         return queue, "⚠️ Chưa có kết quả để thêm."
     query_id = query_id.strip() or "kis_query_001"
@@ -129,7 +129,7 @@ def kis_add_to_queue(df: pd.DataFrame, query_id: str, queue: list) -> tuple:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 def qa_run(query: str, question: str, top_k: int) -> tuple:
-    """Run Q&A pipeline and return results."""
+    """Chạy pipeline Q&A, trả về kết quả."""
     if not query.strip():
         return [], pd.DataFrame(), "", 0.0, "⚠️ Nhập query trước."
     try:
@@ -151,7 +151,7 @@ def qa_run(query: str, question: str, top_k: int) -> tuple:
 
 
 def qa_add_to_queue(df: pd.DataFrame, answer: str, query_id: str, queue: list) -> tuple:
-    """Add Q&A results to queue."""
+    """Thêm kết quả Q&A vào queue."""
     if df is None or len(df) == 0:
         return queue, "⚠️ Chưa có kết quả."
     query_id = query_id.strip() or "qa_query_001"
@@ -174,7 +174,7 @@ def _parse_events(events_text: str) -> list[str]:
 
 
 def trake_run(global_query: str, events_text: str, top_k_video: int) -> tuple:
-    """Run TRAKE pipeline. events_text: one event per line."""
+    """Chạy pipeline TRAKE. events_text: mỗi dòng 1 khoảnh khắc."""
     if not global_query.strip():
         return pd.DataFrame(), "⚠️ Nhập global query trước."
     events = _parse_events(events_text)
@@ -185,7 +185,7 @@ def trake_run(global_query: str, events_text: str, top_k_video: int) -> tuple:
         out = run_trake(global_query, events, top_k_video=int(top_k_video), top_k_frame=10)
         results = out["results"]
 
-        # Build display DF: 1 row per candidate video
+        # Dựng DF hiển thị: 1 dòng / video candidate
         rows = []
         for r in results:
             fids = " | ".join(str(f) for f in r["frame_ids"])
@@ -208,7 +208,7 @@ def trake_run(global_query: str, events_text: str, top_k_video: int) -> tuple:
 
 
 def trake_add_to_queue(df: pd.DataFrame, query_id: str, events_text: str, queue: list) -> tuple:
-    """Add TRAKE result to queue (top-1 video only, with all frame_ids)."""
+    """Thêm kết quả TRAKE vào queue (chỉ video top-1, kèm toàn bộ frame_ids)."""
     if df is None or len(df) == 0:
         return queue, "⚠️ Chưa có kết quả."
     n_events = len(_parse_events(events_text))
@@ -216,7 +216,7 @@ def trake_add_to_queue(df: pd.DataFrame, query_id: str, events_text: str, queue:
         return queue, "⚠️ Không xác định được số mốc kỳ vọng (ô Events trống) — không thể thêm vào hàng đợi."
     query_id = query_id.strip() or "trake_query_001"
 
-    # Parse frame_ids từ cột "frame_ids" (string "1 | 2 | 3"), chặn nếu thiếu mốc so với số event
+    # Tách frame_ids từ cột "frame_ids" (dạng "1 | 2 | 3"), chặn nếu thiếu mốc so với số event
     submission_rows = []
     problems = []
     for _, r in df.iterrows():
@@ -245,7 +245,7 @@ def trake_add_to_queue(df: pd.DataFrame, query_id: str, events_text: str, queue:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 def export_show_queue(queue: list) -> tuple:
-    """Display current submission queue."""
+    """Hiển thị submission queue hiện tại."""
     if not queue:
         return pd.DataFrame(), "📭 Queue trống. Thêm kết quả từ các tab KIS/Q&A/TRAKE."
     rows = []
@@ -260,7 +260,7 @@ def export_show_queue(queue: list) -> tuple:
 
 
 def export_zip(queue: list) -> tuple:
-    """Build submission CSVs + ZIP from queue."""
+    """Dựng CSV + ZIP submission từ queue."""
     if not queue:
         return None, "⚠️ Queue trống."
 
@@ -279,7 +279,7 @@ def export_zip(queue: list) -> tuple:
         rows  = item["_rows"]
         try:
             if qtype == "kis":
-                # Convert to hit-like list
+                # Chuyển thành list dạng hit
                 hits = [{"video_id": r["video_id"], "frame_id": r["frame_id"],
                          "frame_idx": r["frame_id"] - 1, "pts_time": 0.0,
                          "score": 1.0, "jpg_path": None} for r in rows]
@@ -318,7 +318,7 @@ def export_clear_queue() -> tuple:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# BUILD UI
+# DỰNG UI
 # ═══════════════════════════════════════════════════════════════════════════════
 
 _CSS = """
@@ -329,10 +329,10 @@ footer { display: none !important; }
 
 with gr.Blocks(title="AIC2026 Search & Submit") as demo:
 
-    # ── Global state ──────────────────────────────────────────────────────────
+    # ── State toàn cục ────────────────────────────────────────────────────────
     submission_queue = gr.State([])
 
-    # ── Header ────────────────────────────────────────────────────────────────
+    # ── Tiêu đề ───────────────────────────────────────────────────────────────
     gr.Markdown(
         "# 🎬 AIC2026 Search & Submit Tool\n"
         "> **Human-in-the-loop**: Tìm kiếm → Xem → Sửa tay → Export ZIP"
@@ -379,7 +379,7 @@ with gr.Blocks(title="AIC2026 Search & Submit") as demo:
                 kis_add_btn = gr.Button("➕ Add to Submission Queue", scale=1)
             kis_queue_status = gr.Markdown()
 
-            # Events
+            # Gắn sự kiện (callback)
             kis_search_btn.click(
                 kis_search,
                 inputs=[kis_query, kis_topk, kis_auto_tr],
@@ -444,7 +444,7 @@ with gr.Blocks(title="AIC2026 Search & Submit") as demo:
                 qa_add_btn = gr.Button("➕ Add to Queue", scale=1)
             qa_queue_status = gr.Markdown()
 
-            # Events
+            # Gắn sự kiện (callback)
             qa_run_btn.click(
                 qa_run,
                 inputs=[qa_query, qa_question, qa_topk],
@@ -499,7 +499,7 @@ with gr.Blocks(title="AIC2026 Search & Submit") as demo:
                 trake_add_btn = gr.Button("➕ Add to Queue", scale=1)
             trake_queue_status = gr.Markdown()
 
-            # Events
+            # Gắn sự kiện (callback)
             trake_run_btn.click(
                 trake_run,
                 inputs=[trake_global, trake_events, trake_topk_video],
@@ -540,7 +540,7 @@ with gr.Blocks(title="AIC2026 Search & Submit") as demo:
             )
             export_status = gr.Markdown()
 
-            # Events
+            # Gắn sự kiện (callback)
             export_refresh_btn.click(
                 export_show_queue,
                 inputs=[submission_queue],
@@ -557,7 +557,7 @@ with gr.Blocks(title="AIC2026 Search & Submit") as demo:
             )
 
 
-# ─── Launch ────────────────────────────────────────────────────────────────────
+# ─── Khởi chạy ─────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     import os
     port = int(os.getenv("GRADIO_PORT", 7860))
