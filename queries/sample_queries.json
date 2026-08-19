@@ -1,0 +1,32 @@
+[
+  {
+    "query_id": "q001",
+    "type": "KIS",
+    "text_vi": "Một diễn giả mặc áo đỏ phát biểu tại cuộc họp báo ngoài trời, phía sau có nhiều cây xanh",
+    "text_en": "A speaker wearing a red shirt giving a speech at an outdoor press conference with trees in the background"
+  },
+  {
+    "query_id": "q002",
+    "type": "KIS",
+    "text_vi": "Trẻ em đang chơi bóng đá trên sân cỏ xanh",
+    "text_en": "Children playing soccer on a green grass field"
+  },
+  {
+    "query_id": "q003",
+    "type": "QA",
+    "text_vi": "Trong video về lễ trao giải âm nhạc, có bao nhiêu người lên sân khấu nhận giải lớn nhất?",
+    "text_en": "In the music award ceremony video, how many people went on stage to receive the biggest award?",
+    "question": "How many people received the award?"
+  },
+  {
+    "query_id": "q004",
+    "type": "TRAKE",
+    "text_vi": "Tìm 3 khoảnh khắc chính khi vận động viên thực hiện cú nhảy cao: giậm nhảy, bay qua xà, tiếp đất",
+    "text_en": "Find 3 key moments of a high jump athlete: takeoff, clearance over the bar, landing",
+    "events": [
+      "athlete takes off from the ground",
+      "athlete clears over the bar at peak height",
+      "athlete lands on the mat"
+    ]
+  }
+]
