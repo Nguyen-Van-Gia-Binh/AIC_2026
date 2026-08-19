@@ -27,12 +27,6 @@ Setup (first time):
 ```
 .venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
-Agent/LLM features (Q&A, TRAKE, query rewrite) additionally need `litellm` and `python-dotenv` — these
-are installed in `.venv` already but not yet pinned in `requirements.txt` (tracked in
-[PLAN.md](PLAN.md) Phase 4). Until that's fixed, also run:
-```
-.venv\Scripts\python.exe -m pip install litellm python-dotenv
-```
 Then copy `.env.example` to `.env` and fill in a real `GEMINI_API_KEY` (get one free at
 [aistudio.google.com](https://aistudio.google.com/apikey)).
 
