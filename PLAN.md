@@ -66,11 +66,12 @@ Việc phát sinh từ code review (2026-08-19) + rà soát thủ công — ưu 
 Success: code review PASS lại (0 finding mức cao), `requirements.txt` cài lại từ đầu chạy được app,
 toàn bộ thay đổi đã nằm trong git history trên 1 branch.
 
-**Phát sinh thêm (chưa nằm trong phạm vi Phase 4 gốc, để dành xét sau):** ngoài comment/docstring,
-`scripts/app.py` còn một số label tiếng Anh trong status message runtime (vd. "Method:",
-"Confidence:", "Best:", "Frames:", "ZIP:", "Path:", "Validate: PASS/FAIL") — cùng vi phạm quy ước
-Vietnamese-UI-text nhưng là text hiển thị runtime chứ không phải comment/docstring, nên không nằm
-trong phạm vi mục đã duyệt ở trên. Cần quyết định có dịch nốt hay không ở phiên sau.
+**Phát sinh thêm (đã fix):** ngoài comment/docstring, `scripts/app.py` còn nhiều label tiếng Anh
+trong status message runtime + label component UI (status Q&A/TRAKE/Export, tên tab, checkbox
+auto-translate, "rows"→"dòng", v.v.) — đã dịch nốt toàn bộ sang tiếng Việt theo yêu cầu, giữ lại
+các loanword kỹ thuật đã dùng nhất quán trong toàn repo (`video_id`, `query`, `ZIP`, `CSV`,
+`keyframe`, `Submission`, `Top-k`) và giữ nguyên các placeholder ví dụ tiếng Anh ở tab TRAKE (mô tả
+cảnh cho CLIP search cần tiếng Anh — xem mục "Notable constraints" CLAUDE.md).
 
 ## Phase 5: Sẵn sàng thi (⏳ Todo)
 - [ ] Đối chiếu format CSV/ZIP hiện tại với validator chính thức của BTC trên Codabench khi có (hạn
