@@ -21,7 +21,7 @@ pipeline_kis.py     pipeline_qa.py          pipeline_trake.py
    └──────────┬───────────┴───────────┬───────────┘
               ▼                       ▼
    agent/tools/retrieve.py    agent/tools/rewrite.py, answer_qa.py, ocr_lookup.py
-   (CLIP cosine similarity     (agent/config.py: call_llm() → LiteLLM → Gemini)
+   (CLIP cosine similarity     (agent/config.py: call_llm() → LiteLLM → PROVIDER_CHAIN)
     trên ma trận 177K keyframe)
               │
               ▼
@@ -30,20 +30,20 @@ pipeline_kis.py     pipeline_qa.py          pipeline_trake.py
 
 ## 2. Trách nhiệm từng module
 
-| Path                                                                          | Vai trò                                                                                                                         | Vì sao ở đây                                                                                                          |
-| ----------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| [scripts/index.py](scripts/index.py)                                           | Build ma trận CLIP`(N,512)` + metadata từ `data/extracted/`                                                                | Layer dữ liệu gốc, không đổi từ baseline ban đầu                                                                 |
-| [scripts/agent/tools/retrieve.py](scripts/agent/tools/retrieve.py)             | Singleton nạp index 1 lần/process;`fast_retrieve()`, `fast_retrieve_for_video()`                                           | Điểm truy cập duy nhất tới ma trận vector — mọi pipeline đều gọi qua đây, không tự`build_index()` riêng |
-| [scripts/agent/config.py](scripts/agent/config.py)                             | `call_llm(prompt, image_paths, model, temperature, max_tokens)` — bọc LiteLLM + Gemini                                       | Nguồn cấu hình LLM duy nhất (API key, model name,`MIN_OUTPUT_TOKENS`, `MAX_AGENT_LOOPS`)                          |
-| [scripts/agent/tools/rewrite.py](scripts/agent/tools/rewrite.py)               | `rewrite_query(query, feedback=None)` — dịch VN→EN + tối ưu visual-centric cho CLIP                                       | Tách riêng khỏi pipeline để dùng chung cho cả Q&A và TRAKE                                                        |
-| [scripts/agent/tools/ocr_lookup.py](scripts/agent/tools/ocr_lookup.py)         | `get_objects()`, `get_objects_for_hits()` — đọc Objects JSON (Faster R-CNN) offline                                       | Không tốn gọi API; nguồn "sự thật" để cross-check answer                                                          |
-| [scripts/agent/tools/answer_qa.py](scripts/agent/tools/answer_qa.py)           | `answer_from_hits()` — 2 tầng (objects JSON → Gemini Vision) + `_crosscheck_answer()`                                     | Cô lập logic chống ảo giác (rủi ro AI-safety lớn nhất của bài Q&A)                                              |
-| [scripts/agent/pipeline_kis.py](scripts/agent/pipeline_kis.py)                 | `run_kis()` — 1 lệnh gọi `fast_retrieve`, không LLM                                                                      | KIS không cần agent (xem §3)                                                                                           |
-| [scripts/agent/pipeline_qa.py](scripts/agent/pipeline_qa.py)                   | `run_qa()` — orchestrator: rewrite → retrieve → answer → (nếu confidence<0.5) rewrite+feedback → retrieve → answer lại | Orchestrator-workers pattern, có gate rõ ràng (không phải free-form agent loop)                                      |
-| [scripts/agent/pipeline_trake.py](scripts/agent/pipeline_trake.py)             | `run_trake()` — giai đoạn 1 chọn top-video, giai đoạn 2 align N event tuần tự (`frame_idx` phải tăng dần)         | Structured pipeline cố định, không để LLM tự quyết định số bước                                              |
-| [scripts/submit/build_submission.py](scripts/submit/build_submission.py)       | `build_kis_csv/build_qa_csv/build_trake_csv/build_zip_submission`                                                              | Điểm duy nhất sinh format nộp bài — pipeline không tự ghi CSV                                                     |
-| [scripts/submit/validate_submission.py](scripts/submit/validate_submission.py) | `validate_csv_file()`, `validate_zip()`                                                                                      | Lưới an toàn cuối trước khi nộp; chạy độc lập, không phụ thuộc pipeline                                     |
-| [scripts/app.py](scripts/app.py)                                               | Gradio UI — 4 tab, hàng đợi submission trong session, human-in-the-loop edit trước export                                  | UI**gọi** pipeline/submit, không chứa logic retrieval/answer riêng                                              |
+| Path                                                                          | Vai trò                                                                                                                                              | Vì sao ở đây                                                                                                          |
+| ----------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| [scripts/index.py](scripts/index.py)                                           | Build ma trận CLIP`(N,512)` + metadata từ `data/extracted/`                                                                                     | Layer dữ liệu gốc, không đổi từ baseline ban đầu                                                                 |
+| [scripts/agent/tools/retrieve.py](scripts/agent/tools/retrieve.py)             | Singleton nạp index 1 lần/process;`fast_retrieve()`, `fast_retrieve_for_video()`                                                                | Điểm truy cập duy nhất tới ma trận vector — mọi pipeline đều gọi qua đây, không tự`build_index()` riêng |
+| [scripts/agent/config.py](scripts/agent/config.py)                             | `call_llm(prompt, image_paths, model, temperature, max_tokens)` — bọc LiteLLM, tự fallback qua `PROVIDER_CHAIN` (Gemini → Groq → NVIDIA NIM) | Nguồn cấu hình LLM duy nhất (API key, model name,`MIN_OUTPUT_TOKENS`, `MAX_AGENT_LOOPS`)                          |
+| [scripts/agent/tools/rewrite.py](scripts/agent/tools/rewrite.py)               | `rewrite_query(query, feedback=None)` — dịch VN→EN + tối ưu visual-centric cho CLIP                                                            | Tách riêng khỏi pipeline để dùng chung cho cả Q&A và TRAKE                                                        |
+| [scripts/agent/tools/ocr_lookup.py](scripts/agent/tools/ocr_lookup.py)         | `get_objects()`, `get_objects_for_hits()` — đọc Objects JSON (Faster R-CNN) offline                                                            | Không tốn gọi API; nguồn "sự thật" để cross-check answer                                                          |
+| [scripts/agent/tools/answer_qa.py](scripts/agent/tools/answer_qa.py)           | `answer_from_hits()` — 2 tầng (objects JSON → LLM Vision) + `_crosscheck_answer()`                                                             | Cô lập logic chống ảo giác (rủi ro AI-safety lớn nhất của bài Q&A)                                              |
+| [scripts/agent/pipeline_kis.py](scripts/agent/pipeline_kis.py)                 | `run_kis()` — 1 lệnh gọi `fast_retrieve`, không LLM                                                                                           | KIS không cần agent (xem §3)                                                                                           |
+| [scripts/agent/pipeline_qa.py](scripts/agent/pipeline_qa.py)                   | `run_qa()` — orchestrator: rewrite → retrieve → answer → (nếu confidence<0.5) rewrite+feedback → retrieve → answer lại                      | Orchestrator-workers pattern, có gate rõ ràng (không phải free-form agent loop)                                      |
+| [scripts/agent/pipeline_trake.py](scripts/agent/pipeline_trake.py)             | `run_trake()` — giai đoạn 1 chọn top-video, giai đoạn 2 align N event tuần tự (`frame_idx` phải tăng dần)                              | Structured pipeline cố định, không để LLM tự quyết định số bước                                              |
+| [scripts/submit/build_submission.py](scripts/submit/build_submission.py)       | `build_kis_csv/build_qa_csv/build_trake_csv/build_zip_submission`                                                                                   | Điểm duy nhất sinh format nộp bài — pipeline không tự ghi CSV                                                     |
+| [scripts/submit/validate_submission.py](scripts/submit/validate_submission.py) | `validate_csv_file()`, `validate_zip()`                                                                                                           | Lưới an toàn cuối trước khi nộp; chạy độc lập, không phụ thuộc pipeline                                     |
+| [scripts/app.py](scripts/app.py)                                               | Gradio UI — 4 tab, hàng đợi submission trong session, human-in-the-loop edit trước export                                                       | UI**gọi** pipeline/submit, không chứa logic retrieval/answer riêng                                              |
 
 ## 3. Quyết định kiến trúc đã chốt
 
@@ -57,10 +57,9 @@ pipeline_kis.py     pipeline_qa.py          pipeline_trake.py
   - **TRAKE** = pipeline 2 giai đoạn cố định (không phải agent tự do), vì thứ tự N mốc đã biết trước.
 - **1 nguồn cấu hình LLM duy nhất**: `scripts/agent/config.py`. Mọi lời gọi LLM đi qua `call_llm()`,
   không gọi `litellm` trực tiếp ở nơi khác.
-  ⚠️ Hiện đang **vi phạm** quyết định này do bug import 2 identity (`config` vs `agent.config`) —
-  xem [PLAN.md](PLAN.md) Phase 4.
-- **Anti-hallucination bắt buộc cho Q&A**: mọi answer từ Gemini Vision phải qua `_crosscheck_answer()`
-  đối chiếu với Objects JSON trước khi coi là đáng tin (`confidence` cao/thấp theo kết quả cross-check).
+- **Anti-hallucination bắt buộc cho Q&A**: mọi answer từ tầng vision (Gemini/Groq/NVIDIA NIM tuỳ
+  provider nào đang phục vụ trong `PROVIDER_CHAIN`) phải qua `_crosscheck_answer()` đối chiếu với
+  Objects JSON trước khi coi là đáng tin (`confidence` cao/thấp theo kết quả cross-check).
 - **File-based, không DB**: toàn bộ state là file (`.npy`/`.csv` index, `queries/*.json`,
   `submissions/*.csv|zip`). Hàng đợi submission trong `app.py` chỉ sống trong session Gradio (RAM),
   mất khi restart — chấp nhận được vì vòng sơ tuyển không phải chạy 24/7.
@@ -71,7 +70,7 @@ pipeline_kis.py     pipeline_qa.py          pipeline_trake.py
 
 ## 4. Không được làm (forbidden)
 
-- Không gọi `litellm`/Gemini trực tiếp bên ngoài `agent/config.py:call_llm()`.
+- Không gọi `litellm` (Gemini/Groq/NVIDIA NIM) trực tiếp bên ngoài `agent/config.py:call_llm()`.
 - Không viết CSV/ZIP submission ở đâu khác ngoài `submit/build_submission.py`.
 - Không để pipeline (`pipeline_kis/qa/trake.py`) tự thêm `.mp4` hoặc tự trừ/cộng `frame_id` — việc
   chuẩn hoá `video_id`/`frame_id` chỉ xảy ra ở `retrieve.py` (đọc) và `build_submission.py` (ghi).
@@ -94,7 +93,11 @@ pipeline_kis.py     pipeline_qa.py          pipeline_trake.py
     (trả `results`, `best`, `n_events`)
 - **Schema hit chuẩn** (trả về từ `retrieve.py`, dùng xuyên suốt mọi pipeline):
   `{video_id, n, frame_idx, frame_id, pts_time, score, jpg_path}`
-- **Không có database/API bên ngoài nào khác** ngoài LLM provider (Gemini qua LiteLLM). Dữ liệu vào
+- **Không có database/API bên ngoài nào khác** ngoài LLM provider (qua LiteLLM). Dữ liệu vào
   là file tĩnh dưới `data/extracted/` (git-ignored, xem `CLAUDE.md`).
-- **External service duy nhất**: Google Gemini (`gemini/gemini-3.5-flash`) qua LiteLLM, key trong
-  `.env` (`GEMINI_API_KEY`, không commit).
+- **External service**: LLM qua LiteLLM, theo chuỗi fallback `PROVIDER_CHAIN` trong
+  `agent/config.py` — Google Gemini (`gemini/gemini-3.5-flash`, ưu tiên 1) → Groq
+  (`llama-3.3-70b-versatile`/`llama-3.2-11b-vision-preview`, fallback 2) → NVIDIA NIM
+  (`meta/llama-3.3-70b-instruct`/`meta/llama-3.2-90b-vision-instruct`, fallback 3). Key trong `.env`
+  (`GEMINI_API_KEY`, `GROQ_API_KEY`, `NVIDIA_NIM_API_KEY`, không commit); provider nào thiếu key sẽ
+  tự bị bỏ qua trong chuỗi.

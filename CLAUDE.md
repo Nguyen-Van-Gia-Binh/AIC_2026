@@ -73,7 +73,11 @@ three buckets above.
 - `torch` (CPU build) — backing framework for `sentence-transformers`.
 - `pandas` / `numpy` — metadata table and the embedding matrix.
 - `gradio` — the UI (`scripts/app.py`).
-- `litellm` — routes LLM calls; currently wired to Google Gemini (`gemini/gemini-3.5-flash`) only.
+- `litellm` — routes LLM calls; `scripts/agent/config.py:PROVIDER_CHAIN` gives it a fallback chain —
+  Google Gemini (`gemini/gemini-3.5-flash`, priority 1) → Groq (`llama-3.3-70b-versatile` /
+  `llama-3.2-11b-vision-preview`, fallback 2) → NVIDIA NIM (`meta/llama-3.3-70b-instruct` /
+  `meta/llama-3.2-90b-vision-instruct`, fallback 3). A provider with no API key in `.env` is skipped
+  automatically.
 - No database, no ORM, no message queue — everything is files under `data/`, `queries/`, `submissions/`.
 
 ## Code Rules
