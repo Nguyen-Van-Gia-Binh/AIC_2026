@@ -67,3 +67,7 @@ Thumbs.db
 
 # 8. Secret environment keys
 .env
+
+# 9. Antigravity-specific (không liên quan Claude Code)
+GEMINI.md
+.agents/

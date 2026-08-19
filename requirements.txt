@@ -8,3 +8,8 @@ sentence-transformers==5.7.0
 torch==2.13.0+cpu
 litellm==1.97.0
 python-dotenv==1.2.3
+
+# scripts/eval/ (Phase 6 — so sánh baseline embedding, không phải app sản xuất KIS/QA/TRAKE):
+transformers==5.15.0
+open_clip_torch==2.32.0
+sentencepiece==0.2.2

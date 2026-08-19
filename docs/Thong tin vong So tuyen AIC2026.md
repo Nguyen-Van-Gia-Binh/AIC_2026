@@ -137,3 +137,131 @@ Dữ liệu cung cấp cho các đội thi để làm quen với bài toán là 
 
 - Dữ liệu thi chính thức là Video; các thành phần còn lại (Keyframes, Objects, CLIP features, Metadata) chỉ nhằm mục đích cung cấp thêm thông tin hoặc hỗ trợ xây dựng giải pháp mẫu cho thí sinh.
 - Đây cũng là dữ liệu batch 1 của AIC 2025. Dữ liệu đầy đủ của vòng sơ tuyển AIC 2026 sẽ bao gồm thêm dữ liệu batch 2, dự kiến được thông báo cho các đội thi trong thời gian tới.
+
+## 4. Hướng dẫn nộp bài sơ tuyển (BTC công bố 2026-08-20)
+
+> Nguồn: tài liệu "Hướng dẫn nộp bài sơ tuyển" chính thức của BTC. §1/§2 ở trên định nghĩa NỘI
+> DUNG truy vấn và cách TÍNH ĐIỂM; mục này định nghĩa QUY TRÌNH và ĐỊNH DẠNG file nộp thực tế —
+> đây là tài liệu tham chiếu chính cho `scripts/submit/build_submission.py` và
+> `scripts/submit/validate_submission.py`.
+
+### 4.1. Gói truy vấn
+
+BTC cung cấp truy vấn theo nhiều đợt, mỗi đợt là 1 gói gồm nhiều file `.txt`, tên file quy ước
+theo hậu tố loại truy vấn:
+
+- Hậu tố `-kis` → Textual KIS
+- Hậu tố `-qa` → Q&A
+- Hậu tố `-trake` → TRAKE
+
+Ví dụ đợt 1: `query-1-kis.txt`, `query-2-kis.txt`, `query-3-qa.txt`, `query-4-trake.txt`.
+
+**Quan trọng**: file CSV nộp lại phải **giữ nguyên tên gốc**, chỉ đổi đuôi `.txt` → `.csv` (ví dụ
+`query-1-kis.txt` → `query-1-kis.csv`). Đây là cách hệ thống BTC khớp file nộp với truy vấn tương
+ứng — sai tên file gần như chắc chắn nghĩa là truy vấn đó không được chấm.
+
+### 4.2. Định dạng từng dòng CSV theo loại truy vấn
+
+Tối đa **100 dòng/file** (không tính header — **không có header row**, dòng đầu tiên đã là dữ liệu).
+
+**Textual KIS** — `<video_id>, <frame_idx>`:
+
+```
+L00_V000,1234
+L00_V055,5555
+L01_V028,25300
+```
+
+**Q&A** — `<video_id>, <frame_idx>, <answer>`:
+
+```
+L01_V028,3450,5
+L02_V011,1200,Năm người
+L03_V005,2800,"Màu đỏ, rất đẹp"
+L04_V012,4100,"Anh ấy nói ""Tuyệt vời"""
+```
+
+- `answer` tối đa **100 ký tự**, tiếng Việt hoặc tiếng Anh, so khớp theo ngữ nghĩa.
+- Ngoặc kép quanh `answer` chỉ **bắt buộc** khi answer chứa dấu phẩy, dấu ngoặc kép, hoặc xuống
+  dòng (dấu ngoặc kép bên trong answer phải escape bằng cách nhân đôi: `""`). Answer đơn giản
+  không cần ngoặc kép, nhưng bọc ngoặc kép cho TẤT CẢ answer cũng được chấp nhận.
+
+**TRAKE** — `<video_id>, <frame_id_1>, ..., <frame_id_N>` (mỗi dòng là 1 phương án dự đoán TRỌN
+VẸN cho cả chuỗi N sự kiện — không phải 1 dòng/event):
+
+```
+L10_V001,1200,1850,2100,2450
+L10_V001,1180,1820,2080,2420
+L11_V003,5100,5700,6200,6800
+```
+
+- Số lượng frame_id trên mỗi dòng phải khớp đúng số event N của truy vấn.
+- Thứ tự frame_id phải theo đúng thứ tự thời gian của các event.
+
+### 4.3. Quy tắc CSV chung
+
+- Encoding: UTF-8. Delimiter: dấu phẩy. Line ending: CRLF hoặc LF đều được.
+- **Không có header row.**
+- `video_id`: không kèm đuôi `.mp4`.
+- `frame_id`/`frame_idx`: số nguyên, so sánh dưới dạng số nguyên (không khoảng trắng thừa).
+- **File phải là `.csv` thật** (text thuần, mở bằng Notepad đọc được) — không phải `.xlsx`/`.xls`
+  đổi đuôi. BTC nhấn mạnh đây là lỗi rất phổ biến khi xuất file từ Excel/Google Sheets.
+
+### 4.4. Cấu trúc file ZIP nộp bài
+
+**Bắt buộc** có 1 thư mục tên `submission/` bên trong ZIP chứa toàn bộ CSV — **không được nén
+trực tiếp các file CSV vào gốc ZIP**:
+
+```
+submission/
+├── query-1-kis.csv
+├── query-2-kis.csv
+├── query-3-qa.csv
+└── query-4-trake.csv
+```
+
+Tên file zip tùy chọn (khuyến nghị chỉ dùng chữ/số, ví dụ `team_ABC_round1.zip`), nhưng cấu trúc
+thư mục `submission/` bên trong là bắt buộc.
+
+### 4.5. Quy trình nộp & tính điểm
+
+- Đăng nhập bằng tài khoản BTC đã cấp, nộp file `.zip` trực tiếp trên hệ thống thi — không đăng ký
+  thêm ở đâu khác.
+- **Tối đa 3 lần nộp cho mỗi gói truy vấn**; kết quả dùng để xếp hạng là **lần nộp CUỐI CÙNG**
+  (không phải điểm cao nhất trong 3 lần).
+- **Nộp sai định dạng vẫn tính là 1 lần nộp** — không được hoàn lại lượt.
+- **Public Leaderboard chỉ tính trên 50% đáp án của BTC** (điểm hiển thị lúc thi có nhiễu).
+  **Private Leaderboard** (kết quả xếp hạng thật của vòng sơ tuyển) tính trên **100% đáp án**, dựa
+  trên lần nộp cuối cùng.
+- Mỗi đội chỉ dùng 1 tài khoản duy nhất để nộp.
+
+### 4.6. Checklist trước khi nộp
+
+- [ ] File có đuôi `.csv` thật (mở bằng Notepad thấy text thuần, không phải `.xlsx`/`.xls`)
+- [ ] Tên file khớp đúng tên truy vấn gốc BTC cấp (`query-N-kis/qa/trake.csv`)
+- [ ] Không có header row
+- [ ] `video_id` không có `.mp4`
+- [ ] Q&A: answer ≤ 100 ký tự
+- [ ] TRAKE: đúng số frame_id theo N event, đúng thứ tự thời gian
+- [ ] ZIP chứa thư mục `submission/` (không nén CSV trực tiếp vào gốc ZIP)
+- [ ] Đã chạy `scripts/submit/validate_submission.py` và PASS trước khi nộp thật
+
+## 5. Lịch trình các vòng thi (cập nhật 2026-08-20 — trạng thái "Nháp", có thể còn thay đổi)
+
+| Vòng              | Mở                   | Đóng                | Trạng thái    |
+| ------------------ | --------------------- | --------------------- | --------------- |
+| Vòng thử nghiệm | 08:00 Ngày 20/8/2026 | 19:30 Ngày 21/8/2026 | Nháp           |
+| Sơ tuyển đợt 1 | 19:30 Ngày 21/8/2026 | 22:30 Ngày 21/8/2026 | Nháp           |
+| Sơ tuyển đợt 2 | 19:30 Ngày 28/8/2026 | 22:30 Ngày 28/8/2026 | Nháp           |
+| Sơ tuyển đợt 3 | 19:30 Ngày 04/9/2026 | 22:30 Ngày 04/9/2026 | Nháp nếu cần |
+
+**Lưu ý quan trọng**:
+
+- Mỗi đợt sơ tuyển thật chỉ mở **3 tiếng** (19:30–22:30), không phải cả ngày. Thao tác chậm/lúng
+  túng trong 3 tiếng này mất điểm trực tiếp, không có bù giờ.
+- **Vòng thử nghiệm đóng đúng lúc Sơ tuyển đợt 1 mở** (cùng mốc 19:30 21/8/2026) — nghĩa là toàn bộ
+  thời gian từ 08:00 20/8 đến 19:30 21/8 là cơ hội DUY NHẤT để tập dượt luồng thao tác thật (search
+  → rà soát → sửa tay → add to queue → export → nộp thử) trước khi vòng tính điểm đầu tiên mở ngay
+  sau đó, không có khoảng đệm.
+- Trạng thái cả bảng đang là "Nháp" — cần xác nhận lại với BTC/hệ thống thi trước khi coi là lịch
+  chính thức không đổi.

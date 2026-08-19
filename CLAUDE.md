@@ -3,9 +3,11 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 > Other docs: [ARCHITECTURE.md](ARCHITECTURE.md) (system design, module responsibilities, locked
-> decisions) · [PLAN.md](PLAN.md) (what's left to do, by phase) · [SESSION_LOG.md](SESSION_LOG.md)
-> (what happened in each past session). This file only covers stable, day-to-day facts — how to run
-> things, where files go, what conventions to follow. It does not track progress or history.
+> decisions) · [PLAN.md](PLAN.md) (what's left to do, by phase) ·
+> [SESSION_LOG.md](docs/_archive/SESSION_LOG.md) (what happened in each past session; moved under
+> `docs/_archive/` — root `SESSION_LOG.md` no longer exists). This file only covers stable,
+> day-to-day facts — how to run things, where files go, what conventions to follow. It does not
+> track progress or history.
 
 ## What this is
 
@@ -52,14 +54,33 @@ framework. There is no linter/formatter configured either.
     (offline Objects JSON reader), `answer_qa.py` (Q&A answer + cross-check).
 - `scripts/submit/` — `build_submission.py` (CSV/ZIP writer), `validate_submission.py` (format checker).
   This is the only place that should serialize a submission file.
-- `queries/` — sample/test query sets (JSON), not competition-official queries.
+- `scripts/eval/` — Phase 6 offline benchmark harness, comparing embedding baselines
+  (`clip_vitb32`/`vitl14`/`siglip`/`dfn`) by the real scoring formula (R@k). `multi_index.py` (index
+  loader + text encoders per model, self-contained — deliberately does NOT import `index.py`/
+  `retrieve.py`, see its docstring), `run_eval.py` (main comparison script, reads
+  `queries/eval_ground_truth.json`, writes `docs/eval_baseline_comparison.md`), `lookup_frame.py`
+  (CLI helper for ground-truth labeling — see `queries/EVAL_GUIDE.md`). Separate top-level folder
+  because it's a standalone offline benchmark tool, not a pipeline/shared-tool/submission-writer —
+  same rationale as `kaggle_jobs/`. Never touches the KIS/QA/TRAKE production path.
+- `queries/` — sample/test query sets (JSON), not competition-official queries. Also holds
+  `eval_ground_truth.json` (Phase 6 hand-labeled eval set) and `EVAL_GUIDE.md` (how to label it).
 - `submissions/` — generated CSV/ZIP output. `*.zip` is git-ignored; keep CSVs for inspection.
 - `data/` — git-ignored, external state (video/keyframe/CLIP-feature/Objects-JSON files from BTC).
   Must already be unzipped locally before any script will run.
 - `docs/` — competition rules, `docs/Training/` transcripts, and generated reports. Reference material,
   not code — don't treat anything under `docs/` as something to keep in sync with the codebase.
+- `kaggle_jobs/` — 4 standalone Kaggle-GPU jobs (`01_vit_l14/`, `02_siglip/`, `03_jina/`, `04_dfn/`)
+  that encode all 177K keyframes with stronger embedding models (ViT-L/14, SigLIP SO400M, Jina CLIP
+  v2, DFN-5B ViT-H/14) than the `clip-ViT-B-32` baseline. Exploratory/ensemble track — pushed and run
+  manually via the Kaggle CLI, doesn't touch the live pipeline unless/until a model is deliberately
+  swapped into `scripts/index.py`. Each job is pushed by hand; don't push a real GPU job yourself.
 - `.env` / `.env.example` — API keys. `.env` is git-ignored; `.env.example` must only ever contain
   placeholder values, never a real key.
+- `GEMINI.md` / `.agents/` — a parallel instructions/skills setup for a different coding agent
+  (Antigravity), not Claude Code's. `.claudeignore` excludes both from this tool's context — don't
+  treat their content as instructions for a Claude Code session. If asked to edit files under
+  `.agents/skills/` (e.g. to prep a task for that other agent), edit them explicitly by path like
+  any other file — the ignore only affects automatic context loading, not editability.
 
 New files go under `scripts/agent/tools/` if they're a single-purpose capability used by more than one
 pipeline, or under `scripts/agent/` directly if they're a new top-level pipeline. Don't add new
@@ -119,7 +140,8 @@ three buckets above.
 ## Ignoring files
 
 `.claudeignore` already excludes `.venv/`, `data/`, all media/binary formats (`*.npy`, `*.jpg`, `*.mp4`,
-etc.), `docs/paper/`, `docs/slide/`, `submissions/`, caches, and `.env` — check it before adding a new
+etc.), `docs/paper/`, `docs/slide/`, `submissions/`, caches, `.env`, and `GEMINI.md`/`.agents/`
+(Antigravity's parallel docs, not Claude Code's — see Folder Structure) — check it before adding a new
 large-file category rather than duplicating rules. `.gitignore` covers `.venv`, `data/`, `.env`, and
 `submissions/*.zip`.
 
@@ -127,5 +149,5 @@ large-file category rather than duplicating rules. `.gitignore` covers `.venv`, 
 
 Update when: a new dependency is added, a command changes, a new top-level folder is introduced, or a
 convention above stops being true. Don't record task history, per-feature decisions, or session
-summaries here — those belong in [PLAN.md](PLAN.md) / [SESSION_LOG.md](SESSION_LOG.md). This file should
-stay stable across sessions, not get an edit every time.
+summaries here — those belong in [PLAN.md](PLAN.md) / [SESSION_LOG.md](docs/_archive/SESSION_LOG.md).
+This file should stay stable across sessions, not get an edit every time.
