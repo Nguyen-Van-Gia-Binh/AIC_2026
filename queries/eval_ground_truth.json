@@ -241,5 +241,29 @@
       {"text_en": "criminal is escorted", "gt_frame_start": 28531, "gt_frame_end": 28531},
       {"text_en": "criminal is being interrogated", "gt_frame_start": 28532, "gt_frame_end": 29363}
   ]
-  }
+  },
+  {
+  "query_id": "e-qa-ai-002",
+  "type": "QA",
+  "text_vi": "Trong video thông báo giải thưởng của cuộc thi lan tỏa tích cực lần 5 năm 2024, có tổng cộng bao nhiêu giải khuyến khích?",
+  "text_en": "In the video announcing the awards for the 5th Spreading Positivity contest (2024), how many Consolation Prizes were awarded in total?",
+  "question": "Có tổng cộng bao nhiêu giải khuyến khích?",   
+  "difficulty_tags": ["counting"],
+  "gt_video_id": "L30_V096",
+  "gt_frame_start": 820,
+  "gt_frame_end": 1100,
+  "gt_answer": "15"  
+},
+{
+"query_id": "e-qa-ai-003",
+  "type": "QA",
+  "text_vi": "Trong video nói về thiên nga, nhóm nhà nghiên cứu đứng ở trên bãi cỏ có bao nhiu người?",
+  "text_en": "In the video about swans, how many researchers are standing on the grass?",
+  "question": "Có bao nhiêu nhà nghiên cứu đang đứng trên bãi cỏ?",   
+  "difficulty_tags": ["counting"],
+  "gt_video_id": "L30_V096",
+  "gt_frame_start": 25828,
+  "gt_frame_end": 25993,
+  "gt_answer": "8"  
+}
 ]
