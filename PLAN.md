@@ -113,6 +113,11 @@ cảnh cho CLIP search cần tiếng Anh — xem mục "Notable constraints" CLA
 - [ ] Chạy thử toàn bộ luồng (KIS + Q&A + TRAKE) trên tài khoản thi thử thật trong cửa sổ Vòng thử
   nghiệm (08:00 20/8–19:30 21/8), không chỉ trên `test_day1.py`/`test_day2_full.py` — đây là cơ hội
   DUY NHẤT tập dượt trước khi Sơ tuyển đợt 1 (tính điểm thật) mở.
+  **Đã có đề thật để chạy việc này (2026-08-20):** `data/raw/THUNGHIEM-bo-de-thi.zip` — 24 câu hỏi
+  thô (18 KIS + 3 QA + 3 TRAKE), tên file khớp với "Vòng thử nghiệm" đang mở → nhiều khả năng đây
+  chính là đề thử của BTC, không phải bộ tự tạo. Ưu tiên chạy đúng 24 câu này qua toàn bộ luồng thật
+  (Gradio UI → sửa tay → export zip → nộp thử) trước khi dùng lại chúng làm ngữ liệu cho bộ eval
+  Phase 6 — đây mới là "cơ hội DUY NHẤT" nói ở trên, không phải bài tập giả lập.
 - [X] Chuẩn bị sẵn checklist thao tác Gradio UI cho người vận hành ngày thi (search → rà soát →
   sửa tay nếu sai → add to queue → export) để không lúng túng trong cửa sổ 3 tiếng của Sơ tuyển
   đợt 1 — đã viết [docs/Checklist Van Hanh Ngay Thi.md](<docs/Checklist%20Van%20Hanh%20Ngay%20Thi.md>)
@@ -138,25 +143,53 @@ Success: nộp thử 1 zip trong Vòng thử nghiệm và được chấp nhận
 
 > Track thăm dò (Mặt trận 1 — xem ADVISOR.md), ưu tiên thấp hơn việc còn lại của Phase 5 (chạy thử
 > nộp thật trong Vòng thử nghiệm). Chỉ dồn lực chính vào đây sau khi việc đó xong hoặc không còn chặn.
-> `data/extracted/` đã có đủ 4/4 bộ feature (`clip-features-32` + `features_vitl14`/`features_siglip`/
-> `features_dfn`, giải nén 2026-08-20 — dung lượng đĩa không phải vấn đề, còn 88GB trống); job Jina
-> `03_jina` vẫn đang chạy trên Kaggle, chưa xong — thêm sau, không chờ. `data/extracted/keyframes/`
-> đủ dữ liệu thật (10 batch L21–L30, 177.321 keyframe).
+> `data/extracted/` có đủ **4/5** bộ feature DÙNG ĐƯỢC (`clip-features-32` + `features_vitl14`/
+> `features_siglip`/`features_dfn`). **`features_jina` đã giải nén (873 file `.npy`) nhưng LỖI NGHIÊM
+> TRỌNG — XÁC NHẬN THẬT (2026-08-20): 100% NaN** (cả 873/873 file, mọi giá trị cùng 1 bit pattern
+> float16 `0x7FFF` — bug encode-time thật trên Kaggle, nghi do chạy `torch_dtype="float16"` trên GPU
+> với vision tower EVA+RoPE dễ overflow fp16, KHÔNG phải lỗi giải nén/transfer. Chi tiết + hướng debug
+> → `kaggle_jobs/README.md` mục "Cập nhật 8"). Đã thêm entry `"jina"` + `_build_jina_encoder()` +
+> patch `_patch_missing_clip_loss()` vào `scripts/eval/multi_index.py` — code encoder đã xác nhận
+> chạy đúng qua smoke-test (text vector không NaN), CHỈ dữ liệu `.npy` nguồn bị hỏng. Đã thêm fail-loud
+> check NaN chung ở `load_feature_index()` để không âm thầm ra `score=nan`. **`jina` KHÔNG dùng được
+> cho tới khi chạy lại job `03_jina` trên Kaggle** (đã ghi cảnh báo + hướng sửa trong
+> `kaggle_jobs/03_jina/main.py`) và giải nén lại — không phải việc ưu tiên trước Sơ tuyển đợt 1.
+> **Lưu ý dung lượng đĩa đã đổi** — không còn 88GB trống như ghi trước đây; do tải thêm nhiều file
+> `Videos_L*.zip` (~50GB+) vào `data/raw/` nên ổ C hiện chỉ còn **~31GB trống (94% đầy)**. Không ảnh
+> hưởng trực tiếp Phase 6 (feature `.npy` đã giải nén xong, nhỏ), nhưng cần dọn trước khi tải/giải nén
+> thêm gì lớn: `data/raw/Videos_L24_a.zip`/`L25_a.zip`/`L26_a-d.zip`/`L27_a.zip`/`L30_a.zip` đang giữ
+> trùng cả `.zip` gốc lẫn bản đã giải nén (~52GB) — xoá `.zip` sau khi xác nhận folder giải nén đủ, như
+> đã làm đúng với `L23`. `data/extracted/keyframes/` đủ dữ liệu thật (10 batch L21–L30, 177.321 keyframe).
+>
+> **Phát hiện mới (2026-08-20): `data/raw/THUNGHIEM-bo-de-thi.zip`** — bộ đề thi thử thật (tên khớp
+> với Vòng thử nghiệm đang mở), 24 file câu hỏi thô (18 KIS + 3 QA + 3 TRAKE), tiếng Việt, **chỉ có
+> câu hỏi, không có đáp án** (đúng bản chất — team tự tìm). Nguồn ngữ liệu tốt hơn hẳn tự bịa cho bộ
+> eval bên dưới — xem mục ground-truth. Quan trọng hơn: nhiều khả năng đây chính là đề cho việc "chạy
+> thử nộp thật trong Vòng thử nghiệm" còn thiếu ở Phase 5 — ưu tiên dùng ngay cho việc đó trước.
 >
 > **Tiện ích/khung code đã dựng xong (2026-08-20)** — xem `scripts/eval/` (`multi_index.py`,
 > `run_eval.py`, `lookup_frame.py`) + `queries/EVAL_GUIDE.md`/`eval_ground_truth.json`. Đã smoke-test
-> cả 4 model tag (`clip_vitb32`/`vitl14`/`siglip`/`dfn`) chạy được, `clip_vitb32` đối chiếu khớp
-> 100% với `scripts/agent/tools/retrieve.py` (cùng video_id/frame_id/score). **Còn thiếu duy nhất**:
-> ground truth thật (`eval_ground_truth.json` vẫn rỗng `[]`) — việc của người, không code được.
+> 4/5 model tag (`clip_vitb32`/`vitl14`/`siglip`/`dfn`) chạy được, `clip_vitb32` đối chiếu khớp
+> 100% với `scripts/agent/tools/retrieve.py` (cùng video_id/frame_id/score). `jina` đã smoke-test
+> xong (encoder code đúng) nhưng phát hiện dữ liệu nguồn `features_jina/` hỏng 100% NaN — xem khối
+> đầu Phase 6. Việc còn thiếu: ground truth thật (`eval_ground_truth.json` mới có 19 câu, cần thêm) —
+> việc của người, không code được.
 
 - [ ] **Dựng bộ eval có ground truth thật, tự chấm bằng đúng công thức thi (R@{1,5,20,50,100})** —
   điều kiện tiên quyết để so sánh baseline khách quan, nếu không sẽ chỉ so bằng cảm tính. AI cố vấn
   không tự tạo được ground truth (không xem được nội dung video thật) — người trong team cần tự xem
   video thật và ghi lại `(video_id, frame_id)` đúng cho từng câu hỏi tự đặt. **Quy trình + schema đã
-  viết sẵn ở [queries/EVAL_GUIDE.md](../queries/EVAL_GUIDE.md)**, dùng
+  viết sẵn ở [queries/EVAL_GUIDE.md](queries/EVAL_GUIDE.md)**, dùng
   `scripts/eval/lookup_frame.py <video_id> <giây>` để tra `frame_id` nhanh thay vì tự tính tay.
+  - **Có sẵn 24 câu hỏi thật** (`data/raw/THUNGHIEM-bo-de-thi.zip`, xem khối phát hiện mới đầu Phase 6)
+    — dùng làm LÕI của bộ eval thay vì tự bịa toàn bộ, vì đây đúng văn phong/độ khó BTC ra đề (đã thấy
+    sẵn ví dụ đánh đố tự nhiên: 1 câu QA hỏi tên xã "tại thời điểm đó" ở Khánh Hòa — dễ dính bẫy sáp
+    nhập/đổi tên địa giới; 1 câu TRAKE nấu ăn cần phân 4 mốc rất sát nhau). Vẫn phải tự xem video thật
+    để gán `(video_id, frame_id)` cho từng câu — zip chỉ có câu hỏi, không có đáp án.
   - Đề xuất cỡ mẫu: ~30 câu KIS + 10 QA + 10 TRAKE (đủ để so sánh có ý nghĩa mà không tốn quá nhiều
-    thời gian ghi tay); chọn video trải đều 10 batch trong `data/extracted/keyframes/` (L21–L30).
+    thời gian ghi tay); chọn video trải đều 10 batch trong `data/extracted/keyframes/` (L21–L30). 24
+    câu thật ở trên mới có 18 KIS + 3 QA + 3 TRAKE — KIS gần đủ ngay, QA/TRAKE cần tự đặt thêm ~7 câu
+    mỗi loại nữa cho đủ cỡ mẫu và đủ tin cậy khi so sánh riêng từng loại.
   - Trải phổ độ khó, không chỉ toàn "lắt léo": giữ một số câu dễ (đối tượng/màu/hành động rõ) làm
     sanity check hệ thống chưa hỏng, phần còn lại mới dồn vào các dạng đánh đố bên dưới.
   - Dạng câu hỏi lắt léo nên có trong bộ test: đối tượng nhỏ/khuất một phần khung hình; nhiều đối
@@ -165,9 +198,10 @@ Success: nộp thử 1 zip trong Vòng thử nghiệm và được chấp nhận
     số lượng (QA — dễ sai vì phần đếm nằm ở vision LLM, không phải retrieval); câu phủ định/loại trừ
     ("cảnh không có người"); câu tiếng Việt có từ địa phương/viết tắt (kiểm tra `rewrite.py` dịch có
     giữ đúng ý); ảnh dễ đánh lừa CLIP (phản chiếu gương, ảnh lồng trong ảnh/màn hình TV trong khung).
-- [ ] So 4 baseline (clip-ViT-B-32 hiện tại + vitl14/siglip/dfn, jina bổ sung sau nếu có) trên cùng bộ
-  eval trên, đo đúng công thức R@{1,5,20,50,100} — không dùng metric khác để kết quả phản ánh đúng
-  cách BTC chấm. **Script đo đã xong: `scripts/eval/run_eval.py`** (đọc `eval_ground_truth.json`,
+- [ ] So baseline: clip-ViT-B-32 hiện tại + vitl14/siglip/dfn (4/4 dùng được) trên cùng bộ eval trên,
+  đo đúng công thức R@{1,5,20,50,100} — không dùng metric khác để kết quả phản ánh đúng cách BTC
+  chấm. `jina` tạm loại khỏi vòng so sánh — dữ liệu `.npy` hỏng 100% NaN, cần chạy lại job Kaggle
+  trước (xem khối đầu Phase 6), không chặn việc so 4 model còn lại. **Script đo đã xong: `scripts/eval/run_eval.py`** (đọc `eval_ground_truth.json`,
   in bảng + ghi `docs/eval_baseline_comparison.md`) — chỉ còn chờ ground truth ở mục trên rồi chạy
   `python scripts\eval\run_eval.py`. Phạm vi đã chốt: chỉ đo retrieval (video_id + frame trong
   `[s,e]`), KHÔNG chấm answer text QA, TRAKE chấm từng event độc lập rồi lấy trung bình — chi tiết lý
@@ -176,6 +210,14 @@ Success: nộp thử 1 zip trong Vòng thử nghiệm và được chấp nhận
   `scripts/index.py`/`retrieve.py`. Nếu sau đó muốn xem trực quan vài case cụ thể model mạnh vẫn sai
   (debug định tính, không phải ra quyết định), dùng lại `scripts/app.py` (Gradio) có sẵn — trỏ tạm
   `FEATURES_DIR` sang model khác để search bằng tay — không cần dựng thêm công cụ web mới cho việc này.
+  **Đã chạy thử thật (2026-08-20)** — `eval_ground_truth.json` có 19 câu (18 KIS do AI cố vấn tự viết
+  sau khi trực tiếp xem ảnh keyframe thật + 1 QA đếm số), `run_eval.py` chạy hết cả 4 model, ra
+  `docs/eval_baseline_comparison.md`: `siglip`/`dfn` vượt rõ `clip_vitb32` ở mọi ngưỡng R@k (VD R@100
+  KIS: 0.667 baseline vs 0.944 siglip vs 1.000 dfn). **CHƯA đủ tin cậy để quyết định** — mẫu còn nhỏ
+  (18/~30-50 mục tiêu), 0 câu TRAKE, và câu hỏi+đáp án cùng do AI viết từ 1 ảnh nên dễ "dễ" hơn câu
+  thật (xem văn phong tự nhiên ở 24 câu `THUNGHIEM-bo-de-thi.zip`) — chỉ là tín hiệu sớm ủng hộ hướng
+  đầu tư tiếp, không đổi lịch "không swap model trước đợt 1" ở dưới. Việc còn lại: câu QA/TRAKE thật +
+  câu phủ định/từ địa phương — để người tự làm (không AI viết được đáng tin cho 2 dạng này).
 - [ ] Cân nhắc ensemble/fusion nhiều model thay vì chọn 1 — kiến trúc lưu embedding `.npy` tách riêng
   theo từng model nên rank-fusion khả thi mà không phá `retrieve.py`, nhưng đây là quyết định kiến
   trúc mới — chỉ làm SAU khi bộ eval chứng minh fusion thắng rõ single-model tốt nhất, không làm vì
@@ -185,11 +227,11 @@ Success: nộp thử 1 zip trong Vòng thử nghiệm và được chấp nhận
   đúng khoảng 21/8→28/8 (giữa đợt 1 và đợt 2, ~1 tuần — dài hơn hẳn khoảng đệm bằng 0 trước đợt 1) làm
   cửa sổ kiểm định + swap nếu có bằng chứng thắng rõ ràng. Giữ nguyên `data/extracted/clip-features-32/`
   cũ (không xoá, không ghi đè `FEATURES_DIR`) để luôn rollback được nếu model mới phát sinh vấn đề.
-- [X] Kiểm tra dung lượng đĩa trống trước khi giải nén — đã xác nhận **không phải vấn đề** (88GB
-  trống / 476GB, 3 zip feature chỉ ~927MB tổng, đã giải nén xong cả 3, không cần dọn zip nguồn).
-  Jina (03) không phải ưu tiên cao khi xong — lợi thế đa ngôn ngữ của nó phần lớn đã giảm do pipeline
-  đã dịch VN→EN qua `rewrite.py` trước khi search; thêm vào `MODEL_REGISTRY` của `multi_index.py`
-  khi có, chỉ cần 1 entry mới.
+- [X] Kiểm tra dung lượng đĩa trống trước khi giải nén — đã xác nhận **không phải vấn đề tại thời
+  điểm đó** (88GB trống / 476GB, 3 zip feature chỉ ~927MB tổng, đã giải nén xong cả 3, không cần dọn
+  zip nguồn). **Cập nhật 2026-08-20 (cùng ngày, sau khi tải thêm video):** số liệu này đã cũ — xem
+  khối đầu Phase 6 ("Lưu ý dung lượng đĩa đã đổi" + "Phát hiện mới") để biết trạng thái hiện tại
+  (~31GB trống, Jina đã chạy xong).
 
 Success: có bộ eval ground-truth thật + bảng so sánh R@{1,5,20,50,100} của ≥3 baseline, quyết định
 model cho Sơ tuyển đợt 2 dựa trên bằng chứng đo được, có đường rollback nếu cần.

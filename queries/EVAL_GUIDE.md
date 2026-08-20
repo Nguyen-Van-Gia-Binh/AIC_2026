@@ -35,9 +35,11 @@ hỏng), phần còn lại dồn vào các dạng **lắt léo** sau (nên có �
    hoặc chuỗi N khoảnh khắc (TRAKE).
 2. Ghi lại thời điểm (giây) của khoảnh khắc đó.
 3. Chạy `lookup_frame.py` để ra `frame_id` gần nhất + gợi ý khoảng `[gt_frame_start, gt_frame_end]`:
+
    ```
    .venv\Scripts\python.exe scripts\eval\lookup_frame.py L21_V001 25.0
    ```
+
    Khoảng gợi ý mặc định khá rộng (tới keyframe lân cận) — nên tự thu hẹp lại bằng mắt (xem ảnh in
    ra ở cột "ảnh") cho khớp đúng lúc khoảnh khắc bắt đầu/kết thúc, giống cách BTC định nghĩa `[s, e]`
    trong `docs/Thong tin vong So tuyen AIC2026.md` §2.1 — khoảng càng sát thật càng đo baseline chính

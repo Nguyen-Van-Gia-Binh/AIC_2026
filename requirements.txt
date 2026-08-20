@@ -13,3 +13,7 @@ python-dotenv==1.2.3
 transformers==5.15.0
 open_clip_torch==2.32.0
 sentencepiece==0.2.2
+# thêm cho model "jina" (jinaai/jina-clip-v2, trust_remote_code=True — xem kaggle_jobs/03_jina/main.py):
+einops
+timm
+accelerate

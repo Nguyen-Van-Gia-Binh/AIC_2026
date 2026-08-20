@@ -5,7 +5,9 @@ Workflow:
   query_text → fast_retrieve(top_k=100) → trả về list kết quả đã rank
 
 Câu hỏi tiếng Việt: kết quả sẽ thấp hơn vì CLIP-ViT-B-32 hiểu tiếng Anh tốt hơn.
-Bước dịch tự động VN→EN sẽ được thêm ở Ngày 2 khi có LiteLLM.
+Cố ý KHÔNG tự dịch VN→EN ở đây — quyết định kiến trúc đã chốt: KIS là workflow tuyến tính, không
+LLM (xem ARCHITECTURE.md §3). Dịch VN→EN được đặt ở tầng UI (`scripts/app.py`, checkbox
+auto-translate gọi `agent/tools/rewrite.py`), không phải trong pipeline này.
 
 Usage:
     from scripts.agent.pipeline_kis import run_kis

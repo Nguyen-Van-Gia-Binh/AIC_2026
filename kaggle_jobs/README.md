@@ -240,3 +240,41 @@ double-projection**, các bản vá phòng hờ (`_get_image_embeds()` shape-bas
 toàn dự phòng, không thực sự được dùng tới nữa với bản 4.57.3.
 
 Đã tắt lại `SMOKE_TEST = False` trong `01_vit_l14/main.py` — sẵn sàng push chạy thật.
+
+**Lưu ý:** `requirements.txt` ở gốc repo (dùng cho `scripts/eval/` local) pin `transformers==5.15.0`
+— KHÁC bản `4.57.3` pin ở đây cho Kaggle. Đây là chủ đích, không phải lệch sót: 2 môi trường không
+cần khớp version vì `scripts/eval/multi_index.py:_extract_embedding()` đã đọc shape tensor lúc
+runtime thay vì đoán cứng field/API theo version cụ thể (xem docstring hàm đó) — encode ảnh (Kaggle,
+pin 4.57.3) và encode text (local, 5.15.0) chỉ cần ra đúng chiều vector, không cần cùng version thư
+viện.
+
+## Cập nhật 8 (2026-08-20, LỖI NGHIÊM TRỌNG — output `features_jina/` 100% NaN, xác nhận thật)
+
+Sau khi giải nén `features_jina.zip` vào `data/extracted/` và smoke-test qua
+`scripts/eval/multi_index.py jina` (đã thêm entry vào `MODEL_REGISTRY` + `_build_jina_encoder()` +
+patch `_patch_missing_clip_loss()` tái dùng từ mục 6/7 ở trên), kết quả trả về `score=nan` cho mọi
+kết quả. Debug tận gốc bằng script riêng (không đoán):
+- Text encoder (`model.encode_text()`, chạy CPU local, `transformers==5.15.0` sau khi vá `clip_loss`)
+  hoạt động ĐÚNG — vector text ra `float32`, không NaN, giá trị hợp lý. **Không phải lỗi ở phía
+  local/multi_index.py.**
+- Kiểm tra thẳng `data/extracted/features_jina/*.npy`: **873/873 file, 100% giá trị là NaN**, và
+  không phải corrupt ngẫu nhiên — MỌI giá trị ở MỌI file đều đúng 1 bit pattern float16 duy nhất
+  `0x7FFF` (canonical NaN). Đây là bug encode-time thật từ lần chạy Kaggle trước, không phải lỗi giải
+  nén/transfer (corrupt ngẫu nhiên sẽ cho nhiều bit pattern khác nhau, không phải 1 pattern đồng nhất
+  tuyệt đối trên toàn bộ 873 file).
+
+**Nghi phạm hàng đầu**: `03_jina/main.py` chạy model ở `torch_dtype="float16"` khi có CUDA (dòng
+`DEVICE == "cuda"` → `dtype_str = "float16"`). jina-clip-v2 dùng vision tower kiến trúc EVA + RoPE
+(`eva_model.py`/`rope_embeddings.py`) — họ kiến trúc này đã biết dễ overflow số ở fp16 (attention
+score/rotary embedding tràn số → NaN). Đã ghi cảnh báo chi tiết + hướng debug trực tiếp trong
+`03_jina/main.py` (gần định nghĩa `DEVICE`).
+
+**Đã xử lý ở phía dùng dữ liệu** (không thể tự sửa dữ liệu nguồn — phải encode lại trên Kaggle):
+`scripts/eval/multi_index.py:load_feature_index()` giờ fail loud (raise `RuntimeError`) nếu phát hiện
+NaN trong bất kỳ `.npy` nào, thay vì âm thầm cho qua rồi ra `score=nan` không ai để ý. Áp dụng chung
+cho mọi model, không riêng jina.
+
+**Trạng thái**: `features_jina/` **KHÔNG dùng được** cho tới khi chạy lại job `03_jina` trên Kaggle
+(thử ép float32 trên CUDA trước, xem ghi chú trong `main.py`) và giải nén lại. `jina` VẪN có trong
+`MODEL_REGISTRY` (code encoder đã xác nhận đúng) nhưng sẽ crash rõ ràng nếu ai gọi tới trước khi dữ
+liệu được encode lại — đúng ý đồ, tốt hơn là chạy êm với kết quả sai.

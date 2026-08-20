@@ -77,6 +77,19 @@ ZIP_PATH = Path(f"/kaggle/working/features_{_RUN_TAG}.zip")
 BATCH_SIZE = 32  # model ~865M tham số, hạ batch để an toàn VRAM trên GPU Kaggle (~16GB)
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
+# CẢNH BÁO NGHIÊM TRỌNG (XÁC NHẬN THẬT 2026-08-20, không phải đoán): output `features_jina/*.npy`
+# từ lần chạy trước đó 100% NaN — kiểm tra cả 873/873 file, MỌI giá trị đều đúng 1 bit pattern
+# float16 0x7FFF (NaN chuẩn), không phải corrupt ngẫu nhiên lúc zip/giải nén mà là bug encode-time
+# thật. Nghi phạm số 1: model chạy ở float16 trên GPU Kaggle — model này dùng tower EVA + RoPE
+# (`eva_model.py`/`rope_embeddings.py`, xem docstring đầu file), kiến trúc đã biết dễ overflow ở
+# fp16 (attention scores/rotary embedding tràn số). ĐÃ SỬA (2026-08-20): ép `dtype_str = "float32"`
+# vô điều kiện, kể cả trên CUDA (xem load_model() bên dưới) — chậm hơn, tốn VRAM hơn, nhưng loại
+# trừ nghi phạm này. Đồng thời main() giờ kiểm tra `np.isnan(feats).any()` ngay sau khi encode xong
+# 1 video, dừng sớm + báo lỗi rõ thay vì lặng lẽ ghi NaN ra .npy như lần trước. CHƯA CHẠY LẠI TRÊN
+# KAGGLE ĐỂ XÁC NHẬN FIX — nếu float32 vẫn ra NaN thì nghi phạm khác là chính bug encode-time trong
+# code tuỳ biến của Jina, không phải dtype. Xem scripts/eval/multi_index.py (đã thêm fail-loud check
+# NaN ở `load_feature_index()` để bắt lỗi này sớm ở phía dùng dữ liệu, phòng khi chạy sót bug này).
+
 
 def resolve_keyframes_root() -> Path:
     """Tìm thư mục keyframes/ thật trong /kaggle/input — KHÔNG hard-code 1 path cố định vì Kaggle
@@ -198,7 +211,9 @@ def load_model():
     # LƯU Ý (phát hiện 2026-08-19 qua Log3.txt): configuration_clip.py tuỳ biến của model này làm
     # `hasattr(torch, torch_dtype)` -> torch_dtype PHẢI là string ("float16"/"float32"), truyền
     # thẳng object torch.float16 sẽ crash với TypeError: attribute name must be string.
-    dtype_str = "float16" if DEVICE == "cuda" else "float32"
+    # LUÔN float32, kể cả trên CUDA — xem cảnh báo NaN ở đầu file (2026-08-20): fp16 trên GPU Kaggle
+    # từng ra 100% NaN cho model này (tower EVA+RoPE dễ tràn số ở fp16).
+    dtype_str = "float32"
     try:
         model = AutoModel.from_pretrained(
             MODEL_ID, trust_remote_code=True, torch_dtype=dtype_str, use_flash_attn=False
@@ -255,6 +270,14 @@ def main():
             continue
 
         feats = encode_video(model, jpgs)
+        # Fail-loud (2026-08-20): dừng NGAY ở video đầu tiên ra NaN thay vì âm thầm ghi .npy hỏng
+        # rồi chạy hết 873 video mất ~8h mới phát hiện (đúng thứ đã xảy ra lần trước với fp16).
+        if np.isnan(feats).any():
+            raise RuntimeError(
+                f"[encode_{TAG}] video {video_id} ra NaN sau encode. Dừng ngay — xem cảnh báo đầu "
+                f"file main.py. Model đã chạy float32 (load_model()); nếu vẫn NaN thì bug không phải "
+                f"do dtype, cần điều tra tiếp trong encode_image()/model tuỳ biến của Jina."
+            )
         np.save(out_path, feats.astype(np.float16))
         for p in jpgs:
             manifest_rows.append({

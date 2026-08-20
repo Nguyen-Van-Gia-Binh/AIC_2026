@@ -69,7 +69,10 @@
 1. Mở file `query-N-trake.txt`, đọc mô tả tổng quát chuỗi sự kiện + danh sách N mốc cần định vị.
 2. Dán mô tả tổng quát vào ô đầu (tiếng Việt OK, tự dịch nội bộ).
 3. Gõ **mỗi mốc sự kiện trên 1 dòng** vào ô "Danh sách khoảnh khắc", **đúng thứ tự thời gian** — số
-   dòng ở đây quyết định N (số cột frame_id) khi Add to Queue.
+   dòng ở đây quyết định N (số cột frame_id) khi Add to Queue. Lưu ý: N được đọc lại từ ô này **tại
+   đúng lúc bấm Add to Queue**, không phải từ lúc bấm Run — nếu sửa số dòng ở ô này SAU khi Run mà
+   không Run lại, bảng frame_ids cũ sẽ lệch N mới và bị chặn Add (báo thiếu/thừa mốc). Sửa ô này thì
+   luôn Run lại trước khi Add to Queue.
 4. Bấm **🎬 Run TRAKE Pipeline** — chờ lâu hơn Q&A (2 giai đoạn: chọn video → căn từng mốc tuần
    tự, chạy N lần gọi LLM).
 5. Rà soát bảng — cột **frame_ids** dạng `40530 | 40727 | 40895`, đối chiếu đúng thứ tự đã nhập.

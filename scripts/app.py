@@ -117,7 +117,7 @@ def kis_add_to_queue(df: pd.DataFrame, query_id: str, queue: list) -> tuple:
     """Thêm kết quả KIS vào submission queue."""
     if df is None or len(df) == 0:
         return queue, "⚠️ Chưa có kết quả để thêm."
-    query_id = query_id.strip() or "kis_query_001"
+    query_id = query_id.strip() or "kis-query-001"  # fallback nếu để trống — LUÔN điền tay theo đúng tên BTC cấp (vd. query-1-kis), đây chỉ là lưới an toàn
     try:
         rows = _df_to_submission_rows(df, "kis")
     except ValueError as e:
@@ -157,7 +157,7 @@ def qa_add_to_queue(df: pd.DataFrame, answer: str, query_id: str, queue: list) -
     """Thêm kết quả Q&A vào queue."""
     if df is None or len(df) == 0:
         return queue, "⚠️ Chưa có kết quả."
-    query_id = query_id.strip() or "qa_query_001"
+    query_id = query_id.strip() or "qa-query-001"  # fallback nếu để trống — LUÔN điền tay theo đúng tên BTC cấp (vd. query-2-qa), đây chỉ là lưới an toàn
     try:
         rows = _df_to_submission_rows(df, "qa", answer=answer)
     except ValueError as e:
@@ -217,7 +217,7 @@ def trake_add_to_queue(df: pd.DataFrame, query_id: str, events_text: str, queue:
     n_events = len(_parse_events(events_text))
     if n_events == 0:
         return queue, "⚠️ Không xác định được số mốc kỳ vọng (ô Events trống) — không thể thêm vào hàng đợi."
-    query_id = query_id.strip() or "trake_query_001"
+    query_id = query_id.strip() or "trake-query-001"  # fallback nếu để trống — LUÔN điền tay theo đúng tên BTC cấp (vd. query-3-trake), đây chỉ là lưới an toàn
 
     # Tách frame_ids từ cột "frame_ids" (dạng "1 | 2 | 3"), chặn nếu thiếu mốc hoặc token không hợp lệ.
     # Kiểm tra trên danh sách token thô (chưa lọc) — nếu lọc token hỏng rồi mới đếm, số lượng còn lại
@@ -329,9 +329,168 @@ def export_clear_queue() -> tuple:
 # DỰNG UI
 # ═══════════════════════════════════════════════════════════════════════════════
 
+_THEME = gr.themes.Soft(
+    primary_hue=gr.themes.colors.indigo,
+    secondary_hue=gr.themes.colors.indigo,
+    neutral_hue=gr.themes.colors.slate,
+    font=[gr.themes.GoogleFont("Inter"), "ui-sans-serif", "system-ui", "sans-serif"],
+).set(
+    # ── Nền tổng thể: sáng, dịu mắt, không chói ─────────────────────────────
+    body_background_fill="#F6F7FB",
+    body_background_fill_dark="#F6F7FB",
+    body_text_color="#1E293B",
+    body_text_color_subdued="#64748B",
+    background_fill_primary="#FFFFFF",
+    background_fill_primary_dark="#FFFFFF",
+    background_fill_secondary="#F8FAFC",
+    background_fill_secondary_dark="#F8FAFC",
+    border_color_primary="#E2E8F0",
+    border_color_primary_dark="#E2E8F0",
+    color_accent_soft="#EEF2FF",
+    color_accent_soft_dark="#EEF2FF",
+
+    # ── Khối/Card: bo góc mềm, viền nhạt, bóng nhẹ thay vì viền cứng ────────
+    block_background_fill="#FFFFFF",
+    block_background_fill_dark="#FFFFFF",
+    block_border_color="#E7E9F3",
+    block_border_color_dark="#E7E9F3",
+    block_border_width="1px",
+    block_radius="16px",
+    block_shadow="0 1px 2px rgba(30,41,59,0.04), 0 4px 12px rgba(30,41,59,0.04)",
+    block_padding="20px",
+    block_title_text_color="#1E293B",
+    block_title_text_weight="600",
+
+    # ── Nhãn (label pill): 1 màu nhất quán thay vì lẫn lộn xanh/cam ─────────
+    block_label_background_fill="#EEF2FF",
+    block_label_background_fill_dark="#EEF2FF",
+    block_label_text_color="#4338CA",
+    block_label_text_color_dark="#4338CA",
+    block_label_border_width="0px",
+    block_label_text_weight="600",
+    block_label_radius="8px",
+
+    # ── Input: bo tròn, viền nhạt, focus rõ ràng bằng accent indigo ─────────
+    input_background_fill="#FFFFFF",
+    input_background_fill_dark="#FFFFFF",
+    input_border_color="#E2E8F0",
+    input_border_color_dark="#E2E8F0",
+    input_border_color_focus="#6366F1",
+    input_border_color_focus_dark="#6366F1",
+    input_radius="10px",
+    input_shadow="0 0 0 transparent",
+
+    # ── Nút bấm: primary nổi bật, secondary nhẹ nhàng, bo góc lớn hơn ───────
+    button_primary_background_fill="#4F46E5",
+    button_primary_background_fill_dark="#4F46E5",
+    button_primary_background_fill_hover="#4338CA",
+    button_primary_background_fill_hover_dark="#4338CA",
+    button_primary_text_color="#FFFFFF",
+    button_primary_text_color_dark="#FFFFFF",
+    button_primary_border_color="#4F46E5",
+    button_primary_border_color_dark="#4F46E5",
+    button_secondary_background_fill="#FFFFFF",
+    button_secondary_background_fill_dark="#FFFFFF",
+    button_secondary_background_fill_hover="#F1F5F9",
+    button_secondary_background_fill_hover_dark="#F1F5F9",
+    button_secondary_border_color="#E2E8F0",
+    button_secondary_border_color_dark="#E2E8F0",
+    button_secondary_text_color="#334155",
+    button_secondary_text_color_dark="#334155",
+    button_large_radius="12px",
+    button_large_padding="12px 22px",
+    button_transition="all 0.15s ease",
+    # Nút "stop" (vd. Clear Queue): giữ sắc đỏ dịu để vẫn nhận biết được là
+    # hành động phá hủy, thay vì lẫn với nút secondary trung tính ở trên.
+    button_cancel_background_fill="#FEF2F2",
+    button_cancel_background_fill_dark="#FEF2F2",
+    button_cancel_background_fill_hover="#FEE2E2",
+    button_cancel_background_fill_hover_dark="#FEE2E2",
+    button_cancel_border_color="#FECACA",
+    button_cancel_border_color_dark="#FECACA",
+    button_cancel_text_color="#DC2626",
+    button_cancel_text_color_dark="#DC2626",
+    button_cancel_text_color_hover="#B91C1C",
+    button_cancel_text_color_hover_dark="#B91C1C",
+
+    # ── Bảng (Dataframe): dòng chẵn/lẻ tương phản nhẹ, dễ đọc ───────────────
+    table_border_color="#E7E9F3",
+    table_even_background_fill="#FFFFFF",
+    table_odd_background_fill="#FAFAFE",
+    table_row_focus="#EEF2FF",
+    table_radius="12px",
+)
+
+# Ép TOÀN BỘ token còn lại luôn hiển thị theo giao diện sáng đã thiết kế ở trên,
+# kể cả khi trình duyệt/OS đang ở dark mode — tránh tình trạng nền đã bị ép sáng
+# nhưng chữ vẫn lấy màu mặc định của dark mode (trắng trên trắng, không đọc được).
+for _attr in list(vars(_THEME)):
+    if _attr.endswith("_dark"):
+        continue
+    _dark_attr = _attr + "_dark"
+    if hasattr(_THEME, _dark_attr):
+        setattr(_THEME, _dark_attr, getattr(_THEME, _attr))
+
 _CSS = """
-.tab-header { font-size: 1.05em; font-weight: 600; margin-bottom: 8px; }
+:root { --aic-accent: #4F46E5; }
+
+.gradio-container {
+    max-width: 1240px !important;
+    margin: 0 auto !important;
+}
+
+/* ── Tiêu đề: banner nhẹ, nổi bật nhưng không chói ─────────────────────── */
+#aic-header {
+    background: linear-gradient(135deg, #EEF2FF 0%, #F6F7FB 100%);
+    border: 1px solid #E7E9F3;
+    border-radius: 18px;
+    padding: 20px 24px;
+    margin-bottom: 18px;
+}
+#aic-header h1 { margin: 0 0 6px 0; font-size: 1.5em; color: #1E1B4B; }
+#aic-header p { margin: 0; color: #4B5563; }
+
+/* ── Thanh Tab: dạng segmented/pill, tab đang chọn nổi bật rõ ─────────────── */
+.tabs > .tab-wrapper > .tab-container {
+    gap: 4px;
+    border-bottom: 1px solid #E7E9F3;
+    padding-bottom: 0;
+}
+.tab-container button {
+    border-radius: 10px 10px 0 0 !important;
+    font-weight: 600;
+    color: #64748B;
+    padding: 10px 18px !important;
+}
+.tab-container button.selected {
+    color: #4338CA !important;
+    background: #EEF2FF !important;
+}
+
+/* ── Mỗi tab-item: nền card trắng bo góc, tách khỏi nền xám nhạt ─────────── */
+.tabitem {
+    background: #FFFFFF;
+    border: 1px solid #E7E9F3 !important;
+    border-radius: 0 14px 14px 14px !important;
+    padding: 22px !important;
+    box-shadow: 0 1px 2px rgba(30,41,59,0.03);
+}
+
+/* ── Nút Search/Run chính: bo tròn lớn hơn, có bóng đổ nhẹ khi hover ─────── */
+button.primary {
+    box-shadow: 0 2px 6px rgba(79,70,229,0.25) !important;
+}
+button.primary:hover {
+    box-shadow: 0 4px 10px rgba(79,70,229,0.32) !important;
+    transform: translateY(-1px);
+}
+
+/* ── Trạng thái / status text: gọn, dễ quét ──────────────────────────────── */
 .status-box textarea { font-family: monospace; font-size: 0.88em; }
+
+/* ── Gallery: bo góc ảnh mềm mại hơn ──────────────────────────────────────── */
+.grid-wrap, .gallery { border-radius: 12px !important; }
+
 footer { display: none !important; }
 """
 
@@ -343,7 +502,8 @@ with gr.Blocks(title="AIC2026 Search & Submit") as demo:
     # ── Tiêu đề ───────────────────────────────────────────────────────────────
     gr.Markdown(
         "# 🎬 AIC2026 Search & Submit Tool\n"
-        "> **Human-in-the-loop**: Tìm kiếm → Xem → Sửa tay → Export ZIP"
+        "**Human-in-the-loop**: Tìm kiếm → Xem → Sửa tay → Export ZIP",
+        elem_id="aic-header",
     )
 
     with gr.Tabs():
@@ -582,6 +742,6 @@ if __name__ == "__main__":
         server_port=port,
         share=False,
         inbrowser=True,   # tu dong mo trinh duyet
-        theme=gr.themes.Soft(primary_hue="blue", neutral_hue="slate"),
+        theme=_THEME,
         css=_CSS,
     )

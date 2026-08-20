@@ -72,6 +72,20 @@ def load_feature_index(features_dir: Path) -> tuple[np.ndarray, pd.DataFrame]:
     matrix = np.concatenate(vec_chunks, axis=0)
     meta = pd.DataFrame(meta_rows)
     assert len(meta) == matrix.shape[0], "meta và matrix lệch số dòng"
+
+    # Fail loud nếu .npy hỏng (NaN) — XÁC NHẬN THẬT đã gặp case này (2026-08-20, features_jina):
+    # toàn bộ 873/873 file NaN 100% (bit pattern float16 0x7FFF ở MỌI giá trị, MỌI video — không
+    # phải corrupt ngẫu nhiên lúc giải nén, mà encode-time bug thật, nhiều khả năng float16 overflow
+    # trên GPU Kaggle, xem kaggle_jobs/README.md). Không âm thầm cho qua vì cosine similarity với
+    # NaN vẫn chạy không lỗi nhưng ra score=nan cho MỌI kết quả — sai hoàn toàn mà không ai biết nếu
+    # không check ở đây.
+    n_nan_rows = int(np.isnan(matrix).any(axis=1).sum())
+    if n_nan_rows > 0:
+        raise RuntimeError(
+            f"[{features_dir.name}] {n_nan_rows}/{len(matrix)} vector chứa NaN — dữ liệu .npy hỏng "
+            f"(gặp thật với features_jina: encode-time bug, không phải lỗi giải nén). Không dùng "
+            f"được cho tới khi encode lại. Xem PLAN.md Phase 6 / kaggle_jobs/README.md."
+        )
     return matrix, meta
 
 
@@ -173,6 +187,65 @@ def _build_dfn_encoder() -> Callable[[list[str]], np.ndarray]:
     return encode
 
 
+def _patch_missing_clip_loss() -> None:
+    """jina-clip-v2 (trust_remote_code=True) làm `from transformers.models.clip.modeling_clip import
+    (..., clip_loss)` — transformers>=5.x đã bỏ hàm nội bộ `clip_loss` này -> ImportError ngay lúc
+    AutoModel.from_pretrained() import module tuỳ biến của Jina, XÁC NHẬN THẬT bằng smoke-test local
+    (2026-08-20, transformers==5.15.0). Giống hệt lỗi đã gặp khi encode ảnh trên Kaggle (xem
+    kaggle_jobs/03_jina/main.py:_patch_missing_clip_loss() + kaggle_jobs/README.md mục "Cập nhật 6").
+    `clip_loss` chỉ dùng lúc HUẤN LUYỆN (return_loss=True) — encode_text()/encode_image() không bao
+    giờ chạy nhánh đó, nên chỉ cần vá lại đúng công thức gốc (ổn định nhiều năm của CLIP) vào module
+    trước khi Jina import, không cần hạ version transformers (tránh phá vitl14/siglip đang chạy tốt
+    ở 5.15.0). Copy nguyên logic từ kaggle_jobs/03_jina/main.py, giữ 1 bản riêng ở đây vì 2 file cố
+    ý không import lẫn nhau (module này chạy local, kaggle_jobs/ chạy trên Kaggle)."""
+    import transformers.models.clip.modeling_clip as _clip_modeling
+    if hasattr(_clip_modeling, "clip_loss"):
+        return
+    import torch
+    import torch.nn.functional as F
+
+    def _contrastive_loss(logits):
+        return F.cross_entropy(logits, torch.arange(len(logits), device=logits.device))
+
+    def _clip_loss(similarity):
+        caption_loss = _contrastive_loss(similarity)
+        image_loss = _contrastive_loss(similarity.t())
+        return (caption_loss + image_loss) / 2.0
+
+    _clip_modeling.clip_loss = _clip_loss
+    print("[multi_index]   đã vá clip_loss còn thiếu trong transformers.models.clip.modeling_clip "
+          "(chỉ cần cho import, không dùng tới khi chỉ encode text)")
+
+
+def _build_jina_encoder() -> Callable[[list[str]], np.ndarray]:
+    """jina-clip-v2 dùng trust_remote_code=True (modeling tuỳ biến riêng, KHÔNG phải CLIPModel/
+    SiglipModel chuẩn của transformers) — model có sẵn hàm tiện lợi model.encode_text(texts) trả
+    thẳng embedding, không đi qua get_text_features()/_extract_embedding() như vitl14/siglip. Xem
+    kaggle_jobs/03_jina/main.py (bên đó dùng encode_image() cùng model, cùng API family)."""
+    import torch
+    from transformers import AutoModel
+    model_id = "jinaai/jina-clip-v2"
+    print(f"[multi_index]   tải {model_id} (lần đầu sẽ tải checkpoint ~1-2GB, trust_remote_code=True)...")
+    _patch_missing_clip_loss()
+    try:
+        model = AutoModel.from_pretrained(
+            model_id, trust_remote_code=True, torch_dtype="float32", use_flash_attn=False
+        )
+    except TypeError:
+        # bản model card cũ hơn không nhận kwarg use_flash_attn — xem kaggle_jobs/03_jina/main.py
+        model = AutoModel.from_pretrained(model_id, trust_remote_code=True, torch_dtype="float32")
+    model.eval()
+
+    def encode(texts: list[str]) -> np.ndarray:
+        with torch.no_grad():
+            vecs = model.encode_text(list(texts))
+        vecs = np.asarray(vecs, dtype=np.float32)
+        norms = np.linalg.norm(vecs, axis=1, keepdims=True)
+        norms[norms == 0] = 1.0
+        return vecs / norms
+    return encode
+
+
 @dataclass
 class ModelSpec:
     tag: str
@@ -185,7 +258,7 @@ MODEL_REGISTRY: dict[str, ModelSpec] = {
     "vitl14":      ModelSpec("vitl14",      "features_vitl14",  _build_vitl14_encoder),
     "siglip":      ModelSpec("siglip",      "features_siglip",  _build_siglip_encoder),
     "dfn":         ModelSpec("dfn",         "features_dfn",     _build_dfn_encoder),
-    # jina: thêm khi kaggle_jobs/03_jina chạy xong + đã tải features_jina.zip (xem PLAN.md Phase 6)
+    "jina":        ModelSpec("jina",        "features_jina",    _build_jina_encoder),
 }
 
 _INDEX_CACHE: dict[str, tuple[np.ndarray, pd.DataFrame]] = {}

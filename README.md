@@ -115,6 +115,10 @@ AIC2026/
 │   ├── submit/                     # Sinh & kiểm tra bài nộp
 │   │   ├── build_submission.py     # Sinh CSV/ZIP theo format BTC
 │   │   └── validate_submission.py  # Validator nội bộ (encoding, frame≥1, ≤100 dòng)
+│   ├── eval/                       # Phase 6 — bộ eval offline, so baseline embedding bằng R@k
+│   │   ├── multi_index.py          # Index + text encoder cho nhiều model (clip_vitb32/vitl14/siglip/dfn)
+│   │   ├── run_eval.py             # So baseline theo eval_ground_truth.json, ghi eval_baseline_comparison.md
+│   │   └── lookup_frame.py         # CLI tra frame_id theo (video_id, giây) khi gán ground truth
 │   ├── test_day1.py                # Test tích hợp end-to-end KIS
 │   ├── test_day2_basic.py          # Test cơ bản Q&A/TRAKE
 │   └── test_day2_full.py           # Test đầy đủ Q&A/TRAKE
@@ -134,7 +138,9 @@ AIC2026/
 │   └── 04_dfn/                     # OpenCLIP DFN-5B ViT-H/14
 │
 ├── queries/                        # Query mẫu/test (JSON)
-│   └── sample_queries.json
+│   ├── sample_queries.json
+│   ├── eval_ground_truth.json      # Bộ ground truth tự chấm Phase 6 (video_id/frame_id đúng)
+│   └── EVAL_GUIDE.md               # Quy trình + schema gán ground truth cho eval_ground_truth.json
 │
 ├── submissions/                    # Output CSV/ZIP (*.zip git-ignored)
 │
@@ -148,7 +154,6 @@ AIC2026/
 ├── requirements.txt                # Dependencies đã pin version
 ├── ARCHITECTURE.md                 # Thiết kế hệ thống, quyết định đã chốt
 ├── PLAN.md                         # Tiến độ project theo Phase
-├── SESSION_LOG.md                  # Nhật ký phiên làm việc
 └── CLAUDE.md                       # Quy ước code cho AI assistant
 ```
 
@@ -175,6 +180,8 @@ python -m venv .venv
 **`requirements.txt`** hiện tại:
 ```
 gradio==6.24.0
+gradio_client==2.6.0
+hf-gradio==0.4.1
 numpy==2.5.2
 pandas==3.0.5
 pillow==12.3.0
@@ -182,6 +189,11 @@ sentence-transformers==5.7.0
 torch==2.13.0+cpu
 litellm==1.97.0
 python-dotenv==1.2.3
+
+# scripts/eval/ (Phase 6 — so sánh baseline embedding, không phải app sản xuất KIS/QA/TRAKE):
+transformers==5.15.0
+open_clip_torch==2.32.0
+sentencepiece==0.2.2
 ```
 
 ### 2. Cấu hình API key
@@ -314,10 +326,10 @@ Events list → Giai đoạn 1: rewrite + retrieve → chọn top-K video
 
 | Job | Model | Thư viện | Trạng thái |
 |-----|-------|----------|------------|
-| `01_vit_l14/` | OpenAI CLIP ViT-L/14 | `transformers` | Smoke-test PASS ✅ |
-| `02_siglip/` | Google SigLIP SO400M-384 | `transformers` | Đã sửa, chờ chạy lại |
-| `03_jina/` | Jina CLIP v2 | `transformers` (remote code) | Đã sửa, chờ chạy lại |
-| `04_dfn/` | OpenCLIP DFN-5B ViT-H/14 | `open_clip_torch` | Đã sửa, chờ chạy lại |
+| `01_vit_l14/` | OpenAI CLIP ViT-L/14 | `transformers` | Chạy xong, feature đã giải nén vào `data/extracted/` ✅ |
+| `02_siglip/` | Google SigLIP SO400M-384 | `transformers` | Chạy xong, feature đã giải nén vào `data/extracted/` ✅ |
+| `03_jina/` | Jina CLIP v2 | `transformers` (remote code) | ❌ Output `features_jina/` hỏng 100% NaN (xác nhận 2026-08-20, xem `kaggle_jobs/README.md` mục "Cập nhật 8") — cần chạy lại job |
+| `04_dfn/` | OpenCLIP DFN-5B ViT-H/14 | `open_clip_torch` | Chạy xong, feature đã giải nén vào `data/extracted/` ✅ |
 
 Chi tiết quy trình CLI, sự cố đã gặp & cách sửa → [`kaggle_jobs/README.md`](kaggle_jobs/README.md)
 
@@ -347,7 +359,6 @@ Cấu hình tại [`scripts/agent/config.py`](scripts/agent/config.py).
 |------|----------|
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | Thiết kế hệ thống, trách nhiệm từng module, quyết định đã chốt |
 | [`PLAN.md`](PLAN.md) | Tiến độ project theo Phase (1–5), blockers & risks |
-| [`SESSION_LOG.md`](SESSION_LOG.md) | Nhật ký phiên làm việc |
 | [`CLAUDE.md`](CLAUDE.md) | Quy ước code, quick start, folder convention |
 | [`docs/Thong tin vong So tuyen AIC2026.md`](docs/Thong%20tin%20vong%20So%20tuyen%20AIC2026.md) | Luật thi vòng Sơ tuyển AIC 2026 |
 | [`docs/Training/`](docs/Training/) | Tóm tắt các buổi training (kiến trúc, Vision-Language, quy trình nộp bài) |
@@ -383,6 +394,7 @@ Cấu hình tại [`scripts/agent/config.py`](scripts/agent/config.py).
 | 3 | Gradio UI Human-in-the-loop | ✅ Done |
 | 4 | Hardening trước ngày thi (code review, fix bug, git) | ✅ Done |
 | 5 | Sẵn sàng thi (test thật trên Codabench, checklist ngày thi) | ⏳ Todo |
+| 6 | Nâng cấp retrieval baseline + bộ eval tự chấm (song song, không chặn Phase 5) | ⏳ Todo |
 
 Chi tiết từng Phase → [`PLAN.md`](PLAN.md)
 
