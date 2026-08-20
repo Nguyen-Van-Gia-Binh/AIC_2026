@@ -12,7 +12,7 @@
 - [Kiến trúc hệ thống](#kiến-trúc-hệ-thống)
 - [Tech Stack](#tech-stack)
 - [Cấu trúc thư mục](#cấu-trúc-thư-mục)
-- [Cài đặt & Khởi chạy](#cài-đặt--khởi-chạy)
+- [Cài đặt &amp; Khởi chạy](#cài-đặt--khởi-chạy)
 - [Sử dụng](#sử-dụng)
 - [Pipeline chi tiết](#pipeline-chi-tiết)
 - [Kaggle Jobs — Encode SOTA](#kaggle-jobs--encode-sota)
@@ -25,13 +25,14 @@
 
 Hệ thống giải quyết **3 dạng bài** của cuộc thi AIC 2026:
 
-| Dạng bài | Mô tả | Pipeline |
-|-----------|--------|----------|
-| **KIS** (Known-Item Search) | Tìm 1 frame cụ thể từ mô tả text | Tuyến tính, không LLM |
-| **Q&A** (Question & Answer) | Tìm frame + trả lời câu hỏi về nội dung | Orchestrator-workers, tối đa 2 vòng reflection |
-| **TRAKE** (Tracking Events) | Tìm chuỗi N frame theo thứ tự thời gian cho N mốc sự kiện | Pipeline 2 giai đoạn cố định |
+| Dạng bài                        | Mô tả                                                           | Pipeline                                          |
+| --------------------------------- | ----------------------------------------------------------------- | ------------------------------------------------- |
+| **KIS** (Known-Item Search) | Tìm 1 frame cụ thể từ mô tả text                            | Tuyến tính, không LLM                          |
+| **Q&A** (Question & Answer) | Tìm frame + trả lời câu hỏi về nội dung                    | Orchestrator-workers, tối đa 2 vòng reflection |
+| **TRAKE** (Tracking Events) | Tìm chuỗi N frame theo thứ tự thời gian cho N mốc sự kiện | Pipeline 2 giai đoạn cố định                 |
 
 **Điểm nổi bật:**
+
 - 🔍 **CLIP retrieval** trên ma trận ~177K keyframe (873 video) — cosine similarity realtime
 - 🤖 **Agent đa phương thức** — LLM (Gemini/Groq/NVIDIA NIM) qua LiteLLM với fallback 3 tầng + key rotation
 - 🛡️ **Anti-hallucination** bắt buộc cho Q&A — cross-check answer với Objects JSON (Faster R-CNN) offline
@@ -39,7 +40,7 @@ Hệ thống giải quyết **3 dạng bài** của cuộc thi AIC 2026:
 - 📦 **Submission engine** — tự sinh CSV/ZIP theo format BTC, kèm validator nội bộ
 
 Scoring: **R-Score / R@k** trung bình tại rank 1/5/20/50/100. Luật thi chi tiết trong
-[`docs/Thong tin vong So tuyen AIC2026.md`](docs/Thong%20tin%20vong%20So%20tuyen%20AIC2026.md).
+[`docs/Thong tin vong So tuyen AIC2026.md`](<docs/Thong%20tin%20vong%20So%20tuyen%20AIC2026.md>).
 
 ---
 
@@ -69,6 +70,7 @@ pipeline_kis.py     pipeline_qa.py          pipeline_trake.py
 ```
 
 **Quyết định kiến trúc chính:**
+
 - Không dùng 1 agent chung cho cả 3 dạng bài — chọn kiến trúc phù hợp theo độ mở của task
 - 1 nguồn cấu hình LLM duy nhất: `scripts/agent/config.py`
 - File-based, không database — toàn bộ state là file (`.npy`, `.csv`, `.json`, `.zip`)
@@ -80,16 +82,16 @@ Chi tiết đầy đủ → [`ARCHITECTURE.md`](ARCHITECTURE.md)
 
 ## Tech Stack
 
-| Thành phần | Công nghệ |
-|-----------|-----------|
-| Ngôn ngữ | Python (qua `.venv`, không có Node/JS) |
-| Embedding | `sentence-transformers` (`clip-ViT-B-32`) — image & text encoder chung 1 không gian |
-| Framework ML | `torch` (CPU build) |
-| Dữ liệu | `pandas`, `numpy` — metadata table & ma trận embedding |
-| UI | `gradio` — 4 tab KIS/Q&A/TRAKE/Export |
-| LLM | `litellm` — route qua chuỗi fallback: **Gemini** → **Groq** → **NVIDIA NIM** |
-| Cấu hình | `python-dotenv` — load API key từ `.env` |
-| Object detection | Faster R-CNN — dữ liệu Objects JSON offline (không gọi API) |
+| Thành phần     | Công nghệ                                                                                          |
+| ---------------- | ---------------------------------------------------------------------------------------------------- |
+| Ngôn ngữ       | Python (qua`.venv`, không có Node/JS)                                                            |
+| Embedding        | `sentence-transformers` (`clip-ViT-B-32`) — image & text encoder chung 1 không gian            |
+| Framework ML     | `torch` (CPU build)                                                                                |
+| Dữ liệu        | `pandas`, `numpy` — metadata table & ma trận embedding                                         |
+| UI               | `gradio` — 4 tab KIS/Q&A/TRAKE/Export                                                             |
+| LLM              | `litellm` — route qua chuỗi fallback: **Gemini** → **Groq** → **NVIDIA NIM** |
+| Cấu hình       | `python-dotenv` — load API key từ `.env`                                                       |
+| Object detection | Faster R-CNN — dữ liệu Objects JSON offline (không gọi API)                                     |
 
 **Không sử dụng**: database, ORM, message queue. Mọi dữ liệu nằm trong file tĩnh dưới `data/`, `queries/`, `submissions/`.
 
@@ -178,6 +180,7 @@ python -m venv .venv
 ```
 
 **`requirements.txt`** hiện tại:
+
 ```
 gradio==6.24.0
 gradio_client==2.6.0
@@ -206,6 +209,7 @@ copy .env.example .env
 ```
 
 Hỗ trợ nhiều key xoay vòng để né rate-limit:
+
 ```env
 GEMINI_API_KEY=key1,key2,key3
 GROQ_API_KEY=your_groq_api_key
@@ -239,14 +243,15 @@ NVIDIA_NIM_API_KEY=your_nvidia_nim_api_key
 
 ### Gradio UI — 4 Tab
 
-| Tab | Chức năng |
-|-----|-----------|
-| **KIS** | Nhập mô tả text → tìm keyframe bằng CLIP → gallery preview → sửa tay → add to queue |
-| **Q&A** | Nhập câu hỏi → pipeline tự rewrite, retrieve, trả lời (2 tầng + cross-check) → sửa tay → add to queue |
-| **TRAKE** | Nhập N mốc sự kiện → tìm top video → align frame theo thứ tự thời gian → sửa tay → add to queue |
-| **Export** | Xem hàng đợi submission → export ZIP 1-click |
+| Tab              | Chức năng                                                                                                      |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------- |
+| **KIS**    | Nhập mô tả text → tìm keyframe bằng CLIP → gallery preview → sửa tay → add to queue                    |
+| **Q&A**    | Nhập câu hỏi → pipeline tự rewrite, retrieve, trả lời (2 tầng + cross-check) → sửa tay → add to queue |
+| **TRAKE**  | Nhập N mốc sự kiện → tìm top video → align frame theo thứ tự thời gian → sửa tay → add to queue     |
+| **Export** | Xem hàng đợi submission → export ZIP 1-click                                                                 |
 
 **Quy trình thao tác ngày thi:**
+
 1. Search (nhập query ở tab tương ứng)
 2. Rà soát kết quả trên bảng
 3. Sửa tay nếu cần (trực tiếp trên dataframe)
@@ -278,13 +283,16 @@ result = run_trake("a man walks into a store", events=["enters door", "picks up 
 ## Pipeline chi tiết
 
 ### KIS — Known-Item Search
+
 ```
 Query text → fast_retrieve(query, top_k) → ranked hits → CSV
 ```
+
 - Không gọi LLM, chỉ dùng CLIP cosine similarity
 - Nhanh nhất trong 3 pipeline
 
 ### Q&A — Question & Answer
+
 ```
 Query → rewrite_query(VN→EN) → fast_retrieve() → answer_from_hits()
                                                        │
@@ -301,10 +309,12 @@ Query → rewrite_query(VN→EN) → fast_retrieve() → answer_from_hits()
                                                        ▼
                                                   Answer + CSV
 ```
+
 - Tối đa **2 vòng** reflection (`MAX_AGENT_LOOPS=2`)
 - Anti-hallucination bắt buộc: mọi answer phải qua cross-check với Objects JSON
 
 ### TRAKE — Tracking Events
+
 ```
 Events list → Giai đoạn 1: rewrite + retrieve → chọn top-K video
                     │
@@ -315,6 +325,7 @@ Events list → Giai đoạn 1: rewrite + retrieve → chọn top-K video
                     ▼
               frame_id sequence → CSV
 ```
+
 - Pipeline 2 giai đoạn cố định, không phải agent tự do
 - Ràng buộc thứ tự thời gian: frame_idx phải tăng dần
 
@@ -324,12 +335,12 @@ Events list → Giai đoạn 1: rewrite + retrieve → chọn top-K video
 
 4 job thăm dò encode 177K keyframe bằng các model SOTA trên GPU Kaggle miễn phí (không thay đổi baseline `clip-ViT-B-32` đang dùng):
 
-| Job | Model | Thư viện | Trạng thái |
-|-----|-------|----------|------------|
-| `01_vit_l14/` | OpenAI CLIP ViT-L/14 | `transformers` | Chạy xong, feature đã giải nén vào `data/extracted/` ✅ |
-| `02_siglip/` | Google SigLIP SO400M-384 | `transformers` | Chạy xong, feature đã giải nén vào `data/extracted/` ✅ |
-| `03_jina/` | Jina CLIP v2 | `transformers` (remote code) | ❌ Output `features_jina/` hỏng 100% NaN (xác nhận 2026-08-20, xem `kaggle_jobs/README.md` mục "Cập nhật 8") — cần chạy lại job |
-| `04_dfn/` | OpenCLIP DFN-5B ViT-H/14 | `open_clip_torch` | Chạy xong, feature đã giải nén vào `data/extracted/` ✅ |
+| Job             | Model                    | Thư viện                     | Trạng thái                                                                                                                                 |
+| --------------- | ------------------------ | ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `01_vit_l14/` | OpenAI CLIP ViT-L/14     | `transformers`               | Chạy xong, feature đã giải nén vào`data/extracted/` ✅                                                                               |
+| `02_siglip/`  | Google SigLIP SO400M-384 | `transformers`               | Chạy xong, feature đã giải nén vào`data/extracted/` ✅                                                                               |
+| `03_jina/`    | Jina CLIP v2             | `transformers` (remote code) | ❌ Output`features_jina/` hỏng 100% NaN (xác nhận 2026-08-20, xem `kaggle_jobs/README.md` mục "Cập nhật 8") — cần chạy lại job |
+| `04_dfn/`     | OpenCLIP DFN-5B ViT-H/14 | `open_clip_torch`            | Chạy xong, feature đã giải nén vào`data/extracted/` ✅                                                                               |
 
 Chi tiết quy trình CLI, sự cố đã gặp & cách sửa → [`kaggle_jobs/README.md`](kaggle_jobs/README.md)
 
@@ -355,14 +366,14 @@ Cấu hình tại [`scripts/agent/config.py`](scripts/agent/config.py).
 
 ## Tài liệu liên quan
 
-| File | Nội dung |
-|------|----------|
-| [`ARCHITECTURE.md`](ARCHITECTURE.md) | Thiết kế hệ thống, trách nhiệm từng module, quyết định đã chốt |
-| [`PLAN.md`](PLAN.md) | Tiến độ project theo Phase (1–5), blockers & risks |
-| [`CLAUDE.md`](CLAUDE.md) | Quy ước code, quick start, folder convention |
-| [`docs/Thong tin vong So tuyen AIC2026.md`](docs/Thong%20tin%20vong%20So%20tuyen%20AIC2026.md) | Luật thi vòng Sơ tuyển AIC 2026 |
-| [`docs/Training/`](docs/Training/) | Tóm tắt các buổi training (kiến trúc, Vision-Language, quy trình nộp bài) |
-| [`kaggle_jobs/README.md`](kaggle_jobs/README.md) | Hướng dẫn 4 job encode SOTA trên Kaggle GPU |
+| File                                                                                              | Nội dung                                                                          |
+| ------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| [`ARCHITECTURE.md`](ARCHITECTURE.md)                                                             | Thiết kế hệ thống, trách nhiệm từng module, quyết định đã chốt        |
+| [`PLAN.md`](PLAN.md)                                                                             | Tiến độ project theo Phase (1–5), blockers & risks                             |
+| [`CLAUDE.md`](CLAUDE.md)                                                                         | Quy ước code, quick start, folder convention                                     |
+| [`docs/Thong tin vong So tuyen AIC2026.md`](<docs/Thong%20tin%20vong%20So%20tuyen%20AIC2026.md>) | Luật thi vòng Sơ tuyển AIC 2026                                                |
+| [`docs/Training/`](docs/Training/)                                                               | Tóm tắt các buổi training (kiến trúc, Vision-Language, quy trình nộp bài) |
+| [`kaggle_jobs/README.md`](kaggle_jobs/README.md)                                                 | Hướng dẫn 4 job encode SOTA trên Kaggle GPU                                    |
 
 ---
 
@@ -387,14 +398,14 @@ Cấu hình tại [`scripts/agent/config.py`](scripts/agent/config.py).
 
 ## Trạng thái dự án
 
-| Phase | Mô tả | Trạng thái |
-|-------|--------|------------|
-| 1 | Nền tảng Retrieval & Submission Engine | ✅ Done |
-| 2 | Agent đa phương thức cho Q&A + TRAKE | ✅ Done |
-| 3 | Gradio UI Human-in-the-loop | ✅ Done |
-| 4 | Hardening trước ngày thi (code review, fix bug, git) | ✅ Done |
-| 5 | Sẵn sàng thi (test thật trên Codabench, checklist ngày thi) | ⏳ Todo |
-| 6 | Nâng cấp retrieval baseline + bộ eval tự chấm (song song, không chặn Phase 5) | ⏳ Todo |
+| Phase | Mô tả                                                                              | Trạng thái |
+| ----- | ------------------------------------------------------------------------------------ | ------------ |
+| 1     | Nền tảng Retrieval & Submission Engine                                             | ✅ Done      |
+| 2     | Agent đa phương thức cho Q&A + TRAKE                                             | ✅ Done      |
+| 3     | Gradio UI Human-in-the-loop                                                          | ✅ Done      |
+| 4     | Hardening trước ngày thi (code review, fix bug, git)                              | ✅ Done      |
+| 5     | Sẵn sàng thi (test thật trên Codabench, checklist ngày thi)                     | ⏳ Todo      |
+| 6     | Nâng cấp retrieval baseline + bộ eval tự chấm (song song, không chặn Phase 5) | ⏳ Todo      |
 
 Chi tiết từng Phase → [`PLAN.md`](PLAN.md)
 
