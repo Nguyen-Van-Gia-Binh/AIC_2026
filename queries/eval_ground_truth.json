@@ -190,5 +190,104 @@
     "gt_video_id": "L30_V001",
     "gt_frame_start": 1604,
     "gt_frame_end": 1604
-  }
+  },
+  {
+    "query_id": "e-trake-001",
+    "type": "TRAKE",
+    "text_vi": "Đoạn video một người đàn ông đang cắt dây khánh thành một dự án, bao gồm ông và các đồng nghiệp của mình",
+    "text_en": "A view of a man cutting the ribbon to inaugurate a project, including him and his colleagues.",
+    "difficulty_tags": ["temporal_order", "short_action"],
+    "gt_video_id": "L21_V016",
+    "events": [
+      {"text_en": "the first moment the ribbon is being cut", "gt_frame_start": 25654, "gt_frame_end": 25654},
+      {"text_en": "the moment the ribbon is cut", "gt_frame_start": 25714, "gt_frame_end": 25714}
+    ]
+  },
+  {
+  "query_id": "e-trake-002",
+  "type": "TRAKE",
+  "text_vi": "Cảnh một người đàn ông đi bộ qua đường, tay cầm một cái xe đẩy em bé đã được xếp vào",
+  "text_en": "View of a man crossing the street, holding a baby stroller that has been folded up.",
+  "difficulty_tags": ["temporal_order"],
+  "gt_video_id": "L25_V003",
+  "events": [
+    {"text_en": "man starts crossing the street", "gt_frame_start": 13770,  "gt_frame_end": 13770},
+    {"text_en": "man is halfway across the street", "gt_frame_start": 13923, "gt_frame_end": 13923},
+    {"text_en": "man reaches the other side", "gt_frame_start": 13923, "gt_frame_end": 13923}
+  ]
+  },
+  {
+    "query_id": "e-trake-003",
+    "type": "TRAKE",
+    "text_vi": "Cảnh một người đàn ông bị thương đang được diều đi bởi 2 người khác, vừa rời đi từ trực thăng, đang di chuyển đến xe cứu thương",
+    "text_en": "A view of a wounded man being carried by two other people, just disembarked from a helicopter, moving towards an ambulance.",
+    "difficulty_tags": ["temporal_order"],
+    "gt_video_id": "L25_V003",
+    "events": [
+      {"text_en": "man starts walking while being carried by two other people", "gt_frame_start": 12778, "gt_frame_end": 12900},
+      {"text_en": "man arriving at the ambulance", "gt_frame_start": 13020, "gt_frame_end": 13170},
+      {"text_en": "man lays in the ambulance", "gt_frame_start": 13170, "gt_frame_end": 13278}
+  ]
+  },
+  {
+    "query_id": "e-trake-004",
+    "type": "TRAKE",
+    "text_vi": "Cảnh một người tội phạm đang bị áp giải bởi một cảnh sát mặc quân phục màu xanh, đang đi đến phòng tra khảo",
+    "text_en": "A view of a criminal being escorted by a blue-uniformed police officer, walking towards the interrogation room.",
+    "difficulty_tags": ["short_action"],
+    "gt_video_id": "L25_V003",
+    "events": [
+      {"text_en": "criminal starts being escorted", "gt_frame_start": 28531, "gt_frame_end": 28530},
+      {"text_en": "criminal is escorted", "gt_frame_start": 28531, "gt_frame_end": 28531},
+      {"text_en": "criminal is being interrogated", "gt_frame_start": 28532, "gt_frame_end": 29363}
+  ]
+  },
+  {
+  "query_id": "e-qa-ai-002",
+  "type": "QA",
+  "text_vi": "Trong video thông báo giải thưởng của cuộc thi lan tỏa tích cực lần 5 năm 2024, có tổng cộng bao nhiêu giải khuyến khích?",
+  "text_en": "In the video announcing the awards for the 5th Spreading Positivity contest (2024), how many Consolation Prizes were awarded in total?",
+  "question": "Có tổng cộng bao nhiêu giải khuyến khích?",   
+  "difficulty_tags": ["counting"],
+  "gt_video_id": "L30_V096",
+  "gt_frame_start": 820,
+  "gt_frame_end": 1100,
+  "gt_answer": "15"  
+},
+{
+"query_id": "e-qa-ai-003",
+  "type": "QA",
+  "text_vi": "Trong video nói về thiên nga, nhóm nhà nghiên cứu đứng ở trên bãi cỏ có bao nhiu người?",
+  "text_en": "In the video about swans, how many researchers are standing on the grass?",
+  "question": "Có bao nhiêu nhà nghiên cứu đang đứng trên bãi cỏ?",   
+  "difficulty_tags": ["counting"],
+  "gt_video_id": "L30_V096",
+  "gt_frame_start": 25828,
+  "gt_frame_end": 25993,
+  "gt_answer": "8"  
+},
+{
+"query_id": "e-qa-ai-004",
+  "type": "QA",
+  "text_vi": "Trong video nói về chương trình món ngon mỗi ngày, chai nước tương trên bàn có nhãn hiệu gì?",
+  "text_en": "In the video about the daily delicious meal program, what brand is the soy sauce bottle on the table?",
+  "question": "Chai nước tương trên bàn có nhãn hiệu gì?",   
+  "difficulty_tags": ["naming"],
+  "gt_video_id": "L26_V296",
+  "gt_frame_start": 1537,
+  "gt_frame_end": 1665,
+  "gt_answer": "Phú Sĩ"  
+},
+{
+"query_id": "e-qa-ai-005",
+  "type": "QA",
+  "text_vi": "Trong video có người đàn ông áo xám cầm hai đĩa bánh xèo, bên trái anh ta là gì?",
+  "text_en": "In the video where a man in a gray shirt is holding two plates of Vietnamese pancakes, what is to his left?",
+  "question": "Bên trái người đàn ông áo xám là gì?",   
+  "difficulty_tags": ["naming"],
+  "gt_video_id": "L27_V003",
+  "gt_frame_start": 7021,
+  "gt_frame_end": 7156,
+  "gt_answer": "Rau sống"  
+}
 ]
