@@ -8,7 +8,7 @@ chỉ chứa thông tin ổn định, không ghi lịch sử hay tiến độ.
 > - Kaggle GPU encoding → skill `kaggle-jobs`
 > - Format nộp bài → skill `submission`
 >
-> Tài liệu tham chiếu thủ công: [PLAN.md](PLAN.md) (tiến độ) · [SESSION_LOG.md](SESSION_LOG.md) (nhật ký phiên)
+> Tài liệu tham chiếu thủ công: [PLAN.md](PLAN.md) (tiến độ)
 
 ## Dự án là gì
 
@@ -47,6 +47,8 @@ Cấu hình API key: copy `.env.example` → `.env`, điền ít nhất `GEMINI_
   - `pipeline_kis.py` / `pipeline_qa.py` / `pipeline_trake.py`
   - `tools/` — `retrieve.py` (CLIP search), `rewrite.py` (VN→EN), `answer_qa.py`, `ocr_lookup.py`
 - `scripts/submit/` — `build_submission.py` (sinh CSV/ZIP), `validate_submission.py`
+- `scripts/eval/` — bộ eval offline Phase 6, so baseline embedding (`clip_vitb32`/`vitl14`/`siglip`/
+  `dfn`) bằng công thức R@k thật; không đụng luồng KIS/Q&A/TRAKE sản xuất
 - `data/` — **git-ignored**, dữ liệu ngoại tuyến (keyframe, embedding, objects JSON)
 - `kaggle_jobs/` — 4 job encode SOTA trên Kaggle GPU (thăm dò, ngoài pipeline chính)
 - `queries/` — Query mẫu/test (JSON)

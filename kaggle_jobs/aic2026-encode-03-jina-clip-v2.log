@@ -1,0 +1,136 @@
+6.1s 1 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 40.8/40.8 kB 2.3 MB/s eta 0:00:00
+7.0s 2 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 11.7/11.7 MB 90.1 MB/s eta 0:00:00
+7.1s 3 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 6.9/6.9 MB 102.3 MB/s eta 0:00:00
+7.1s 4 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.6/2.6 MB 76.6 MB/s eta 0:00:00
+7.2s 5 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 389.2/389.2 kB 25.8 MB/s eta 0:00:00
+7.2s 6 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 516.0/516.0 kB 32.1 MB/s eta 0:00:00
+23.8s 7 ERROR: pip's dependency resolver does not currently take into account all the packages that are installed. This behaviour is the source of the following dependency conflicts.
+23.8s 8 dopamine-rl 4.1.2 requires gym<=0.25.2, but you have gym 0.26.2 which is incompatible.
+23.8s 9 gradio 5.50.0 requires pillow<12.0,>=8.0, but you have pillow 12.3.0 which is incompatible.
+50.9s 10 [encode_jina] device=cuda
+50.9s 11 [encode_jina] tải model jinaai/jina-clip-v2 ...
+52.3s 12 [encode_jina] đã vá clip_loss còn thiếu trong transformers.models.clip.modeling_clip (chỉ cần cho import, không dùng tới khi chỉ encode ảnh)
+52.4s 13 Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+52.6s 14 [transformers] A new version of the following files was downloaded from https://huggingface.co/jinaai/jina-clip-implementation:
+52.6s 15 - configuration_clip.py
+52.6s 16 . Make sure to double-check they do not contain any added malicious code. To avoid downloading new versions of the code file, you can pin a revision.
+52.6s 17 [transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+53.0s 18 [transformers] A new version of the following files was downloaded from https://huggingface.co/jinaai/jina-clip-implementation:
+53.0s 19 - rope_embeddings.py
+53.0s 20 . Make sure to double-check they do not contain any added malicious code. To avoid downloading new versions of the code file, you can pin a revision.
+53.0s 21 [transformers] A new version of the following files was downloaded from https://huggingface.co/jinaai/jina-clip-implementation:
+53.0s 22 - eva_model.py
+53.0s 23 - rope_embeddings.py
+53.0s 24 . Make sure to double-check they do not contain any added malicious code. To avoid downloading new versions of the code file, you can pin a revision.
+53.1s 25 [transformers] A new version of the following files was downloaded from https://huggingface.co/jinaai/jina-clip-implementation:
+53.1s 26 - hf_model.py
+53.1s 27 . Make sure to double-check they do not contain any added malicious code. To avoid downloading new versions of the code file, you can pin a revision.
+56.1s 28 [transformers] A new version of the following files was downloaded from https://huggingface.co/jinaai/jina-clip-implementation:
+56.1s 29 - transform.py
+56.1s 30 . Make sure to double-check they do not contain any added malicious code. To avoid downloading new versions of the code file, you can pin a revision.
+56.1s 31 [transformers] A new version of the following files was downloaded from https://huggingface.co/jinaai/jina-clip-implementation:
+56.1s 32 - modeling_clip.py
+56.1s 33 - eva_model.py
+56.1s 34 - hf_model.py
+56.1s 35 - transform.py
+56.1s 36 . Make sure to double-check they do not contain any added malicious code. To avoid downloading new versions of the code file, you can pin a revision.
+62.4s 37 /root/.cache/huggingface/modules/transformers_modules/jinaai/jina_hyphen_clip_hyphen_implementation/39e6a55ae971b59bea6e44675d237c99762e7ee2/modeling_clip.py:140: UserWarning: Flash attention is not installed. Check https://github.com/Dao-AILab/flash-attention?tab=readme-ov-file#installation-and-features for installation instructions, disabling
+62.4s 38 warnings.warn(
+62.4s 39 /root/.cache/huggingface/modules/transformers_modules/jinaai/jina_hyphen_clip_hyphen_implementation/39e6a55ae971b59bea6e44675d237c99762e7ee2/modeling_clip.py:175: UserWarning: xFormers is not installed. Check https://github.com/facebookresearch/xformers?tab=readme-ov-file#installing-xformers for installation instructions, disabling
+62.4s 40 warnings.warn(
+62.5s 41 [transformers] A new version of the following files was downloaded from https://huggingface.co/jinaai/xlm-roberta-flash-implementation:
+62.5s 42 - configuration_xlm_roberta.py
+62.5s 43 . Make sure to double-check they do not contain any added malicious code. To avoid downloading new versions of the code file, you can pin a revision.
+62.8s 44 [transformers] A new version of the following files was downloaded from https://huggingface.co/jinaai/xlm-roberta-flash-implementation:
+62.8s 45 - mlp.py
+62.8s 46 . Make sure to double-check they do not contain any added malicious code. To avoid downloading new versions of the code file, you can pin a revision.
+62.9s 47 [transformers] A new version of the following files was downloaded from https://huggingface.co/jinaai/xlm-roberta-flash-implementation:
+62.9s 48 - rotary.py
+62.9s 49 . Make sure to double-check they do not contain any added malicious code. To avoid downloading new versions of the code file, you can pin a revision.
+63.0s 50 [transformers] A new version of the following files was downloaded from https://huggingface.co/jinaai/xlm-roberta-flash-implementation:
+63.0s 51 - mha.py
+63.0s 52 . Make sure to double-check they do not contain any added malicious code. To avoid downloading new versions of the code file, you can pin a revision.
+63.1s 53 [transformers] A new version of the following files was downloaded from https://huggingface.co/jinaai/xlm-roberta-flash-implementation:
+63.1s 54 - embedding.py
+63.1s 55 . Make sure to double-check they do not contain any added malicious code. To avoid downloading new versions of the code file, you can pin a revision.
+63.2s 56 [transformers] A new version of the following files was downloaded from https://huggingface.co/jinaai/xlm-roberta-flash-implementation:
+63.2s 57 - xlm_padding.py
+63.2s 58 . Make sure to double-check they do not contain any added malicious code. To avoid downloading new versions of the code file, you can pin a revision.
+63.3s 59 [transformers] A new version of the following files was downloaded from https://huggingface.co/jinaai/xlm-roberta-flash-implementation:
+63.3s 60 - stochastic_depth.py
+63.3s 61 . Make sure to double-check they do not contain any added malicious code. To avoid downloading new versions of the code file, you can pin a revision.
+63.3s 62 [transformers] A new version of the following files was downloaded from https://huggingface.co/jinaai/xlm-roberta-flash-implementation:
+63.3s 63 - block.py
+63.3s 64 - stochastic_depth.py
+63.3s 65 . Make sure to double-check they do not contain any added malicious code. To avoid downloading new versions of the code file, you can pin a revision.
+63.3s 66 [transformers] A new version of the following files was downloaded from https://huggingface.co/jinaai/xlm-roberta-flash-implementation:
+63.3s 67 - modeling_xlm_roberta.py
+63.3s 68 - mlp.py
+63.3s 69 - rotary.py
+63.3s 70 - mha.py
+63.3s 71 - embedding.py
+63.3s 72 - xlm_padding.py
+63.3s 73 - block.py
+63.3s 74 . Make sure to double-check they do not contain any added malicious code. To avoid downloading new versions of the code file, you can pin a revision.
+63.3s 75 [transformers] A new version of the following files was downloaded from https://huggingface.co/jinaai/xlm-roberta-flash-implementation:
+63.3s 76 - modeling_lora.py
+63.3s 77 - modeling_xlm_roberta.py
+63.3s 78 . Make sure to double-check they do not contain any added malicious code. To avoid downloading new versions of the code file, you can pin a revision.
+72.9s 79 Loading weights:   0%|          | 0/999 [00:00<?, ?it/s]Loading weights:   1%|          | 9/999 [00:00<01:26, 11.50it/s]Loading weights: 100%|██████████| 999/999 [00:00<00:00, 1213.59it/s]
+73.8s 80 [encode_jina] keyframes root: /kaggle/input/datasets/kiet1106/aic26-frames/keyframes
+379.1s 81 [encode_jina] tổng số video tìm thấy: 873
+379.5s 82 [transformers] A new version of the following files was downloaded from https://huggingface.co/jinaai/jina-clip-implementation:
+379.5s 83 - processing_clip.py
+379.5s 84 . Make sure to double-check they do not contain any added malicious code. To avoid downloading new versions of the code file, you can pin a revision.
+1261.5s 85 [encode_jina] 20/873 video đã xử lý (mới encode: 20, đã có sẵn/skip: 0), 882s trôi qua
+2214.2s 86 [encode_jina] 40/873 video đã xử lý (mới encode: 40, đã có sẵn/skip: 0), 1835s trôi qua
+3183.7s 87 [encode_jina] 60/873 video đã xử lý (mới encode: 60, đã có sẵn/skip: 0), 2805s trôi qua
+3465.2s 88 [encode_jina] 80/873 video đã xử lý (mới encode: 80, đã có sẵn/skip: 0), 3086s trôi qua
+4027.0s 89 [encode_jina] 100/873 video đã xử lý (mới encode: 100, đã có sẵn/skip: 0), 3648s trôi qua
+4593.4s 90 [encode_jina] 120/873 video đã xử lý (mới encode: 120, đã có sẵn/skip: 0), 4214s trôi qua
+5572.6s 91 [encode_jina] 140/873 video đã xử lý (mới encode: 140, đã có sẵn/skip: 0), 5193s trôi qua
+6936.4s 92 [encode_jina] 160/873 video đã xử lý (mới encode: 160, đã có sẵn/skip: 0), 6557s trôi qua
+8410.0s 93 [encode_jina] 180/873 video đã xử lý (mới encode: 180, đã có sẵn/skip: 0), 8031s trôi qua
+9793.1s 94 [encode_jina] 200/873 video đã xử lý (mới encode: 200, đã có sẵn/skip: 0), 9414s trôi qua
+11119.5s 95 [encode_jina] 220/873 video đã xử lý (mới encode: 220, đã có sẵn/skip: 0), 10740s trôi qua
+11573.9s 96 [encode_jina] 240/873 video đã xử lý (mới encode: 240, đã có sẵn/skip: 0), 11195s trôi qua
+12059.4s 97 [encode_jina] 260/873 video đã xử lý (mới encode: 260, đã có sẵn/skip: 0), 11680s trôi qua
+12550.3s 98 [encode_jina] 280/873 video đã xử lý (mới encode: 280, đã có sẵn/skip: 0), 12171s trôi qua
+13086.8s 99 [encode_jina] 300/873 video đã xử lý (mới encode: 300, đã có sẵn/skip: 0), 12708s trôi qua
+13589.7s 100 [encode_jina] 320/873 video đã xử lý (mới encode: 320, đã có sẵn/skip: 0), 13211s trôi qua
+14113.2s 101 [encode_jina] 340/873 video đã xử lý (mới encode: 340, đã có sẵn/skip: 0), 13734s trôi qua
+14635.4s 102 [encode_jina] 360/873 video đã xử lý (mới encode: 360, đã có sẵn/skip: 0), 14256s trôi qua
+15142.5s 103 [encode_jina] 380/873 video đã xử lý (mới encode: 380, đã có sẵn/skip: 0), 14763s trôi qua
+15703.9s 104 [encode_jina] 400/873 video đã xử lý (mới encode: 400, đã có sẵn/skip: 0), 15325s trôi qua
+16247.0s 105 [encode_jina] 420/873 video đã xử lý (mới encode: 420, đã có sẵn/skip: 0), 15868s trôi qua
+16833.3s 106 [encode_jina] 440/873 video đã xử lý (mới encode: 440, đã có sẵn/skip: 0), 16454s trôi qua
+17385.7s 107 [encode_jina] 460/873 video đã xử lý (mới encode: 460, đã có sẵn/skip: 0), 17007s trôi qua
+17946.4s 108 [encode_jina] 480/873 video đã xử lý (mới encode: 480, đã có sẵn/skip: 0), 17567s trôi qua
+18518.9s 109 [encode_jina] 500/873 video đã xử lý (mới encode: 500, đã có sẵn/skip: 0), 18140s trôi qua
+19062.1s 110 [encode_jina] 520/873 video đã xử lý (mới encode: 520, đã có sẵn/skip: 0), 18683s trôi qua
+19612.2s 111 [encode_jina] 540/873 video đã xử lý (mới encode: 540, đã có sẵn/skip: 0), 19233s trôi qua
+20185.2s 112 [encode_jina] 560/873 video đã xử lý (mới encode: 560, đã có sẵn/skip: 0), 19806s trôi qua
+20733.4s 113 [encode_jina] 580/873 video đã xử lý (mới encode: 580, đã có sẵn/skip: 0), 20354s trôi qua
+21282.7s 114 [encode_jina] 600/873 video đã xử lý (mới encode: 600, đã có sẵn/skip: 0), 20904s trôi qua
+21835.9s 115 [encode_jina] 620/873 video đã xử lý (mới encode: 620, đã có sẵn/skip: 0), 21457s trôi qua
+22373.0s 116 [encode_jina] 640/873 video đã xử lý (mới encode: 640, đã có sẵn/skip: 0), 21994s trôi qua
+22948.3s 117 [encode_jina] 660/873 video đã xử lý (mới encode: 660, đã có sẵn/skip: 0), 22569s trôi qua
+23482.5s 118 [encode_jina] 680/873 video đã xử lý (mới encode: 680, đã có sẵn/skip: 0), 23103s trôi qua
+24044.0s 119 [encode_jina] 700/873 video đã xử lý (mới encode: 700, đã có sẵn/skip: 0), 23665s trôi qua
+24750.6s 120 [encode_jina] 720/873 video đã xử lý (mới encode: 720, đã có sẵn/skip: 0), 24371s trôi qua
+26068.2s 121 [encode_jina] 740/873 video đã xử lý (mới encode: 740, đã có sẵn/skip: 0), 25689s trôi qua
+27571.7s 122 [encode_jina] 760/873 video đã xử lý (mới encode: 760, đã có sẵn/skip: 0), 27193s trôi qua
+28988.3s 123 [encode_jina] 780/873 video đã xử lý (mới encode: 780, đã có sẵn/skip: 0), 28609s trôi qua
+29241.9s 124 [encode_jina] 800/873 video đã xử lý (mới encode: 800, đã có sẵn/skip: 0), 28863s trôi qua
+29548.0s 125 [encode_jina] 820/873 video đã xử lý (mới encode: 820, đã có sẵn/skip: 0), 29169s trôi qua
+29842.2s 126 [encode_jina] 840/873 video đã xử lý (mới encode: 840, đã có sẵn/skip: 0), 29463s trôi qua
+30084.7s 127 [encode_jina] 860/873 video đã xử lý (mới encode: 860, đã có sẵn/skip: 0), 29706s trôi qua
+30271.1s 128 [encode_jina] 873/873 video đã xử lý (mới encode: 873, đã có sẵn/skip: 0), 29892s trôi qua
+30271.6s 129 [encode_jina] nén kết quả vào /kaggle/working/features_jina.zip ...
+30274.2s 130 [encode_jina] XONG. 873 video mới encode, 0 video đã có sẵn (resume). Zip: /kaggle/working/features_jina.zip (1.4 MB)
+30280.8s 131 /usr/local/lib/python3.12/dist-packages/mistune.py:435: SyntaxWarning: invalid escape sequence '\|'
+30280.8s 132 cells[i][c] = re.sub('\\\\\|', '|', cell)
+30281.1s 133 /usr/local/lib/python3.12/dist-packages/nbconvert/filters/filter_links.py:36: SyntaxWarning: invalid escape sequence '\_'
+30281.1s 134 text = re.sub(r'_', '\_', text) # Escape underscores in display text
+30281.9s 135 [NbConvertApp] Converting notebook __script__.ipynb to html
+30283.2s 136 [NbConvertApp] Writing 316305 bytes to __results__.html

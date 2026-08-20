@@ -1,1 +1,194 @@
-[]
+[
+  {
+    "query_id": "e-kis-ai-001",
+    "type": "KIS",
+    "text_vi": "Một tia nước phun thẳng lên trời từ một giếng khô giữa cánh đồng, phía trước có hàng rào gỗ cũ, bầu trời nhiều mây xám.",
+    "text_en": "A tall jet of water shoots straight up into the sky from a dry well in an open field, with an old wooden fence in front and a cloudy grey sky.",
+    "difficulty_tags": ["easy_sanity_check"],
+    "gt_video_id": "L21_V001",
+    "gt_frame_start": 5761,
+    "gt_frame_end": 5761
+  },
+  {
+    "query_id": "e-kis-ai-002",
+    "type": "KIS",
+    "text_vi": "Nữ MC bản tin thời sự mặc áo trắng hoa văn kẻ ô, đứng trước phông nền thành phố lúc hoàng hôn có tòa nhà Bitexco phía sau bên phải.",
+    "text_en": "A female news anchor wearing a white patterned blazer stands in front of a sunset city skyline backdrop featuring the Bitexco Financial Tower on the right.",
+    "difficulty_tags": ["multi_similar_object"],
+    "gt_video_id": "L21_V001",
+    "gt_frame_start": 17881,
+    "gt_frame_end": 17881
+  },
+  {
+    "query_id": "e-kis-ai-003",
+    "type": "KIS",
+    "text_vi": "Cảnh đua xe đạp, ống kính lia qua một lá cờ đỏ sao vàng lớn cắm giữa đường đua, phía sau có xe máy dẫn đoàn và vận động viên đạp xe mờ phía xa, góc trên trái hiển thị đồng hồ đua 'CHẶNG 1'.",
+    "text_en": "A cycling race scene with a large red flag bearing a yellow star planted in the middle of the road, an escort motorbike in the foreground, and cyclists blurred in the distance; a race timer reading 'CHẶNG 1' is shown in the top-left corner.",
+    "difficulty_tags": ["small_object"],
+    "gt_video_id": "L23_V001",
+    "gt_frame_start": 626,
+    "gt_frame_end": 626
+  },
+  {
+    "query_id": "e-kis-ai-004",
+    "type": "KIS",
+    "text_vi": "Cảnh toàn đường đua xe đạp với hai hàng cờ đỏ dọc hai bên vỉa hè, khán giả đứng xem đông, phía xa có cổng chào trang trí hoa mai bắc ngang đường, góc trên màn hình hiện khoảng cách còn lại '2.9 Km'.",
+    "text_en": "A wide shot of a cycling race road lined with rows of red flags on both sides and crowds of spectators watching, with a decorated flower-arch banner spanning the road in the distance; the on-screen graphic shows a remaining distance of '2.9 Km'.",
+    "difficulty_tags": ["easy_sanity_check"],
+    "gt_video_id": "L23_V001",
+    "gt_frame_start": 1906,
+    "gt_frame_end": 1906
+  },
+  {
+    "query_id": "e-kis-ai-005",
+    "type": "KIS",
+    "text_vi": "Cận cảnh một bàn tay cầm bút chì màu cam đang viết vào một cuốn vở có cả chữ tiếng Việt và tiếng Anh viết tay, hình ảnh hơi mờ do lấy nét gần.",
+    "text_en": "A close-up shot of a hand holding an orange pencil writing in a notebook containing handwritten Vietnamese and English text, slightly blurred due to close focus.",
+    "difficulty_tags": ["small_object"],
+    "gt_video_id": "L25_V001",
+    "gt_frame_start": 2195,
+    "gt_frame_end": 2195
+  },
+  {
+    "query_id": "e-kis-ai-006",
+    "type": "KIS",
+    "text_vi": "Một nữ sinh đeo kính, mặc đồng phục cổ đỏ có huy hiệu trường quốc tế, đang ngồi vẽ/tô màu tại bàn trong lớp học trang trí nhiều tranh giấy sặc sỡ, một bạn học khác ngồi cạnh không đeo kính.",
+    "text_en": "A schoolgirl wearing glasses and a white uniform with a maroon collar bearing an international-school patch sits drawing/coloring at a desk in a colorfully decorated classroom, with another classmate without glasses sitting beside her.",
+    "difficulty_tags": ["multi_similar_object"],
+    "gt_video_id": "L25_V001",
+    "gt_frame_start": 19479,
+    "gt_frame_end": 19479
+  },
+  {
+    "query_id": "e-qa-ai-001",
+    "type": "QA",
+    "text_vi": "Trong cảnh lớp học có nữ sinh đeo kính đang vẽ, có bao nhiêu học sinh đang ngồi tại bàn trong khung hình?",
+    "text_en": "In the classroom scene with the girl wearing glasses drawing, how many students are seated at the desk in this frame?",
+    "question": "How many students are seated at the desk in this frame?",
+    "difficulty_tags": ["counting"],
+    "gt_video_id": "L25_V001",
+    "gt_frame_start": 19479,
+    "gt_frame_end": 19479,
+    "gt_answer": "2"
+  },
+  {
+    "query_id": "e-kis-ai-007",
+    "type": "KIS",
+    "text_vi": "Một tấm áp phích lớn in hình chân dung công nương Diana kèm dòng chữ 'DIANA 1961 1997' được dựng cạnh một đống hoa tưởng niệm dưới gốc cây, phía sau có vài người đi ngang qua.",
+    "text_en": "A large poster with a portrait of Princess Diana and the text 'DIANA 1961 1997' stands next to a pile of memorial flowers under a tree, with a few people walking by in the background.",
+    "difficulty_tags": ["fine_detail"],
+    "gt_video_id": "L22_V001",
+    "gt_frame_start": 13198,
+    "gt_frame_end": 13198
+  },
+  {
+    "query_id": "e-kis-ai-008",
+    "type": "KIS",
+    "text_vi": "Mũi một chiếc thuyền gỗ sơn đỏ-xanh ngọc với dây thừng cuộn tròn ở góc phải, nhìn ra mặt biển phẳng lặng và một dải đồi núi mờ phía xa.",
+    "text_en": "The bow of a red-and-turquoise wooden fishing boat with coiled rope on the right, facing a calm sea and a hazy line of hills in the distance.",
+    "difficulty_tags": ["small_object"],
+    "gt_video_id": "L22_V003",
+    "gt_frame_start": 12031,
+    "gt_frame_end": 12031
+  },
+  {
+    "query_id": "e-kis-ai-009",
+    "type": "KIS",
+    "text_vi": "Một nhóm thanh niên mặc đồ rằn ri xanh lá biểu diễn múa rồng vàng trên sân khấu trong nhà, phía sau có màn hình lớn chiếu hình đàn cừu, hai người mặc đồ đỏ đứng 2 bên làm nền.",
+    "text_en": "A group of young performers in green camouflage outfits perform a golden dragon dance on an indoor stage, with a large screen behind them showing a herd of sheep, and two people in red costumes standing on either side.",
+    "difficulty_tags": ["multi_similar_object"],
+    "gt_video_id": "L24_V002",
+    "gt_frame_start": 8193,
+    "gt_frame_end": 8193
+  },
+  {
+    "query_id": "e-kis-ai-010",
+    "type": "KIS",
+    "text_vi": "Cũng đội múa rồng mặc đồ rằn ri xanh lá nhưng biểu diễn ngoài trời vào ban đêm, có đèn lồng đỏ hình quả bóng bay lớn và cờ đuôi nheo xanh phía sau, khán giả ngồi quanh dưới ánh đèn sân khấu.",
+    "text_en": "The same green-camouflage dragon dance team performing outdoors at night, with a large red lantern balloon and a green pennant flag behind them, and an audience seated around under stage lighting.",
+    "difficulty_tags": ["multi_similar_object"],
+    "gt_video_id": "L24_V004",
+    "gt_frame_start": 9046,
+    "gt_frame_end": 9046
+  },
+  {
+    "query_id": "e-kis-ai-011",
+    "type": "KIS",
+    "text_vi": "Một bát thủy tinh trong suốt đặt trên bàn gỗ, bên trong chỉ có một ít hạt gạo trắng nằm gọn ở đáy bát.",
+    "text_en": "A clear glass bowl sits on a wooden table, containing only a small amount of white rice grains resting at the bottom.",
+    "difficulty_tags": ["small_object"],
+    "gt_video_id": "L26_V001",
+    "gt_frame_start": 2589,
+    "gt_frame_end": 2589
+  },
+  {
+    "query_id": "e-kis-ai-012",
+    "type": "KIS",
+    "text_vi": "Một miếng ức gà sống đã lột da đặt trên đĩa sứ trắng, để trên thớt gỗ, có thể thấy vài hạt gia vị nhỏ dính trên bề mặt thịt.",
+    "text_en": "A raw, skinless chicken breast sits on a white ceramic plate placed on a wooden cutting board, with a few small seasoning grains visible on the meat's surface.",
+    "difficulty_tags": ["small_object"],
+    "gt_video_id": "L26_V003",
+    "gt_frame_start": 2628,
+    "gt_frame_end": 2628
+  },
+  {
+    "query_id": "e-kis-ai-013",
+    "type": "KIS",
+    "text_vi": "Không gian nội thất một ngôi miếu/chùa với đèn chùm mạ vàng lớn treo trần, bên cạnh là các bức hoành phi sơn son thếp vàng khắc chữ Hán, một tấm có dòng chữ Việt 'CHÚA XỨ THÁNH MẪU'.",
+    "text_en": "The interior of a temple with a large gold-plated chandelier hanging from the ceiling, next to red-and-gold lacquered panels carved with Chinese characters, one of which reads 'CHÚA XỨ THÁNH MẪU' in Vietnamese.",
+    "difficulty_tags": ["fine_detail"],
+    "gt_video_id": "L27_V001",
+    "gt_frame_start": 3985,
+    "gt_frame_end": 3985
+  },
+  {
+    "query_id": "e-kis-ai-014",
+    "type": "KIS",
+    "text_vi": "Một người đàn ông trẻ và một phụ nữ đang xem xét các bó hoa/vòng lá xanh tại một sạp hoa ngoài trời có mái tôn, xung quanh bày nhiều chậu hoa màu sắc.",
+    "text_en": "A young man and a woman examine green leaf wreaths/bouquets at an outdoor flower stall with a tin roof, surrounded by many colorful potted flower arrangements.",
+    "difficulty_tags": ["multi_similar_object"],
+    "gt_video_id": "L27_V003",
+    "gt_frame_start": 3241,
+    "gt_frame_end": 3241
+  },
+  {
+    "query_id": "e-kis-ai-015",
+    "type": "KIS",
+    "text_vi": "Đoạn tư liệu cũ tông màu ngả vàng có ghi chú 'Tư liệu MÊ KÔNG KÝ SỰ', quay cảnh 2 người đàn ông lớn tuổi đi bộ dọc bờ nước trên con đường đất.",
+    "text_en": "An old, sepia-toned archival clip labeled 'Tư liệu MÊ KÔNG KÝ SỰ' showing two elderly men walking along a dirt path beside the water.",
+    "difficulty_tags": ["fine_detail"],
+    "gt_video_id": "L28_V002",
+    "gt_frame_start": 8101,
+    "gt_frame_end": 8101
+  },
+  {
+    "query_id": "e-kis-ai-016",
+    "type": "KIS",
+    "text_vi": "Hai chiếc phà sông lớn màu trắng mang số hiệu 'AG-09399' và 'AG-12627' đậu ở bến, một thuyền nhỏ hơn đang chạy qua giữa hai phà.",
+    "text_en": "Two large white river ferries bearing the registration numbers 'AG-09399' and 'AG-12627' are docked at the pier, with a smaller boat passing between them.",
+    "difficulty_tags": ["fine_detail"],
+    "gt_video_id": "L28_V003",
+    "gt_frame_start": 10821,
+    "gt_frame_end": 10821
+  },
+  {
+    "query_id": "e-kis-ai-017",
+    "type": "KIS",
+    "text_vi": "Hai phụ nữ lớn tuổi ngồi đan/tước sợi cói khô, một người mặc áo tím không đeo kính, người còn lại mặc áo đỏ đô và đeo kính, phía sau là tấm bảng xanh có chữ và các bó cói dựng đứng.",
+    "text_en": "Two elderly women sit weaving dried reed strands; one wears a purple shirt without glasses, the other wears a maroon shirt and glasses, with a green signboard and bundles of standing reeds behind them.",
+    "difficulty_tags": ["multi_similar_object"],
+    "gt_video_id": "L29_V001",
+    "gt_frame_start": 7351,
+    "gt_frame_end": 7351
+  },
+  {
+    "query_id": "e-kis-ai-018",
+    "type": "KIS",
+    "text_vi": "Cận cảnh phía sau đầu một người đang cầm điện thoại xem một đoạn video/ảnh khác hiển thị trên màn hình điện thoại, phía sau là cửa sổ có chấn song và cây xanh, logo 'Tuổi Trẻ TV' góc trên phải.",
+    "text_en": "A close-up from behind someone's head holding a phone displaying another video/photo on its screen, with a barred window and greenery behind, and a 'Tuổi Trẻ TV' logo in the top-right corner.",
+    "difficulty_tags": ["image_in_image"],
+    "gt_video_id": "L30_V001",
+    "gt_frame_start": 1604,
+    "gt_frame_end": 1604
+  }
+]

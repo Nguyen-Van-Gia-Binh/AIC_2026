@@ -36,7 +36,8 @@ video_id,frame_id,answer
 L21_V001,42,red car
 ```
 - Cùng quy tắc `video_id`/`frame_id` như KIS
-- `answer`: text trả lời câu hỏi (tiếng Anh)
+- `answer`: text trả lời câu hỏi, tiếng Việt hoặc tiếng Anh — cùng ngôn ngữ với câu hỏi (luật thi
+  cho phép cả 2, xem `docs/Thong tin vong So tuyen AIC2026.md`)
 - Tối đa **100 dòng**
 
 ### TRAKE CSV
