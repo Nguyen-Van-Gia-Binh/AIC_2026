@@ -278,3 +278,39 @@ cho mọi model, không riêng jina.
 (thử ép float32 trên CUDA trước, xem ghi chú trong `main.py`) và giải nén lại. `jina` VẪN có trong
 `MODEL_REGISTRY` (code encoder đã xác nhận đúng) nhưng sẽ crash rõ ràng nếu ai gọi tới trước khi dữ
 liệu được encode lại — đúng ý đồ, tốt hơn là chạy êm với kết quả sai.
+
+## Cập nhật 9 (2026-08-20, ép float32 — hết NaN thật nhưng chậm gấp ~3 lần)
+
+Đã sửa `03_jina/main.py`: `dtype_str = "float32"` vô điều kiện (bỏ nhánh theo `DEVICE`, xem
+`load_model()`), cộng thêm fail-loud check `np.isnan(feats).any()` ngay sau mỗi video encode (dừng
+NGAY ở video đầu tiên lỗi thay vì âm thầm ghi hết 873 video hỏng như lần trước).
+
+**Sự cố lúc verify**: định chạy `SMOKE_TEST = True` trước để xác nhận nhanh (~1-2 phút GPU) theo
+đúng quy trình mục "Cập nhật 6", nhưng bản push lên Kaggle thực tế lại có `SMOKE_TEST = False` —
+tức là chạy thẳng full 873 video mà CHƯA qua bước smoke-test xác nhận fix trước (lệch quy trình,
+ghi lại để tránh lặp lần sau). Do đó phải theo dõi trực tiếp bằng `kaggle kernels logs` (lệnh
+`kaggle kernels status`/`output` KHÔNG trả được gì khi kernel còn `RUNNING`; `logs` MỚI đọc được
+log live, nhưng cần `PYTHONIOENCODING=utf-8` trên PowerShell/Git Bash Windows nếu không sẽ
+`UnicodeEncodeError` vì log có tiếng Việt/ký tự box-drawing).
+
+**Kết quả xác nhận thật (log live, không phải đoán):**
+```
+[encode_jina] 20/873 video đã xử lý (mới encode: 20, đã có sẵn/skip: 0), 2602s trôi qua
+```
+- **Hết NaN thật**: qua 20/873 video không hề bị raise NaN-check mới thêm ở trên → giả thuyết
+  "float16 overflow ở tower EVA+RoPE" (mục "Cập nhật 8") gần như chắc chắn đúng nguyên nhân gốc.
+- **Chậm gấp ~2.95×** bản fp16 cũ: 2602s/20 video so với 882s/20 video (log "Cập nhật 8"). Ngoại
+  suy full 873 video ≈ **113.600s ≈ 31.6 giờ** — dài hơn nhiều so với ~8.4h của bản fp16, nhiều khả
+  năng **vượt giới hạn 1 phiên GPU Kaggle** (thường ~9-12h) và bị cắt giữa chừng.
+
+**Quyết định (bạn chọn, 2026-08-20)**: để job chạy tiếp nguyên trạng (không sửa thêm, không huỷ) —
+đã xác nhận đúng (hết NaN) nên rủi ro còn lại chỉ là thời gian, không phải đúng/sai. Nếu Kaggle cắt
+phiên giữa chừng, dùng đúng cơ chế **resume qua nhiều lần push** đã ghi ở mục "Lưu ý trước khi chạy
+thật" phía trên (tải zip video đã xong → `kaggle datasets create`/`version` → thêm vào
+`dataset_sources` trong `kernel-metadata.json` → push lại) để nối tiếp thay vì encode lại từ đầu.
+
+**Hướng thay thế nếu cần nhanh hơn (CHƯA THỬ, chỉ ghi lại để cân nhắc sau)**: đổi `dtype_str` sang
+`"bfloat16"` — cùng 8-bit exponent với float32 (dải giá trị rộng, không tràn số như fp16) nhưng nhẹ
+hơn fp32. Lưu ý quan trọng: **GPU T4 (Turing, sm_75) không có tensor core hỗ trợ bf16 gốc** (chỉ từ
+Ampere/sm_80 trở lên) — tốc độ bf16 trên T4 CHƯA CHẮC nhanh hơn float32 đáng kể, đây vẫn là giả
+thuyết chưa kiểm chứng bằng log thật, không phải kết luận.
