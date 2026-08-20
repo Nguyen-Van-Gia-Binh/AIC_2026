@@ -265,5 +265,29 @@
   "gt_frame_start": 25828,
   "gt_frame_end": 25993,
   "gt_answer": "8"  
+},
+{
+"query_id": "e-qa-ai-004",
+  "type": "QA",
+  "text_vi": "Trong video nói về chương trình món ngon mỗi ngày, chai nước tương trên bàn có nhãn hiệu gì?",
+  "text_en": "In the video about the daily delicious meal program, what brand is the soy sauce bottle on the table?",
+  "question": "Chai nước tương trên bàn có nhãn hiệu gì?",   
+  "difficulty_tags": ["naming"],
+  "gt_video_id": "L26_V296",
+  "gt_frame_start": 1537,
+  "gt_frame_end": 1665,
+  "gt_answer": "Phú Sĩ"  
+},
+{
+"query_id": "e-qa-ai-005",
+  "type": "QA",
+  "text_vi": "Trong video có người đàn ông áo xám cầm hai đĩa bánh xèo, bên trái anh ta là gì?",
+  "text_en": "In the video where a man in a gray shirt is holding two plates of Vietnamese pancakes, what is to his left?",
+  "question": "Bên trái người đàn ông áo xám là gì?",   
+  "difficulty_tags": ["naming"],
+  "gt_video_id": "L27_V003",
+  "gt_frame_start": 7021,
+  "gt_frame_end": 7156,
+  "gt_answer": "Rau sống"  
 }
 ]
