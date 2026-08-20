@@ -228,5 +228,18 @@
       {"text_en": "man arriving at the ambulance", "gt_frame_start": 13020, "gt_frame_end": 13170},
       {"text_en": "man lays in the ambulance", "gt_frame_start": 13170, "gt_frame_end": 13278}
   ]
+  },
+  {
+    "query_id": "e-trake-004",
+    "type": "TRAKE",
+    "text_vi": "Cảnh một người tội phạm đang bị áp giải bởi một cảnh sát mặc quân phục màu xanh, đang đi đến phòng tra khảo",
+    "text_en": "A view of a criminal being escorted by a blue-uniformed police officer, walking towards the interrogation room.",
+    "difficulty_tags": ["short_action"],
+    "gt_video_id": "L25_V003",
+    "events": [
+      {"text_en": "criminal starts being escorted", "gt_frame_start": 28531, "gt_frame_end": 28530},
+      {"text_en": "criminal is escorted", "gt_frame_start": 28531, "gt_frame_end": 28531},
+      {"text_en": "criminal is being interrogated", "gt_frame_start": 28532, "gt_frame_end": 29363}
+  ]
   }
 ]
