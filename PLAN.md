@@ -273,7 +273,29 @@ model cho Sơ tuyển đợt 2 dựa trên bằng chứng đo được, có đư
   xác nhận trong `build_submission.py` (thư mục `submission/` trong ZIP, tên file CSV) **đã fix**
   — xem Phase 5 mục đầu. Vẫn cần chạy thử nộp thật 1 zip trong Vòng thử nghiệm để xác nhận hệ
   thống BTC chấp nhận, không chỉ dựa vào validator nội bộ.
-- **Single LLM provider (Gemini)** — đã hết, có fallback 3 tầng + key rotation (xem Phase 5), cả 3
-  provider đều có key thật trong `.env`.
-- **Chưa test load thật** — chưa rõ latency `run_qa`/`run_trake` (gọi Gemini nhiều lần) có đủ nhanh
-  để rà soát tay trong thời gian thi hay không.
+- **Single LLM provider (Gemini)** — đã hết, có fallback 3 tầng + key rotation (28 key Gemini trong
+  `.env`, cách nhau dấu phẩy/xuống dòng, xem `_parse_key_list` trong `config.py`), cả 3 provider đều có
+  key thật trong `.env`.
+- ⚠️ **[XÁC NHẬN THẬT 2026-08-20, RẤT QUAN TRỌNG] Nghi vấn nguyên nhân chính khiến QA/TRAKE "sai bét"
+  trong lần nộp thử đầu tiên (điểm 5.6, thấp hơn hẳn top 30 hiện tại 9-11 điểm)** — người dùng báo:
+  KIS chạy tạm ổn (phải tự sắp lại thứ tự — khớp với R@1 thấp của `clip_vitb32` đã đo), nhưng QA/TRAKE
+  **sai hoàn toàn**. Chạy thử lại 1 câu QA thật (`query-p1-15-qa.txt`, câu xã Khánh Hòa) qua
+  `pipeline_qa.py` trực tiếp (không qua UI) thì bắt được bằng chứng: **key Gemini #1 và #2 trong 28 key
+  đều báo `RateLimitError 429` (`generate_content_free_tier_requests`, quota free-tier = 20
+  request/ngày/project/model) ngay lập tức** — nghĩa là 2 key đầu tiên trong danh sách rotation đã cạn
+  quota (khả năng cao do đã dùng nhiều trong lúc chạy thử 24 câu thật hôm nay), buộc hệ thống rơi xuống
+  key khác hoặc fallback Groq/NVIDIA (model vision yếu hơn hẳn Gemini). Rotation **không nhớ trạng thái
+  key nào đã cạn giữa các lần chạy process mới** — mỗi lần mở lại `app.py`/pipeline sẽ lại thử từ key 1
+  trước, tốn thời gian + tăng khả năng dùng phải model fallback yếu hơn đúng lúc cần chính xác nhất
+  (QA/TRAKE cần suy luận thị giác tốt). Đây là hướng nghi vấn có bằng chứng thật mạnh hơn giả thuyết
+  "chỉ do embedding kém" — embedding yếu giải thích KIS phải sắp lại tay, nhưng KHÔNG giải thích được
+  QA/TRAKE sai *hoàn toàn* (embedding chỉ ảnh hưởng thứ hạng candidate, LLM vẫn nên trả lời đúng nếu
+  đúng frame nằm trong top-20/100 đưa vào). **Việc cần làm trước Sơ tuyển đợt 1**: (1) kiểm tra quota
+  Gemini còn lại qua https://ai.dev/rate-limit trước khi thi; (2) nếu quota chưa hồi kịp, cân nhắc giao
+  Agent thêm việc nhỏ: cache lại key nào đã cạn quota trong ngày (ghi file tạm, không phải sửa logic
+  provider chain) để rotation không lặp lại việc thử key đã biết chết mỗi lần khởi động — tiết kiệm thời
+  gian quý giá trong 3 tiếng thi thật; (3) không kết luận vội "đổi embedding model sẽ sửa được
+  QA/TRAKE" — ưu tiên xác minh nguyên nhân LLM trước khi đổ thêm công sức vào Front 1 (so model
+  embedding).
+- **Chưa test load thật** — chưa rõ latency `run_qa`/`run_trake` (gọi Gemini nhiều lần, nay có thêm rủi
+  ro cạn quota) có đủ nhanh để rà soát tay trong thời gian thi hay không.

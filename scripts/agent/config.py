@@ -53,12 +53,15 @@ def _parse_key_list(raw: str) -> list[str]:
 GEMINI_API_KEYS = _parse_key_list(os.getenv("GEMINI_API_KEY", ""))
 GROQ_API_KEYS = _parse_key_list(os.getenv("GROQ_API_KEY", ""))
 NVIDIA_NIM_API_KEYS = _parse_key_list(os.getenv("NVIDIA_NIM_API_KEY", ""))
+OMNIROUTE_API_KEYS = _parse_key_list(os.getenv("OMNIROUTE_API_KEY", ""))
+OMNIROUTE_BASE_URL = os.getenv("OMNIROUTE_BASE_URL", "http://localhost:20128/v1")
 
 # Tuong thich nguoc: bien key don cho cho nao con doc truc tiep (key dau tien
 # trong danh sach, hoac "" neu chua dien).
 GEMINI_API_KEY = GEMINI_API_KEYS[0] if GEMINI_API_KEYS else ""
 GROQ_API_KEY = GROQ_API_KEYS[0] if GROQ_API_KEYS else ""
 NVIDIA_NIM_API_KEY = NVIDIA_NIM_API_KEYS[0] if NVIDIA_NIM_API_KEYS else ""
+OMNIROUTE_API_KEY = OMNIROUTE_API_KEYS[0] if OMNIROUTE_API_KEYS else ""
 
 MIN_OUTPUT_TOKENS = 2048
 MAX_AGENT_LOOPS = 2
@@ -68,6 +71,13 @@ MAX_AGENT_LOOPS = 2
 # api_keys (co the rong neu chua dien trong .env — provider do se tu dong bi
 # bo qua trong call_llm(), khong can xoa tay khoi danh sach nay).
 PROVIDER_CHAIN = [
+    {
+        "name": "omniroute",
+        "model_text": "openai/combo-text",
+        "model_vision": "openai/auto",
+        "api_keys": OMNIROUTE_API_KEYS,
+        "api_base": OMNIROUTE_BASE_URL,
+    },
     {
         "name": "gemini",
         "model_text": "gemini/gemini-3.5-flash",
@@ -115,26 +125,31 @@ def _build_messages(prompt: str, image_paths: list[str] | None):
     return [{"role": "user", "content": content}]
 
 
-def _call_one(model: str, api_key: str, messages, temperature: float, max_tokens: int) -> str:
+def _call_one(
+    model: str,
+    api_key: str,
+    messages,
+    temperature: float,
+    max_tokens: int,
+    api_base: str | None = None,
+) -> str:
     """Goi 1 model cu the; tu nang gap doi max_tokens neu thinking model tra None."""
-    response = litellm.completion(
-        model=model,
-        messages=messages,
-        temperature=temperature,
-        max_tokens=max_tokens,
-        api_key=api_key,
-        stream=False,
-    )
+    kwargs = {
+        "model": model,
+        "messages": messages,
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+        "api_key": api_key,
+        "stream": False,
+    }
+    if api_base:
+        kwargs["api_base"] = api_base
+
+    response = litellm.completion(**kwargs)
     content = response.choices[0].message.content
     if content is None:
-        response2 = litellm.completion(
-            model=model,
-            messages=messages,
-            temperature=temperature,
-            max_tokens=max_tokens * 2,
-            api_key=api_key,
-            stream=False,
-        )
+        kwargs["max_tokens"] = max_tokens * 2
+        response2 = litellm.completion(**kwargs)
         content = response2.choices[0].message.content
         if content is None:
             raise ValueError(f"{model} van tra None sau khi nang max_tokens")
@@ -149,7 +164,7 @@ def call_llm(
     max_tokens: int = 512,
 ) -> str:
     """
-    Goi LLM qua chuoi fallback PROVIDER_CHAIN (Gemini -> Groq -> NVIDIA NIM).
+    Goi LLM qua chuoi fallback PROVIDER_CHAIN (OmniRoute -> Gemini -> Groq -> NVIDIA NIM).
     model="vision" (hoac co image_paths) dung nhanh multimodal cua provider,
     con lai dung nhanh text. max_tokens tu dong nang len >= 2048 de tranh
     Gemini tra None (thinking budget).
@@ -171,10 +186,11 @@ def call_llm(
             continue
 
         chosen_model = provider["model_vision"] if is_vision else provider["model_text"]
+        api_base = provider.get("api_base")
         for key_idx, api_key in enumerate(api_keys, start=1):
             key_label = f"key {key_idx}/{len(api_keys)}" if len(api_keys) > 1 else "key"
             try:
-                return _call_one(chosen_model, api_key, messages, temperature, actual_max)
+                return _call_one(chosen_model, api_key, messages, temperature, actual_max, api_base=api_base)
             except Exception as e:
                 print(
                     f"[config] Provider '{provider['name']}' ({chosen_model}, {key_label}) loi "
