@@ -190,5 +190,19 @@
     "gt_video_id": "L30_V001",
     "gt_frame_start": 1604,
     "gt_frame_end": 1604
+  },
+  {
+    "query_id": "p1-1-trake",
+    "type": "TRAKE",
+    "text_vi": "Đoạn video một người đàn ông đang cắt dây khánh thành một dự án, bao gồm ông và các đồng nghiệp của mình",
+    "text_en": "A view of a man cutting the ribbon to inaugurate a project, including him and his colleagues.",
+    "difficulty_tags": ["temporal_order", "short_action"],
+    "gt_video_id": "L21_V016",
+    "events": [
+      {"text_en": "the first moment the ribbon is being cut", "gt_frame_start": 25654, "gt_frame_end": 25654},
+      {"text_en": "the moment the ribbon is cut", "gt_frame_start": 25714, "gt_frame_end": 25714}
+    ],
+    "status": "needs_labeling",
+    "source_file": "query-p1-1-trake.txt"
   }
 ]
