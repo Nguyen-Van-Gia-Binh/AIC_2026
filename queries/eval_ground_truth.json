@@ -201,8 +201,6 @@
     "events": [
       {"text_en": "the first moment the ribbon is being cut", "gt_frame_start": 25654, "gt_frame_end": 25654},
       {"text_en": "the moment the ribbon is cut", "gt_frame_start": 25714, "gt_frame_end": 25714}
-    ],
-    "status": "needs_labeling",
-    "source_file": "query-p1-1-trake.txt"
+    ]
   }
 ]
