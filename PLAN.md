@@ -218,15 +218,41 @@ Success: nộp thử 1 zip trong Vòng thử nghiệm và được chấp nhận
   thật (xem văn phong tự nhiên ở 24 câu `THUNGHIEM-bo-de-thi.zip`) — chỉ là tín hiệu sớm ủng hộ hướng
   đầu tư tiếp, không đổi lịch "không swap model trước đợt 1" ở dưới. Việc còn lại: câu QA/TRAKE thật +
   câu phủ định/từ địa phương — để người tự làm (không AI viết được đáng tin cho 2 dạng này).
+- [X] **Cơ chế đổi model sản xuất qua biến môi trường — đã dựng + kiểm chứng xong (2026-08-20)** —
+  `scripts/agent/tools/retrieve.py` đọc `AIC_RETRIEVE_MODEL` lúc import (mặc định/không set =
+  `clip_vitb32`, luồng cũ giữ nguyên 100% không đổi gì); set `vitl14`/`siglip`/`dfn` route qua
+  `scripts/eval/multi_index.py` (đã bù cột `jpg_path` để UI vẫn hiện ảnh preview khi rà tay). Đã
+  smoke-test cả 2 nhánh (mặc định + `dfn`) chạy đúng, ra kết quả khác nhau rõ ràng, ảnh preview vẫn
+  hiện đủ. Cách dùng:
+  ```
+  $env:AIC_RETRIEVE_MODEL = "siglip"; .venv\Scripts\python.exe scripts\app.py   # bật model khác
+  Remove-Item Env:\AIC_RETRIEVE_MODEL; .venv\Scripts\python.exe scripts\app.py   # revert baseline
+  ```
+  **Dùng ngay cho việc tự tay tìm ground truth** (`queries/EVAL_GUIDE.md` ở trên) — phản hồi thật từ
+  người dùng (2026-08-20): `clip_vitb32` nhận diện kém, hay ra sai video, khiến việc tự dò tay rất cực.
+  Set `AIC_RETRIEVE_MODEL=siglip` (mạnh nhất ở R@1/R@5 theo bảng dưới) trước khi mở `app.py` để tìm
+  nhanh hơn — việc này KHÔNG đụng tới quyết định model sản xuất ở mục dưới, chỉ là công cụ hỗ trợ tìm.
 - [ ] Cân nhắc ensemble/fusion nhiều model thay vì chọn 1 — kiến trúc lưu embedding `.npy` tách riêng
   theo từng model nên rank-fusion khả thi mà không phá `retrieve.py`, nhưng đây là quyết định kiến
   trúc mới — chỉ làm SAU khi bộ eval chứng minh fusion thắng rõ single-model tốt nhất, không làm vì
   "trực giác nhiều model chắc tốt hơn".
-- [ ] **KHÔNG đổi model sản xuất trước Sơ tuyển đợt 1 (19:30 21/8)** — không còn đủ thời gian validate
-  an toàn (chưa có bộ eval, chưa test QA/TRAKE với embedding mới). Giữ `clip-ViT-B-32` cho đợt 1. Dùng
-  đúng khoảng 21/8→28/8 (giữa đợt 1 và đợt 2, ~1 tuần — dài hơn hẳn khoảng đệm bằng 0 trước đợt 1) làm
-  cửa sổ kiểm định + swap nếu có bằng chứng thắng rõ ràng. Giữ nguyên `data/extracted/clip-features-32/`
-  cũ (không xoá, không ghi đè `FEATURES_DIR`) để luôn rollback được nếu model mới phát sinh vấn đề.
+- [ ] **Kế hoạch kiểm định + quyết định đổi model sản xuất (cập nhật 2026-08-20)** — vẫn giữ tinh thần
+  "không đổi liều lĩnh ngay trước giờ thi", cụ thể hoá bằng lượt nộp thử còn lại trong Vòng thử nghiệm
+  (đóng 19:30 21/8, có hiển thị điểm tổng thật từ BTC, không chi tiết từng câu):
+  1. **Đang làm, ưu tiên cao nhất**: chạy hết 24 câu `THUNGHIEM-bo-de-thi.zip` bằng `clip_vitb32`
+     (mặc định, không set biến môi trường) qua `app.py` → export → nộp → ghi điểm BTC = mốc baseline
+     an toàn, chắc chắn có 1 bài nộp được trước khi thử gì khác.
+  2. Nếu còn thời gian + lượt nộp trước 19:30 mai: set `AIC_RETRIEVE_MODEL=siglip`, chạy lại đúng 24
+     câu đó (rehearsal đầy đủ KIS/QA/TRAKE qua UI thật, không chỉ so điểm offline như `run_eval.py`),
+     export, nộp riêng, ghi điểm BTC. Làm thêm `dfn` nếu còn lượt (bỏ qua `vitl14` — không hơn baseline
+     đáng kể theo bảng trên). Đây là lần đầu test 2 model này qua TOÀN BỘ pipeline thật.
+  3. **Quyết định**: điểm BTC + rehearsal ở bước 2 đều thắng rõ và chạy mượt (không lỗi, không quá
+     chậm) → có thể đổi mặc định ngay cho đợt 1 nếu rehearsal xong đủ sớm, đủ tự tin; nếu không kịp/
+     không chắc → giữ `clip_vitb32` an toàn cho đợt 1, đổi mặc định cho đợt 2 (28/8, có ~1 tuần đệm,
+     dài hơn hẳn khoảng đệm bằng 0 trước đợt 1). KHÔNG đổi fallback trong `retrieve.py`
+     (`or "clip_vitb32"`) chỉ dựa trên bảng `run_eval.py` 19 câu — cần thêm bằng chứng điểm BTC thật +
+     rehearsal full-pipeline ở bước 2. Giữ nguyên `data/extracted/clip-features-32/` cũ (không xoá,
+     không ghi đè `FEATURES_DIR`) để luôn rollback được nếu model mới phát sinh vấn đề.
 - [X] Kiểm tra dung lượng đĩa trống trước khi giải nén — đã xác nhận **không phải vấn đề tại thời
   điểm đó** (88GB trống / 476GB, 3 zip feature chỉ ~927MB tổng, đã giải nén xong cả 3, không cần dọn
   zip nguồn). **Cập nhật 2026-08-20 (cùng ngày, sau khi tải thêm video):** số liệu này đã cũ — xem
