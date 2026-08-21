@@ -34,7 +34,7 @@ Hệ thống giải quyết **3 dạng bài** của cuộc thi AIC 2026:
 **Điểm nổi bật:**
 
 - 🔍 **CLIP retrieval** trên ma trận ~177K keyframe (873 video) — cosine similarity realtime
-- 🤖 **Agent đa phương thức** — LLM (Gemini/Groq/NVIDIA NIM) qua LiteLLM với fallback 3 tầng + key rotation
+- 🤖 **Agent đa phương thức** — LLM text/vision qua OpenRouter và LiteLLM
 - 🛡️ **Anti-hallucination** bắt buộc cho Q&A — cross-check answer với Objects JSON (Faster R-CNN) offline
 - 👤 **Human-in-the-loop** — Gradio UI cho phép rà soát, sửa tay kết quả trước khi nộp bài
 - 📦 **Submission engine** — tự sinh CSV/ZIP theo format BTC, kèm validator nội bộ
@@ -89,7 +89,7 @@ Chi tiết đầy đủ → [`ARCHITECTURE.md`](ARCHITECTURE.md)
 | Framework ML     | `torch` (CPU build)                                                                                |
 | Dữ liệu        | `pandas`, `numpy` — metadata table & ma trận embedding                                         |
 | UI               | `gradio` — 4 tab KIS/Q&A/TRAKE/Export                                                             |
-| LLM              | `litellm` — route qua chuỗi fallback: **Gemini** → **Groq** → **NVIDIA NIM** |
+| LLM              | `litellm` — route text/vision qua **OpenRouter** |
 | Cấu hình       | `python-dotenv` — load API key từ `.env`                                                       |
 | Object detection | Faster R-CNN — dữ liệu Objects JSON offline (không gọi API)                                     |
 
@@ -205,15 +205,14 @@ sentencepiece==0.2.2
 # Copy template
 copy .env.example .env
 
-# Điền key thật vào .env (ít nhất GEMINI_API_KEY)
+# Điền key thật vào .env (OPENROUTER_API_KEY)
 ```
 
 Hỗ trợ nhiều key xoay vòng để né rate-limit:
 
 ```env
-GEMINI_API_KEY=key1,key2,key3
-GROQ_API_KEY=your_groq_api_key
-NVIDIA_NIM_API_KEY=your_nvidia_nim_api_key
+OPENROUTER_API_KEY=your_openrouter_api_key
+OPENROUTER_MODEL=google/gemini-2.5-flash
 ```
 
 ### 3. Chạy ứng dụng

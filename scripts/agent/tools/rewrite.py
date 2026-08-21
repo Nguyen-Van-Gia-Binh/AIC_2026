@@ -1,8 +1,8 @@
 """
 rewrite.py — Dich query tieng Viet sang tieng Anh + lam ro mo ta visual.
 
-CLIP-ViT-B-32 hieu tieng Anh tot hon nhieu. Mo ta visual-centric (mau sac,
-vat the, hanh dong, boi canh) se cho ket qua CLIP search tot hon.
+CLIP-family hieu tieng Anh tot hon nhieu. Mo ta visual-centric (vat the neo,
+mau sac, hanh dong, boi canh) se cho ket qua retrieval tot hon.
 
 Usage:
     from scripts.agent.tools.rewrite import rewrite_query
@@ -27,10 +27,20 @@ Task: Translate and rewrite the following query into a concise English descripti
 
 Rules:
 - Output ONLY the rewritten query (no explanations, no quotes)
-- Keep it SHORT (max 20 words)
-- Focus on VISUAL elements: objects, colors, actions, scene/location, clothing
-- Remove temporal/sequential words (first, then, after) — CLIP searches single frames
-- If already in English, just clean and optimize it
+- Keep it concise (max 35 words)
+- FIRST identify and preserve the most distinctive visual anchor object or landmark
+    (for example: helicopter, wind turbine, red octopus toy, sand sculpture)
+- Put that anchor object near the START of the rewritten query; never omit it even
+    when the query also describes people or an action
+- Then include the main action and the important people/clothing, followed by location
+    or background context if useful
+- Prefer concrete visual nouns and verbs; remove vague filler and factual details
+    that cannot be seen in a frame
+- Remove temporal/sequential words (first, then, after) — this rewrite is for
+    single-frame retrieval, including each individual TRAKE event
+- If already in English, just clean and optimize it while preserving the anchor object
+
+Preferred format: "[distinctive anchor object] + [main action] + [people/clothing] + [visible setting]"
 
 Query: {query}
 

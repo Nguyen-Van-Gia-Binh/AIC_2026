@@ -16,6 +16,7 @@ Usage:
 from __future__ import annotations
 
 import sys
+import re
 from pathlib import Path
 
 _ROOT = Path(__file__).resolve().parent.parent.parent
@@ -67,6 +68,32 @@ Is this answer plausible given the detected objects? Reply with:
 - "NO: <brief reason>" if inconsistent
 
 Response:"""
+
+KNOWLEDGE_FALLBACK_PROMPT = """\
+Answer this question using general knowledge only because no usable video evidence was found.
+If the answer cannot be inferred reliably from the question, reply exactly: CANNOT_ANSWER.
+Return only the shortest answer, with no explanation, no sentence prefix, and no uncertainty.
+Use the same language as the question and keep the answer under 100 characters.
+
+Question: {question}
+
+Answer:"""
+
+MAX_ANSWER_CHARS = 100
+
+
+def _normalize_answer(raw_answer: str) -> str:
+    """Giu answer 1 dong, ngan gon, va khong vuot gioi han BTC."""
+    answer = " ".join(str(raw_answer).replace("\r", " ").replace("\n", " ").split())
+    answer = re.sub(r"^(answer|final answer|câu trả lời)\s*:\s*", "", answer, flags=re.IGNORECASE)
+    answer = answer.strip(" \t\"'")
+    if len(answer) <= MAX_ANSWER_CHARS:
+        return answer
+
+    first_sentence = re.split(r"(?<=[.!?])\s+", answer, maxsplit=1)[0].strip()
+    if first_sentence and len(first_sentence) <= MAX_ANSWER_CHARS:
+        return first_sentence
+    return answer[: MAX_ANSWER_CHARS - 3].rstrip() + "..."
 
 
 # ─── Main Function ─────────────────────────────────────────────────────────────
@@ -124,7 +151,7 @@ def answer_from_hits(
             crosscheck = _crosscheck_answer(question, ans1, unique_objects[:15])
             conf = 0.75 if crosscheck else 0.45
             return {
-                "answer":     ans1.strip(),
+                "answer":     _normalize_answer(ans1),
                 "best_hit":   candidates[0],
                 "confidence": conf,
                 "method":     "objects",
@@ -149,18 +176,24 @@ def answer_from_hits(
             crosscheck = _crosscheck_answer(question, ans2, hit_objs)
             conf = 0.85 if crosscheck else 0.6
             return {
-                "answer":     ans2.strip(),
+                "answer":     _normalize_answer(ans2),
                 "best_hit":   hit,
                 "confidence": conf,
                 "method":     "vision",
             }
 
-    # --- Fallback: khong co anh, objects khong du ---
+    # --- Fallback: chi dung kien thuc nen khi khong con bang chung tu video ---
+    knowledge_prompt = KNOWLEDGE_FALLBACK_PROMPT.format(question=question)
+    knowledge_answer = _normalize_answer(
+        call_llm(knowledge_prompt, model="text", temperature=0.0, max_tokens=80)
+    )
+    if knowledge_answer.upper() == "CANNOT_ANSWER":
+        knowledge_answer = "N/A"
     return {
-        "answer":     "N/A",
+        "answer":     knowledge_answer,
         "best_hit":   candidates[0] if candidates else {},
         "confidence": 0.1,
-        "method":     "fallback",
+        "method":     "knowledge_fallback",
     }
 
 
