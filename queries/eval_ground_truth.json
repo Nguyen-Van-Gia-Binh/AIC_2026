@@ -209,7 +209,7 @@
   "text_vi": "Cảnh một người đàn ông đi bộ qua đường, tay cầm một cái xe đẩy em bé đã được xếp vào",
   "text_en": "View of a man crossing the street, holding a baby stroller that has been folded up.",
   "difficulty_tags": ["temporal_order"],
-  "gt_video_id": "L25_V003",
+  "gt_video_id": "L21_V025",
   "events": [
     {"text_en": "man starts crossing the street", "gt_frame_start": 13770,  "gt_frame_end": 13770},
     {"text_en": "man is halfway across the street", "gt_frame_start": 13923, "gt_frame_end": 13923},
@@ -222,7 +222,7 @@
     "text_vi": "Cảnh một người đàn ông bị thương đang được diều đi bởi 2 người khác, vừa rời đi từ trực thăng, đang di chuyển đến xe cứu thương",
     "text_en": "A view of a wounded man being carried by two other people, just disembarked from a helicopter, moving towards an ambulance.",
     "difficulty_tags": ["temporal_order"],
-    "gt_video_id": "L25_V003",
+    "gt_video_id": "L22_V023",
     "events": [
       {"text_en": "man starts walking while being carried by two other people", "gt_frame_start": 12778, "gt_frame_end": 12900},
       {"text_en": "man arriving at the ambulance", "gt_frame_start": 13020, "gt_frame_end": 13170},
@@ -235,7 +235,7 @@
     "text_vi": "Cảnh một người tội phạm đang bị áp giải bởi một cảnh sát mặc quân phục màu xanh, đang đi đến phòng tra khảo",
     "text_en": "A view of a criminal being escorted by a blue-uniformed police officer, walking towards the interrogation room.",
     "difficulty_tags": ["short_action"],
-    "gt_video_id": "L25_V003",
+    "gt_video_id": "L22_V003",
     "events": [
       {"text_en": "criminal starts being escorted", "gt_frame_start": 28531, "gt_frame_end": 28530},
       {"text_en": "criminal is escorted", "gt_frame_start": 28531, "gt_frame_end": 28531},

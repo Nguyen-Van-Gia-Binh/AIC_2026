@@ -29,8 +29,8 @@ Setup (first time):
 ```
 .venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
-Then copy `.env.example` to `.env` and fill in a real `GEMINI_API_KEY` (get one free at
-[aistudio.google.com](https://aistudio.google.com/apikey)).
+Then copy `.env.example` to `.env` and fill in a real `OPENROUTER_API_KEY` (get one at
+[openrouter.ai/keys](https://openrouter.ai/keys)).
 
 Daily commands — always run through the project venv's Python directly (no activation needed):
 ```
@@ -94,11 +94,8 @@ three buckets above.
 - `torch` (CPU build) — backing framework for `sentence-transformers`.
 - `pandas` / `numpy` — metadata table and the embedding matrix.
 - `gradio` — the UI (`scripts/app.py`).
-- `litellm` — routes LLM calls; `scripts/agent/config.py:PROVIDER_CHAIN` gives it a fallback chain —
-  Google Gemini (`gemini/gemini-3.5-flash`, priority 1) → Groq (`llama-3.3-70b-versatile` /
-  `llama-3.2-11b-vision-preview`, fallback 2) → NVIDIA NIM (`meta/llama-3.3-70b-instruct` /
-  `meta/llama-3.2-90b-vision-instruct`, fallback 3). A provider with no API key in `.env` is skipped
-  automatically.
+- `litellm` — routes all text and vision LLM calls through OpenRouter; the model is configured by
+  `OPENROUTER_MODEL` and defaults to `google/gemini-2.5-flash`.
 - No database, no ORM, no message queue — everything is files under `data/`, `queries/`, `submissions/`.
 
 ## Code Rules

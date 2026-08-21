@@ -36,8 +36,8 @@ from agent.tools.rewrite import rewrite_query
 def run_trake(
     query_text: str,
     events: list[str],
-    top_k_video: int = 5,
-    top_k_frame: int = 10,
+    top_k_video: int = 20,
+    top_k_frame: int = 20,
 ) -> dict:
     """
     Chay pipeline TRAKE day du.
@@ -46,8 +46,8 @@ def run_trake(
         query_text:  Mo ta tong quat chuoi su kien (de tim video).
         events:      Danh sach mo ta tung khoang khac theo thu tu thoi gian.
                      Vi du: ["athlete takes off", "athlete clears bar", "athlete lands"]
-        top_k_video: So video candidate de thu alignment (default 5).
-        top_k_frame: So frame candidate moi event khi alignment (default 10).
+        top_k_video: So video candidate de thu alignment (default 20).
+        top_k_frame: So frame candidate moi event khi alignment (default 20).
 
     Returns:
         dict:
@@ -121,9 +121,9 @@ def run_trake(
     # Sap xep theo score
     video_results.sort(key=lambda x: x["score"], reverse=True)
 
-    # Build submission format (top-100 rows: moi video la 1 row)
+    # Moi video la 1 phuong an; giu tran 100 dong theo rule BTC.
     results = []
-    for vr in video_results:
+    for vr in video_results[:100]:
         results.append({
             "video_id":  vr["video_id"],
             "frame_ids": vr["frame_ids"],
