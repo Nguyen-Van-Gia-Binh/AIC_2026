@@ -66,7 +66,7 @@ chạy đúng ở test và contest mode, warning fallback đúng khi `AIC_MODE` 
 `OPENROUTER_MODEL_CONTEST`, QA pipeline xác nhận model contest áp dụng cho cả text lẫn vision call.
 Plan chi tiết: [docs/superpowers/plans/2026-08-24-phase1-aic_mode.md](docs/superpowers/plans/2026-08-24-phase1-aic_mode.md).
 
-## Phase 2: Query rewrite — thêm rule xử lý phủ định (⏳ Todo)
+## Phase 2: Query rewrite — thêm rule xử lý phủ định (✅ Done)
 
 Thêm đúng 1 rule vào prompt rewrite hiện có: khi query nói "không có"/"without" một vật/hành động,
 diễn giải lại thành mô tả cái ĐANG hiện diện thay vì giữ nguyên câu phủ định (CLIP khớp mô tả dương
@@ -76,7 +76,15 @@ coi như đã có sẵn trong prompt hiện tại, xem [DECISION.md](DECISION.md
 Success: bộ câu test có phủ định trong `eval_ground_truth.json` (cần bổ sung — xem mục 0) cải thiện
 R@k so với trước khi thêm rule.
 
-## Phase 3: Risk-aware ranking & budget allocation (⏳ Todo)
+**Đã làm:** Thêm 1 rule mới vào `REWRITE_PROMPT` (`scripts/agent/tools/rewrite.py`) — không đổi
+signature `rewrite_query()`. Verify bằng LLM call thật (3 câu phủ định VN/EN mẫu, không có trong
+`eval_ground_truth.json`): output không còn dính "no/without/không" trước tên vật thể, chuyển thành mô
+tả dương tính ("bare face"/"plain face"...). **Gap còn lại:** `eval_ground_truth.json` chưa có câu nào
+gắn nhãn phủ định nên chưa đo được R@k trước/sau bằng số liệu thật như success line yêu cầu — người
+dùng sẽ tự bổ sung câu này sau (cần xem video thật để gắn nhãn, xem mục 0). Plan chi tiết:
+[docs/superpowers/plans/2026-08-24-phase2-3-rewrite-negation-risk-ranking.md](docs/superpowers/plans/2026-08-24-phase2-3-rewrite-negation-risk-ranking.md).
+
+## Phase 3: Risk-aware ranking & budget allocation (✅ Done)
 
 Thêm 1 bước hậu xử lý sau khi retrieve: nếu 1 video nổi bật rõ so với các video còn lại (margin lớn),
 "đặt cược" nhiều dòng kết quả hơn vào đúng video đó; nếu không có video nào nổi bật rõ, trải kết quả
@@ -85,6 +93,20 @@ nào khác, không cần LLM.
 
 Success: so sánh R@1/R@5 (đặt cược) và R@50/R@100 (trải rủi ro) trước/sau trên `eval_ground_truth.json`,
 cả 2 nhóm câu đều không tệ đi.
+
+**Đã làm:** Tool mới `scripts/agent/tools/rerank.py` (`apply_risk_aware_ranking()`, thuần Python,
+không LLM) — so best score/video để tính margin: margin ≥ `MARGIN_THRESHOLD=0.012` → "đặt cược" (đào
+sâu thêm frame trong đúng video qua `fast_retrieve_for_video`, để cạnh tranh công bằng theo score thật,
+không ép lên đầu danh sách bất kể điểm — vòng đầu ép cứng gây regression R@20/R@50, đã fix); margin nhỏ
+hơn → "trải rủi ro" (giới hạn `SPREAD_MAX_PER_VIDEO=3` dòng/video). Đã wire vào cả `pipeline_kis.py` và
+`pipeline_qa.py` (không đụng `pipeline_trake.py` — thuộc Phase 4). Verify: 3 self-test (bet/spread/rỗng)
+PASS; benchmark thật `scripts/test_phase3_rerank.py` trên 23 câu KIS+QA của `eval_ground_truth.json`
+(dùng đúng `retrieve.py` production, model `clip_vitb32`) — R@1=0.130, R@5=0.217, R@20=0.348,
+R@50=0.478, R@100=0.522 **không đổi** trước/sau (1 câu cải thiện rank 75→52, không đủ để đổi R@k ở mẫu
+nhỏ 23 câu). Ngưỡng `MARGIN_THRESHOLD`/`BET_VIDEO_SHARE`/`SPREAD_MAX_PER_VIDEO` là điểm khởi đầu dựa
+trên phân bố score thật (~0.28-0.31), sẽ tinh chỉnh tiếp ở Phase 6 checkpoint khi có nhiều dữ liệu eval
+hơn. Plan chi tiết:
+[docs/superpowers/plans/2026-08-24-phase2-3-rewrite-negation-risk-ranking.md](docs/superpowers/plans/2026-08-24-phase2-3-rewrite-negation-risk-ranking.md).
 
 ## Phase 4: TRAKE — ràng buộc thời gian tăng dần + cross-check tầng 3 (⏳ Todo)
 

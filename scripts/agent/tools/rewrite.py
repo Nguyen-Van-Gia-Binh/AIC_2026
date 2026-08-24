@@ -47,6 +47,15 @@ Rules:
 - Preserve EXACT counts and colors mentioned for people/objects (e.g. "5 people", "one person wearing
     glasses", "three red hats", "yellow car") — these are strong CLIP-matchable attributes, keep them
     verbatim rather than summarizing them away
+- If the query says something is ABSENT or NEGATED (Vietnamese "không có", "không đeo", "không mặc",
+    English "without", "no X", "not wearing X"), do NOT keep the negation as-is in the rewritten query —
+    CLIP matches positive visual descriptions and cannot understand logical negation, so a literal "a
+    person without glasses" is often still matched by CLIP toward frames that DO show glasses. Instead
+    rewrite the negated clause into what IS visibly present: either describe the actually-visible
+    attribute in its place (e.g. "không đeo kính" -> "bare face" / "plain face, no eyewear" as part of a
+    positive description, not as a "no X" clause), or if the object is simply not relevant to
+    disambiguate the scene, drop it from the description entirely rather than negate it. Never output
+    the words "no"/"without"/"không" immediately before an object name.
 - Preserve distinctive proper nouns or on-screen signage/text mentioned in the query (e.g. place/brand
     names like "London Zoo", a price/number board, a scoreboard) — CLIP cannot read text reliably, but
     naming it tells CLIP what KIND of shot to match (a sign, a gauge, a display)
