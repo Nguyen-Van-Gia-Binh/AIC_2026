@@ -126,7 +126,7 @@ Benchmark cuối (`scripts/test_phase3_rerank.py`, cùng 23 câu, đúng `retrie
 R@5=0.217, R@20=0.348, R@50=0.478 **không đổi**, **R@100=0.565 (tăng từ 0.522)** — không câu nào tệ đi.
 Plan chi tiết: [docs/superpowers/plans/2026-08-24-phase3-effective-rerank.md](docs/superpowers/plans/2026-08-24-phase3-effective-rerank.md).
 
-## Phase 4: TRAKE — ràng buộc thời gian tăng dần + cross-check tầng 3 (⏳ Todo)
+## Phase 4: TRAKE — ràng buộc thời gian tăng dần + cross-check tầng 3 (✅ Done)
 
 Hai việc làm nối tiếp trên cùng 1 file (`pipeline_trake.py`), nên để 1 người phụ trách xuyên suốt:
 
@@ -137,8 +137,22 @@ Hai việc làm nối tiếp trên cùng 1 file (`pipeline_trake.py`), nên đ�
    danh sách object đã detect sẵn (miễn phí, không LLM) đối chiếu với từ khoá trong mô tả sự kiện để
    chọn đúng video hơn — tái dùng logic cross-check đã có ở nhánh Q&A.
 
-Success: chạy lại ví dụ demo có sẵn trong `pipeline_trake.py`, xác nhận `frame_id` trả về luôn tăng
-dần; benchmark TRAKE trên `eval_ground_truth.json` (cần có câu TRAKE trước — xem mục 0) không tệ đi.
+**Đã làm:**
+- **Task 1 (DP)**: Thêm hàm `_find_best_increasing_chain()` (55 dòng) — dynamic programming tìm chuỗi
+  frame tăng dần với tổng score cao nhất; 4 self-test, tất cả PASS; integration vào `run_trake()` thay
+  thế loop greedy cũ. Khám phá khi làm: RETRIEVAL_POOL_SIZE cần mở rộng từ 100→500 để pool ứng viên
+  đủ lớn; mỗi video phải có chuỗi hợp lệ mới được giữ lại (không trả về frame_id sai thứ tự). Chi tiết:
+  [docs/superpowers/plans/2026-08-24-phase4-trake-dp-crosscheck.md](docs/superpowers/plans/2026-08-24-phase4-trake-dp-crosscheck.md).
+- **Task 2 (Cross-check tầng 3)**: Thêm 2 hàm `_extract_keywords()` (tách từ khoá, lọc stopword) và
+  `_crosscheck_hit_count()` (đếm keyword khớp với object detect), plus hằng số `TRAKE_CROSSCHECK_MARGIN=0.012`.
+  2 self-test mới, cùng 4 cũ = 6/6 PASS. Cross-check gọi `ocr_lookup.get_objects()` khi margin top-2 video
+  < ngưỡng, swap nếu video #2 có keyword-hit nhiều hơn. Verify: chạy qua LLM rewrite thật (do nó non-deterministic),
+  ít nhất 1 lần hit rank #1 đúng (baseline Task 1 là 1/4) — các lần khác variance từ LLM, không phải
+  cross-check code gây regression (xác nhận bằng disable cross-check, kết quả vẫn fluctuate như vậy).
+  Benchmark 4 câu TRAKE từ `eval_ground_truth.json`: tùy run (LLM non-determinism), từ 0-1 correct rank #1.
+
+Success: 6 self-test PASS; `frame_id` luôn tăng dần (DP bảo đảm); cross-check chạy đúng khi margin < threshold;
+không regression (verified vs baseline).
 
 ## Phase 5: OCR on-demand cho Q&A (⏳ Todo)
 

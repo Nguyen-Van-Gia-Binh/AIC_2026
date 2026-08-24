@@ -22,6 +22,7 @@ Output: list[dict] {video_id, frame_id_1, ..., frame_id_N}
 from __future__ import annotations
 
 import sys
+import re
 from pathlib import Path
 from collections import defaultdict
 from typing import Optional
@@ -33,6 +34,7 @@ if str(_ROOT) not in sys.path:
 from agent.tools.retrieve import fast_retrieve, fast_retrieve_for_video
 from agent.tools.rewrite import rewrite_query
 from agent.tools.rerank import RETRIEVAL_POOL_SIZE
+from agent.tools.ocr_lookup import get_objects
 
 
 def _find_best_increasing_chain(event_hits: list[list[dict]]) -> list[dict] | None:
@@ -88,6 +90,43 @@ def _find_best_increasing_chain(event_hits: list[list[dict]]) -> list[dict] | No
         chain[i] = event_hits[i][j]
         j = back[i][j]
     return chain  # type: ignore[return-value]
+
+
+# Nguong chenh lech trake_score (trung binh cosine similarity qua N event) giua video #1 va #2 de coi
+# la "chua du ro rang, can cross-check bang object detection" — cung thang do voi
+# rerank.MARGIN_THRESHOLD (~0.012, xem scripts/agent/tools/rerank.py). Diem khoi dau, se tinh chinh o
+# Phase 6 khi co benchmark rong hon (xem PLAN.md "Blockers").
+TRAKE_CROSSCHECK_MARGIN = 0.012
+
+# Tu loai khoi keyword khi doi chieu voi object detect duoc — chi loai tu ngu phap, GIU LAI danh tu chi
+# doi tuong (man/woman/car/...) vi do chinh la thu can khop voi ten object (Person/Car/...).
+_STOPWORDS = frozenset({
+    "a", "an", "the", "of", "in", "on", "at", "to", "and", "or", "is", "are", "was", "were",
+    "with", "this", "that", "these", "those", "his", "her", "their", "its", "for", "from",
+    "by", "as", "be", "being", "been", "has", "have", "had", "it", "he", "she", "they",
+    "just", "while", "first", "moment", "view",
+})
+
+
+def _extract_keywords(text: str) -> set[str]:
+    """Tach tu khoa tho tu mo ta (khong LLM) de doi chieu voi ten object detect duoc — loc stopword
+    ngu phap, giu tu >= 3 ky tu."""
+    words = re.findall(r"[a-zA-Z]+", text.lower())
+    return {w for w in words if len(w) >= 3 and w not in _STOPWORDS}
+
+
+def _crosscheck_hit_count(chain: list[dict], keywords: set[str]) -> int:
+    """Dem so keyword co it nhat 1 object detect duoc (gop tu toan bo frame trong chain) chua no —
+    khong goi LLM, chi doc Objects JSON co san (ocr_lookup.get_objects)."""
+    if not keywords or not chain:
+        return 0
+    all_objects: set[str] = set()
+    for hit in chain:
+        vid = hit.get("video_id", "")
+        n = hit.get("n")
+        if vid and n is not None:
+            all_objects.update(o.lower() for o in get_objects(vid, int(n)))
+    return sum(1 for kw in keywords if any(kw in obj for obj in all_objects))
 
 
 def run_trake(
@@ -162,6 +201,20 @@ def run_trake(
     # Sap xep theo score
     video_results.sort(key=lambda x: x["score"], reverse=True)
 
+    # Cross-check top-2 khi margin sac diem < nguong
+    if len(video_results) >= 2:
+        margin = video_results[0]["score"] - video_results[1]["score"]
+        if margin < TRAKE_CROSSCHECK_MARGIN:
+            keywords = _extract_keywords(query_text + " " + " ".join(events))
+            hits0 = _crosscheck_hit_count(video_results[0]["chain"], keywords)
+            hits1 = _crosscheck_hit_count(video_results[1]["chain"], keywords)
+            print(f"[trake]   Cross-check top-2 (margin={margin:.4f} < {TRAKE_CROSSCHECK_MARGIN}): "
+                  f"{video_results[0]['video_id']}={hits0} keyword-hit vs "
+                  f"{video_results[1]['video_id']}={hits1}")
+            if hits1 > hits0:
+                video_results[0], video_results[1] = video_results[1], video_results[0]
+                print(f"[trake]   -> Doi cho: {video_results[0]['video_id']} len #1")
+
     # Moi video la 1 phuong an; giu tran 100 dong theo rule BTC.
     results = []
     for vr in video_results[:100]:
@@ -227,6 +280,17 @@ def _run_self_tests() -> None:
     chain_4 = _find_best_increasing_chain(event_hits_4)
     assert chain_4 is not None, "Frame_idx bang nhau giua 2 event phai HOP LE (khong giam)"
     print("[trake] Test frame_idx bang nhau: OK")
+
+    # Test 5: trich keyword tho — giu danh tu chi doi tuong (khop ten object), loai stopword ngu phap
+    kws = _extract_keywords("A man cutting the ribbon with his colleagues")
+    assert "man" in kws and "ribbon" in kws and "colleagues" in kws, f"Thieu keyword: {kws}"
+    assert "the" not in kws and "his" not in kws and "with" not in kws, f"Con sot stopword: {kws}"
+    print("[trake] Test extract keywords: OK")
+
+    # Test 6: _crosscheck_hit_count khong crash voi keyword rong / chain rong
+    assert _crosscheck_hit_count([], set()) == 0
+    assert _crosscheck_hit_count([], {"car"}) == 0
+    print("[trake] Test crosscheck rong: OK")
 
     print("[trake] Tat ca self-test PASS")
 
