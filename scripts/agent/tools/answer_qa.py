@@ -25,6 +25,7 @@ if str(_ROOT) not in sys.path:
 
 from agent.config import call_llm
 from agent.tools.ocr_lookup import get_objects, objects_contain_keywords
+from agent.tools.ocr_read import read_text_from_hits, format_ocr_hint
 
 # ─── Prompts ───────────────────────────────────────────────────────────────────
 
@@ -53,6 +54,7 @@ You are analyzing up to 3 candidate video keyframes retrieved for the same scene
 They may show the same moment at slightly different times — one may be clearer than the others.
 
 Question: {question}
+{ocr_hint}
 
 Look at the image(s) carefully and answer concisely:
 - If the question asks for a NUMBER, COUNT, or TEXT visible on a display/gauge/sign/banner/scoreboard/
@@ -64,6 +66,12 @@ Look at the image(s) carefully and answer concisely:
 - Keep the answer SHORT (1-5 words if possible) and factual, based only on what you can see.
 
 Answer:"""
+
+OCR_HINT_TEMPLATE = """\
+Automated OCR hint (from a text-reading model on the candidate frame(s) — may contain errors; treat \
+as a hint, verify every digit/word against what you actually see in the image before trusting it):
+{ocr_lines}
+"""
 
 CROSSCHECK_PROMPT = """\
 You are verifying if an answer is consistent with detected objects in an image.
@@ -189,7 +197,17 @@ def answer_from_hits(
     vision_hits = [h for h in candidates if h.get("jpg_path") and Path(h["jpg_path"]).exists()][:3]
     if vision_hits:
         image_paths = [h["jpg_path"] for h in vision_hits]
-        prompt2 = ANSWER_FROM_IMAGES_PROMPT.format(question=question)
+
+        # OCR that (Phase 5) — chi chay khi cau hoi thuc su can doc chu/so (dieu kien tai su dung tu
+        # skip_objects_tier o tren), chi lam goi y phu cho Vision, khong thay the no.
+        ocr_hint = ""
+        if skip_objects_tier:
+            ocr_results = read_text_from_hits(vision_hits, top_n=3)
+            formatted = format_ocr_hint(ocr_results)
+            if formatted:
+                ocr_hint = OCR_HINT_TEMPLATE.format(ocr_lines=formatted)
+
+        prompt2 = ANSWER_FROM_IMAGES_PROMPT.format(question=question, ocr_hint=ocr_hint)
         ans2 = call_llm(
             prompt2,
             image_paths=image_paths,
