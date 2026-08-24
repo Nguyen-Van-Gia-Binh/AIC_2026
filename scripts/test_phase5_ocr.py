@@ -42,9 +42,16 @@ def _hit(video_id: str, n: int) -> dict:
 
 # 3 cau hoi tu tao, moi cau 1 hit duy nhat tro dung frame GT da biet ro noi dung chu/so (n tra tu
 # data/extracted/map-keyframes/{video_id}.csv, xem chi tiet trong docs/superpowers/plans/2026-08-24-phase5-ocr-on-demand.md).
+#
+# Fix round 1: 3 cau hoi ban dau ("What years are written...", "What Vietnamese phrase is written...")
+# KHONG khop _TEXT_READING_HINTS trong answer_qa.py (regex chi bat "number"/"how many"/"what number"
+# ben tieng Anh, cac cum tieng Viet "ghi gi"/"chu gi"/... ben tieng Viet — khong co trigger cho kieu
+# cau "what does it say"/"what phrase is written"), nen skip_objects_tier=False va OCR KHONG duoc goi
+# o ca 2 pass cho 2 cau do — da xac minh lai tung cau bang _TEXT_READING_HINTS.search(question) truoc
+# khi sua, ca 3 cau duoi day deu tra True.
 CASES = [
     {
-        "question": "What years are written on the memorial poster?",
+        "question": "What number range is shown on the memorial poster?",
         "hits": [_hit("L22_V001", 120)],  # GT text: "DIANA 1961 1997"
     },
     {
@@ -52,7 +59,7 @@ CASES = [
         "hits": [_hit("L28_V003", 190)],  # GT text: "AG-09399" / "AG-12627"
     },
     {
-        "question": "What Vietnamese phrase is written on the temple sign panel?",
+        "question": "Bảng chữ trong miếu ghi gì?",
         "hits": [_hit("L27_V001", 110)],  # GT text: "CHÚA XỨ THÁNH MẪU"
     },
 ]

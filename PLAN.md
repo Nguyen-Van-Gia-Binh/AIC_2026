@@ -188,8 +188,9 @@ không phát sinh crash khi OCR không đọc được gì.
   `from paddleocr import PaddleOCR` bên trong `_get_engine()` để tránh xung đột thứ tự nạp DLL trên
   Windows (opencv nạp `shm.dll` runtime trước, che khuất DLL mà torch cần). Phát hiện thực tế trong lúc
   làm (chưa có trong DECISION.md, ghi lại ở đây): `lang="vi"` của PaddleOCR thực chất nạp bảng ký tự
-  "latin" chứ không phải tiếng Việt có dấu thật — đọc số/chữ Latin (biển số, giá tiền, số áo) khá tốt
-  nhưng đọc sai/mất dấu chữ tiếng Việt có dấu. Self-test rỗng
+  "latin" chứ không phải bảng ký tự tiếng Việt có dấu — thử trên 2 ảnh chứa số/chữ Latin (biển số, năm)
+  và 1 ảnh chứa chữ tiếng Việt có dấu, kết quả đọc được dấu tiếng Việt không đầy đủ/chính xác so với
+  GT ghi trong comment. Self-test rỗng
   (hits rỗng/`jpg_path` None/không tồn tại) PASS; self-test đọc ảnh thật (2 case tiếng Anh + số, 1 case
   tiếng Việt có dấu) chạy được, không crash.
 - **Task 2 (wire vào Tier 2 Vision)**: Sửa `scripts/agent/tools/answer_qa.py` — trong nhánh Tier 2
@@ -205,20 +206,33 @@ không phát sinh crash khi OCR không đọc được gì.
   để khử nhiễu benchmark, chỉ đo đúng 1 biến số là có/không OCR hint). Chạy 2 pass trong cùng 1
   process: pass 1 monkeypatch `read_text_from_hits` (trong namespace module `answer_qa`, kỹ thuật
   giống monkeypatch `rewrite_query` của `test_phase4_trake.py`) thành hàm trả `{}` (mô phỏng "chưa có
-  Phase 5"), pass 2 dùng hàm thật. Output thô (answer/confidence/method từng pass, `call_llm` thật qua
-  OpenRouter/Gemini, không mock):
-  - Q "What years are written on the memorial poster?" (frame GT: `L22_V001` n=120, text "DIANA 1961
-    1997"): before `answer='1961 - 1997'` confidence=0.85 method=vision; after `answer='1961 1997'`
-    confidence=0.85 method=vision.
-  - Q "What are the registration numbers painted on the two ferries?" (frame GT: `L28_V003` n=190,
-    text "AG-09399"/"AG-12627"): before `answer='AG-09399 and AG-12627'` confidence=0.60 method=vision;
-    after `answer='AG-09399 and AG-12627'` confidence=0.60 method=vision.
-  - Q "What Vietnamese phrase is written on the temple sign panel?" (frame GT: `L27_V001` n=110, text
-    "CHÚA XỨ THÁNH MẪU"): before `answer='CHUA XU THAN MAU'` confidence=0.60 method=vision; after
-    `answer='CHÚA XỨ THÁNH MẪU'` confidence=0.85 method=vision.
+  Phase 5"), pass 2 dùng hàm thật.
+  - **Fix round 1**: 2/3 câu hỏi tự tạo ban đầu ("What years are written..." và "What Vietnamese
+    phrase is written...") không khớp `_TEXT_READING_HINTS` (regex trong `answer_qa.py` quyết định
+    `skip_objects_tier`/có gọi `read_text_from_hits()` hay không) — regex chỉ có trigger tiếng Anh
+    "number"/"how many"/"what number", không có trigger cho kiểu câu "what does it say"/"what phrase
+    is written". Hệ quả: OCR không được gọi ở cả 2 pass cho 2 câu đó, nên chênh lệch before/after quan
+    sát được ở bản chạy đầu (dấu `-`, confidence, dấu tiếng Việt) không do OCR gây ra. Đã verify từng
+    câu bằng `_TEXT_READING_HINTS.search(question)` trực tiếp trong Python trước khi sửa. Câu 1 đổi
+    thành `"What number range is shown on the memorial poster?"` (khớp qua "number"), câu 3 đổi thành
+    tiếng Việt `"Bảng chữ trong miếu ghi gì?"` (khớp qua "ghi gì"), câu 2 giữ nguyên (đã khớp qua
+    "numbers" ngay từ đầu). Cả 3 câu verify `True` trước khi chạy lại.
+  - Output thô sau fix (answer/confidence/method từng pass, `call_llm` thật qua OpenRouter/Gemini,
+    không mock; log xác nhận `[ocr_read] PaddleOCR san sang.` xuất hiện ở đầu Pass 2, tức OCR được
+    kích hoạt trong lần chạy này cho cả 3 câu — `skip_objects_tier=True` ở cả 3):
+    - Q "What number range is shown on the memorial poster?" (frame GT: `L22_V001` n=120, text "DIANA
+      1961 1997"): before `answer='1961 - 1997'` confidence=0.85 method=vision; after
+      `answer='1961 - 1997'` confidence=0.85 method=vision.
+    - Q "What are the registration numbers painted on the two ferries?" (frame GT: `L28_V003` n=190,
+      text "AG-09399"/"AG-12627"): before `answer='AG-09399 and AG-12627'` confidence=0.60
+      method=vision; after `answer='AG-09399 and AG-12627'` confidence=0.60 method=vision.
+    - Q "Bảng chữ trong miếu ghi gì?" (frame GT: `L27_V001` n=110, text "CHÚA XỨ THÁNH MẪU"): before
+      `answer='Linh Hiển Chúa Xứ Bà Ứn'` confidence=0.60 method=vision; after
+      `answer='Linh Hiển Chúa Xứ Bà Án'` confidence=0.60 method=vision.
 
   Không có `gt_answer` cho 3 câu tự tạo này nên script không chấm điểm đúng/sai — chỉ in answer/
-  confidence/method cạnh nhau để người dùng tự đọc và đánh giá. Không phát sinh crash ở cả 2 pass.
+  confidence/method cạnh nhau để người dùng tự đọc và đánh giá. Không phát sinh crash ở cả 2 pass, cả
+  bản chạy trước và sau fix round 1.
   Plan chi tiết: [docs/superpowers/plans/2026-08-24-phase5-ocr-on-demand.md](docs/superpowers/plans/2026-08-24-phase5-ocr-on-demand.md).
 
 ## Phase 6: Checkpoint & Dry-run (⏳ Todo, sau khi Phase 1–5 xong)
