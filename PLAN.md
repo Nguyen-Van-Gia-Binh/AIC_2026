@@ -138,6 +138,7 @@ Hai việc làm nối tiếp trên cùng 1 file (`pipeline_trake.py`), nên đ�
    chọn đúng video hơn — tái dùng logic cross-check đã có ở nhánh Q&A.
 
 **Đã làm:**
+
 - **Task 1 (DP)**: Thêm hàm `_find_best_increasing_chain()` (55 dòng) — dynamic programming tìm chuỗi
   frame tăng dần với tổng score cao nhất; 4 self-test, tất cả PASS; integration vào `run_trake()` thay
   thế loop greedy cũ. Khám phá khi làm: RETRIEVAL_POOL_SIZE cần mở rộng từ 100→500 để pool ứng viên
@@ -156,13 +157,13 @@ Hai việc làm nối tiếp trên cùng 1 file (`pipeline_trake.py`), nên đ�
   deterministic, rồi chạy cùng bộ câu 2 lần trong 1 process — pass 1 tắt cross-check
   (`TRAKE_CROSSCHECK_MARGIN=-1.0`, mô phỏng "chỉ Task 1"), pass 2 bật lại ngưỡng thật (`0.012`, "Task 1
   + Task 2") — cùng chung 1 lần retrieval nên chênh lệch giữa 2 pass quy thẳng về cross-check. Verify:
-  chạy `scripts/test_phase4_trake.py` 2 lần liên tiếp, số liệu 2 lần giống hệt nhau (identity-patch xoá
-  đúng nguồn non-determinism). Benchmark 4 câu TRAKE từ `eval_ground_truth.json` (before = Task 1 only
-  → after = Task 1 + Task 2): Video đúng hạng #1: 0/4 → 0/4; Video xuất hiện (bất kỳ hạng): 1/4 → 1/4;
-  Event frame đúng (video #1 đúng): 0/11 → 0/11 — không đổi trên bộ 4 câu này (cross-check được kích
-  hoạt ở cả 4 câu do margin top-2 < 0.012, nhưng keyword-hit hoà hoặc video top-1 vẫn thắng nên không
-  câu nào bị swap; không có regression). Mẫu quá nhỏ (4 câu) để kết luận cross-check có ích hay không —
-  cần bộ eval TRAKE lớn hơn ở Phase 6 checkpoint.
+    chạy `scripts/test_phase4_trake.py` 2 lần liên tiếp, số liệu 2 lần giống hệt nhau (identity-patch xoá
+    đúng nguồn non-determinism). Benchmark 4 câu TRAKE từ `eval_ground_truth.json` (before = Task 1 only
+    → after = Task 1 + Task 2): Video đúng hạng #1: 0/4 → 0/4; Video xuất hiện (bất kỳ hạng): 1/4 → 1/4;
+    Event frame đúng (video #1 đúng): 0/11 → 0/11 — không đổi trên bộ 4 câu này (cross-check được kích
+    hoạt ở cả 4 câu do margin top-2 < 0.012, nhưng keyword-hit hoà hoặc video top-1 vẫn thắng nên không
+    câu nào bị swap; không có regression). Mẫu quá nhỏ (4 câu) để kết luận cross-check có ích hay không —
+    cần bộ eval TRAKE lớn hơn ở Phase 6 checkpoint.
 
 Success: 6 self-test PASS; `frame_id` luôn tăng dần (DP bảo đảm); cross-check chạy đúng khi margin < threshold;
 không regression (verified vs baseline).
@@ -178,8 +179,8 @@ Success: thử vài câu hỏi loại "biển số xe"/"giá tiền"/"số áo",
 không phát sinh crash khi OCR không đọc được gì.
 
 **Đã làm:**
-- **Task 1 (OCR engine)**: File mới `scripts/agent/tools/ocr_read.py` — `read_text_from_hits(hits,
-  top_n=3)` chạy PaddleOCR (`use_angle_cls=True, lang="vi", ocr_version="PP-OCRv4"`) trên tối đa
+
+- **Task 1 (OCR engine)**: File mới `scripts/agent/tools/ocr_read.py` — `read_text_from_hits(hits, top_n=3)` chạy PaddleOCR (`use_angle_cls=True, lang="vi", ocr_version="PP-OCRv4"`) trên tối đa
   `top_n` ảnh candidate có `jpg_path` tồn tại, trả `dict[int, list[str]]` (rỗng nếu không đọc được
   gì); `format_ocr_hint()` định dạng kết quả thành đoạn text chèn vào prompt. Singleton engine nạp 1
   lần/process, không retry lại nếu load lỗi trong cùng phiên; toàn bộ load/OCR bọc try/except, không
@@ -207,6 +208,7 @@ không phát sinh crash khi OCR không đọc được gì.
   process: pass 1 monkeypatch `read_text_from_hits` (trong namespace module `answer_qa`, kỹ thuật
   giống monkeypatch `rewrite_query` của `test_phase4_trake.py`) thành hàm trả `{}` (mô phỏng "chưa có
   Phase 5"), pass 2 dùng hàm thật.
+
   - **Fix round 1**: 2/3 câu hỏi tự tạo ban đầu ("What years are written..." và "What Vietnamese
     phrase is written...") không khớp `_TEXT_READING_HINTS` (regex trong `answer_qa.py` quyết định
     `skip_objects_tier`/có gọi `read_text_from_hits()` hay không) — regex chỉ có trigger tiếng Anh
@@ -235,7 +237,7 @@ không phát sinh crash khi OCR không đọc được gì.
   bản chạy trước và sau fix round 1.
   Plan chi tiết: [docs/superpowers/plans/2026-08-24-phase5-ocr-on-demand.md](docs/superpowers/plans/2026-08-24-phase5-ocr-on-demand.md).
 
-## Phase 6: Checkpoint & Dry-run (⏳ Todo, sau khi Phase 1–5 xong)
+## Phase 6: Checkpoint & Dry-run (🔄 In Progress / Runbooks sẵn sàng)
 
 - **Checkpoint benchmark**: người D (eval owner) chạy `scripts/eval/run_eval.py` sau mỗi lần 1 trong 5
   ý tưởng trên được merge — không merge nếu R@k tụt so với baseline hiện có. Đây cũng là lúc hiệu
@@ -249,19 +251,97 @@ không phát sinh crash khi OCR không đọc được gì.
   Người D bổ sung thêm câu TRAKE (xem mục 0) trước khi tinh chỉnh ngưỡng này.
 - **Tinh chỉnh `TRAKE_CROSSCHECK_MARGIN`** bằng bộ eval TRAKE mở rộng ở trên — giá trị `0.012` hiện tại
   chỉ là điểm khởi đầu mượn từ `rerank.MARGIN_THRESHOLD` (Phase 3), chưa có số liệu Phase 4 riêng.
-- **Chạy review tổng toàn nhánh cho Phase 4** (`superpowers:requesting-code-review` hoặc tương đương) —
-  phiên làm Phase 4 (subagent-driven) đã review từng Task riêng lẻ (cả 2 sạch, 1 finding fix round đã
-  giải quyết) nhưng bỏ qua bước review toàn nhánh cuối cùng theo yêu cầu dừng sớm của người dùng; nên
-  chạy 1 lần trước khi freeze 03/09 để bắt các vấn đề nằm ngoài phạm vi từng Task riêng lẻ. Kế hoạch +
-  ledger còn giữ tại `.superpowers/sdd/2026-08-24-phase4-trake-dp-crosscheck/` để resume nếu cần.
-- **Sửa docstring lỗi thời ở `pipeline_trake.py`** dòng đầu file — vẫn ghi `fast_retrieve(100)` dù code
-  thật đã đổi thành `RETRIEVAL_POOL_SIZE` (500) từ Task 1 Phase 4 — cosmetic, không chặn gì.
-- **Lỗi encoding console Windows**: chạy bất kỳ script nào import `scripts/agent/tools/retrieve.py`
-  trên console mặc định (code page cp1252) sẽ crash `UnicodeEncodeError` ở dòng in "ĐANG DÙNG MODEL"
-  (ký tự "Đ") — phải set `PYTHONIOENCODING=utf-8` mới chạy được. Lỗi có từ trước Phase 4, không phải do
-  Phase 4 gây ra, nhưng ảnh hưởng bất kỳ ai chạy script trên máy Windows mặc định — nên sửa (vd.
-  `sys.stdout.reconfigure(encoding="utf-8")` ở đầu `retrieve.py`, hoặc đổi log sang không dấu) trước
-  ngày nộp thật để tránh crash bất ngờ lúc demo/dry-run.
+
+**Đã làm:**
+
+- **Task 1 (Sửa docstring lỗi thời `pipeline_trake.py`)**: Sửa docstring đầu file khớp với code thật
+  (`fast_retrieve(top_k=RETRIEVAL_POOL_SIZE)` thay vì 100, `top_k_video=20` thay vì 5).
+- **Task 2 (Sửa encoding console Windows)**: Thêm `sys.stdout.reconfigure(encoding="utf-8")` vào đầu
+  `scripts/agent/tools/retrieve.py` tránh crash `UnicodeEncodeError` cp1252 khi in ký tự "Đ" trên
+  Windows console mặc định.
+- **Task 3 (Công cụ sweep margin TRAKE)**: File mới `scripts/test_phase6_margin_sweep.py` — hỗ trợ
+  sweep nhiều ngưỡng margin (`-1.0`, `0.006`, `0.012`, `0.018`, `0.024`, `0.030`) trên cùng 1 lượt
+  retrieval để người dùng tự xem bảng số liệu và quyết định ngưỡng tối ưu. Self-test PASS.
+- **Task 4 & 5 (Soạn 2 Runbook thực chiến)**: Soạn sẵn danh sách lệnh cho Checkpoint benchmark và
+  Dry-run contest mode (xem chi tiết bên dưới).
+- **Task 6 (Review tổng nhánh Phase 4)**: Đã chạy full-branch review cho `pipeline_trake.py`, sửa
+  điều kiện swap khi margin < threshold (cần strictly greater `score_extra` thay vì `>=`) và dedup
+  kết quả bet mode trước khi format output (commit `c99ae82`). 6 self-test của `pipeline_trake.py` PASS.
+
+**Runbook checkpoint benchmark (tự chạy, tự đọc kết quả — không nhờ AI kết luận đúng/sai):**
+
+1. So sánh baseline embedding (đã có từ Phase 6 cũ, dùng lại nguyên trạng để phát hiện regression do
+   thay đổi khác gây ra, KHÔNG phải benchmark rewrite/rerank/OCR — script này bypass các module đó,
+   xem docstring `run_eval.py`):
+   ```powershell
+   .venv\Scripts\python.exe scripts\eval\run_eval.py
+   ```
+   Đọc `docs\eval_baseline_comparison.md` sau khi chạy xong, so với số cũ đã có trong file này (nếu
+   đã từng chạy trước đó) — R@k tụt rõ rệt ở model `clip_vitb32` (model production) là dấu hiệu cần
+   điều tra trước khi merge tiếp.
+
+2. Phase 3 (risk-aware rerank) — so lại với số đã ghi trong PLAN.md Phase 3
+   (R@1=0.130, R@5=0.217, R@20=0.348, R@50=0.478, R@100=0.565, đo trên 23 câu KIS+QA):
+   ```powershell
+   .venv\Scripts\python.exe scripts\test_phase3_rerank.py
+   ```
+
+3. Phase 4 (TRAKE DP + cross-check) — so lại với số đã ghi trong PLAN.md Phase 4
+   (video hạng #1: 0/4→0/4, video xuất hiện: 1/4→1/4, event đúng: 0/11→0/11, đo trên 4 câu TRAKE):
+   ```powershell
+   .venv\Scripts\python.exe scripts\test_phase4_trake.py
+   ```
+
+4. Sweep `TRAKE_CROSSCHECK_MARGIN` trên dữ liệu TRAKE thật (dùng công cụ mới ở Task 3 — chỉ chạy
+   SAU KHI đã mở rộng bộ eval TRAKE, xem mục "Việc không nằm trong Task" ở đầu plan này; chạy trên 4
+   câu hiện có cũng được nhưng số liệu sẽ rất nhiễu vì mẫu quá nhỏ):
+   ```powershell
+   .venv\Scripts\python.exe scripts\test_phase6_margin_sweep.py
+   ```
+   Đọc cột `video_top1` / `events_matched` ở từng dòng margin — tự chọn giá trị `TRAKE_CROSSCHECK_MARGIN`
+   mới (nếu có) rồi sửa tay hằng số đó ở `scripts/agent/pipeline_trake.py` (dòng khai báo
+   `TRAKE_CROSSCHECK_MARGIN`), chạy lại bước 3 để xác nhận không tệ hơn số cũ trước khi commit.
+
+5. Phase 5 (OCR hint) — so answer/confidence/method của 3 câu tự tạo, xem lại số đã ghi trong PLAN.md
+   Phase 5:
+   ```powershell
+   .venv\Scripts\python.exe scripts\test_phase5_ocr.py
+   ```
+
+**Tiêu chí "không merge nếu R@k tụt"**: so từng số ở trên với số đã ghi lại trong PLAN.md của đúng
+Phase đó — tụt rõ rệt (không phải nhiễu do mẫu nhỏ/1 câu đổi hạng) thì dừng, không merge, quay lại
+điều tra nguyên nhân trước khi tiếp tục Phase 6.
+
+**Runbook dry-run contest mode (tự chạy, tự quan sát log — trước 03/09):**
+
+1. Xác nhận `.env` có `OPENROUTER_MODEL_CONTEST` hợp lệ (khác rỗng) — nếu để trống, `config.py` tự
+   fallback về `OPENROUTER_MODEL` kèm cảnh báo `[config] WARNING: AIC_MODE=contest nhung
+   OPENROUTER_MODEL_CONTEST trong .env trong rong...`, tức là dry-run KHÔNG thật sự test model mạnh
+   hơn — kiểm tra dòng log này xuất hiện hay không mỗi lần chạy dưới đây.
+
+2. Kiểm tra quota Gemini còn lại tại https://ai.dev/rate-limit trước khi chạy (bài học đợt 1 — xem
+   EXPERIMENT.md) — dry-run tốn quota giống lúc thi thật.
+
+3. Chạy cả 3 pipeline với `AIC_MODE=contest`, đọc log xác nhận dòng
+   `[config] OpenRouter AIC_MODE=contest model=...` xuất hiện đúng model mạnh (không phải model dev):
+
+   PowerShell:
+   ```powershell
+   $env:AIC_MODE = "contest"
+   .venv\Scripts\python.exe scripts\agent\pipeline_kis.py "a cyclist racing on a mountain road"
+   .venv\Scripts\python.exe scripts\agent\pipeline_qa.py
+   .venv\Scripts\python.exe scripts\agent\pipeline_trake.py
+   Remove-Item Env:\AIC_MODE
+   ```
+
+4. So thời gian chạy (tự bấm giờ hoặc đọc timestamp log) với 1 lần chạy tương đương ở `AIC_MODE=test`
+   (mặc định, không set biến) — chênh lệch lớn bất thường (không chỉ do model mạnh hơn chậm hơn chút,
+   mà crash/treo/timeout) là dấu hiệu cần điều tra trước 03/09, không phải lúc thi thật mới phát hiện.
+
+5. Chạy hết cả 3 pipeline không lỗi + xác nhận đúng model contest được dùng ở CẢ 3 (kể cả lời gọi
+   vision trong `pipeline_qa.py` khi có ảnh — đã verify ở Phase 1, dry-run này chỉ là xác nhận lại lần
+   cuối trước freeze, không phải lần đầu kiểm tra) → coi dry-run PASS, ghi lại kết quả (hoặc bất kỳ
+   vấn đề gặp phải) vào PLAN.md Phase 6.
 
 Success: nộp đợt 4 với cả 5 cải tiến đã qua benchmark xác nhận không regress so với đợt 1.
 
