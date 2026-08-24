@@ -185,6 +185,25 @@ không phát sinh crash khi OCR không đọc được gì.
 - **Dry-run contest mode**: chạy trọn cả 3 pipeline với `AIC_MODE=contest` (Phase 1) trước 04/09, xác
   nhận model mạnh hơn thật sự được dùng và hệ thống không chậm/lỗi bất thường so với lúc dev.
 - **Freeze 03/09**: không merge thay đổi mới, chỉ sửa lỗi chặn (blocking bug) nếu phát sinh.
+- **Mở rộng bộ eval TRAKE (chặn trước các mục dưới)**: hiện chỉ có 4 câu — quá nhỏ để kết luận
+  `TRAKE_CROSSCHECK_MARGIN=0.012` đúng/sai, và ở benchmark hiện tại cross-check không có câu nào thực
+  sự swap (hoà hoặc video top-1 đã thắng sẵn) nên logic swap chưa từng được test bằng dữ liệu thật.
+  Người D bổ sung thêm câu TRAKE (xem mục 0) trước khi tinh chỉnh ngưỡng này.
+- **Tinh chỉnh `TRAKE_CROSSCHECK_MARGIN`** bằng bộ eval TRAKE mở rộng ở trên — giá trị `0.012` hiện tại
+  chỉ là điểm khởi đầu mượn từ `rerank.MARGIN_THRESHOLD` (Phase 3), chưa có số liệu Phase 4 riêng.
+- **Chạy review tổng toàn nhánh cho Phase 4** (`superpowers:requesting-code-review` hoặc tương đương) —
+  phiên làm Phase 4 (subagent-driven) đã review từng Task riêng lẻ (cả 2 sạch, 1 finding fix round đã
+  giải quyết) nhưng bỏ qua bước review toàn nhánh cuối cùng theo yêu cầu dừng sớm của người dùng; nên
+  chạy 1 lần trước khi freeze 03/09 để bắt các vấn đề nằm ngoài phạm vi từng Task riêng lẻ. Kế hoạch +
+  ledger còn giữ tại `.superpowers/sdd/2026-08-24-phase4-trake-dp-crosscheck/` để resume nếu cần.
+- **Sửa docstring lỗi thời ở `pipeline_trake.py`** dòng đầu file — vẫn ghi `fast_retrieve(100)` dù code
+  thật đã đổi thành `RETRIEVAL_POOL_SIZE` (500) từ Task 1 Phase 4 — cosmetic, không chặn gì.
+- **Lỗi encoding console Windows**: chạy bất kỳ script nào import `scripts/agent/tools/retrieve.py`
+  trên console mặc định (code page cp1252) sẽ crash `UnicodeEncodeError` ở dòng in "ĐANG DÙNG MODEL"
+  (ký tự "Đ") — phải set `PYTHONIOENCODING=utf-8` mới chạy được. Lỗi có từ trước Phase 4, không phải do
+  Phase 4 gây ra, nhưng ảnh hưởng bất kỳ ai chạy script trên máy Windows mặc định — nên sửa (vd.
+  `sys.stdout.reconfigure(encoding="utf-8")` ở đầu `retrieve.py`, hoặc đổi log sang không dấu) trước
+  ngày nộp thật để tránh crash bất ngờ lúc demo/dry-run.
 
 Success: nộp đợt 4 với cả 5 cải tiến đã qua benchmark xác nhận không regress so với đợt 1.
 
