@@ -24,6 +24,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 from collections import defaultdict
+from typing import Optional
 
 _ROOT = Path(__file__).resolve().parent.parent
 if str(_ROOT) not in sys.path:
@@ -31,6 +32,62 @@ if str(_ROOT) not in sys.path:
 
 from agent.tools.retrieve import fast_retrieve, fast_retrieve_for_video
 from agent.tools.rewrite import rewrite_query
+from agent.tools.rerank import RETRIEVAL_POOL_SIZE
+
+
+def _find_best_increasing_chain(event_hits: list[list[dict]]) -> list[dict] | None:
+    """Tim chuoi 1 frame/event sao cho frame_idx KHONG GIAM qua tung event (event sau >= event
+    truoc — cho phep bang nhau vi du lieu that co truong hop 2 event lien tiep trung 1 frame, xem
+    docs/superpowers/plans/2026-08-24-phase4-trake-dp-crosscheck.md) va TONG score la lon nhat, bang
+    quy hoach dong — thay vi greedy cu (chon diem cao nhat cho event dau tien roi khoa cung, co the
+    chan mat lua chon tot hon o cac event sau, xem "Ly do thiet ke" trong plan).
+
+    Args:
+        event_hits: event_hits[i] = list ung vien (tu fast_retrieve_for_video, da sap xep giam dan
+                    theo score) cho event thu i.
+
+    Returns:
+        list[dict] do dai == len(event_hits), 1 hit/event, frame_idx khong giam dan, tong score lon
+        nhat co the; None neu KHONG TON TAI chuoi hop le nao (video nay bi loai hoan toan).
+    """
+    n = len(event_hits)
+    if n == 0 or any(not candidates for candidates in event_hits):
+        return None
+
+    NEG_INF = float("-inf")
+    # dp[i][j] = tong score lon nhat cua chuoi ket thuc bang ung vien j cua event i
+    dp: list[list[float]] = [[NEG_INF] * len(candidates) for candidates in event_hits]
+    back: list[list[Optional[int]]] = [[None] * len(candidates) for candidates in event_hits]
+
+    for j, hit in enumerate(event_hits[0]):
+        dp[0][j] = hit["score"]
+
+    for i in range(1, n):
+        for j, hit in enumerate(event_hits[i]):
+            for k, prev_hit in enumerate(event_hits[i - 1]):
+                if prev_hit["frame_idx"] > hit["frame_idx"]:
+                    continue  # phai khong giam (>=), khong duoc lui ve truoc
+                if dp[i - 1][k] == NEG_INF:
+                    continue
+                candidate_score = dp[i - 1][k] + hit["score"]
+                if candidate_score > dp[i][j]:
+                    dp[i][j] = candidate_score
+                    back[i][j] = k
+
+    last = n - 1
+    best_j, best_score = None, NEG_INF
+    for j, s in enumerate(dp[last]):
+        if s > best_score:
+            best_score, best_j = s, j
+    if best_j is None or best_score == NEG_INF:
+        return None
+
+    chain: list[Optional[dict]] = [None] * n
+    j = best_j
+    for i in range(last, -1, -1):
+        chain[i] = event_hits[i][j]
+        j = back[i][j]
+    return chain  # type: ignore[return-value]
 
 
 def run_trake(
@@ -62,7 +119,7 @@ def run_trake(
     query_en = rewrite_query(query_text)
     print(f"[trake]   Global query: {query_en!r}")
 
-    all_hits = fast_retrieve(query_en, top_k=100)
+    all_hits = fast_retrieve(query_en, top_k=RETRIEVAL_POOL_SIZE)
 
     # Group by video, tinh tong score top-3 frame moi video
     video_scores: dict[str, float] = defaultdict(float)
@@ -89,33 +146,17 @@ def run_trake(
     video_results = []
 
     for vid in top_videos:
-        frame_ids = []
-        event_scores = []
-        prev_frame_idx = -1  # World model: frame sau phai > frame truoc
+        event_hits = [fast_retrieve_for_video(eq, vid, top_k=top_k_frame) for eq in event_queries_en]
+        chain = _find_best_increasing_chain(event_hits)
+        if chain is None:
+            print(f"[trake]   {vid}: khong tim duoc chuoi moc tang dan hop le -> loai")
+            continue
 
-        for i, eq in enumerate(event_queries_en):
-            frame_hits = fast_retrieve_for_video(eq, vid, top_k=top_k_frame)
-
-            if not frame_hits:
-                # Fallback: dung frame giua video
-                frame_ids.append(1)
-                event_scores.append(0.0)
-                continue
-
-            # Uu tien frame CO frame_idx > prev_frame_idx (thu tu thoi gian)
-            valid = [h for h in frame_hits if h["frame_idx"] > prev_frame_idx]
-            chosen = (valid[0] if valid else frame_hits[0])
-
-            frame_ids.append(chosen["frame_id"])
-            event_scores.append(chosen["score"])
-            prev_frame_idx = chosen["frame_idx"]
-
-        avg_score = sum(event_scores) / len(event_scores) if event_scores else 0.0
         video_results.append({
             "video_id":  vid,
-            "frame_ids": frame_ids,
-            "score":     avg_score,
-            "event_scores": event_scores,
+            "frame_ids": [h["frame_id"] for h in chain],
+            "score":     sum(h["score"] for h in chain) / len(chain),
+            "chain":     chain,  # giu hit day du (co "n") de cross-check tang 3 dung — khong vao CSV
         })
 
     # Sap xep theo score
@@ -141,8 +182,60 @@ def run_trake(
     }
 
 
+# ─── CLI self-test (repo khong dung pytest — xem CLAUDE.md) ────────────────────
+def _fake_hit(video_id: str, frame_idx: int, score: float) -> dict:
+    return {
+        "video_id": video_id, "n": frame_idx, "frame_idx": frame_idx, "frame_id": frame_idx + 1,
+        "pts_time": 0.0, "score": score, "jpg_path": None,
+    }
+
+
+def _run_self_tests() -> None:
+    # Test 1: DP phai thang greedy — event 0 co frame diem cao nhat (100, 0.9) nam MUON, chan mat
+    # event 1 co frame diem cao (10, 0.95) nam SOM hon. Greedy se khoa X1 (0.9) ngay lap tuc, chi con
+    # Y2 (0.3) hop le cho event 1 -> tong 1.2. DP phai chon X2+Y1 = 0.8+0.95 = 1.75 (tot hon).
+    event_hits_1 = [
+        [_fake_hit("V", 100, 0.9), _fake_hit("V", 5, 0.8)],
+        [_fake_hit("V", 10, 0.95), _fake_hit("V", 200, 0.3)],
+    ]
+    chain_1 = _find_best_increasing_chain(event_hits_1)
+    assert chain_1 is not None, "Phai tim duoc chuoi hop le"
+    total_1 = sum(h["score"] for h in chain_1)
+    assert abs(total_1 - 1.75) < 1e-9, f"DP phai chon X2+Y1 (0.8+0.95=1.75), duoc {total_1}"
+    assert chain_1[0]["frame_idx"] == 5 and chain_1[1]["frame_idx"] == 10, (
+        f"DP phai chon frame_idx=5 roi 10, duoc {[h['frame_idx'] for h in chain_1]}"
+    )
+    print("[trake] Test DP thang greedy: OK (tong=1.75, tot hon greedy=1.2)")
+
+    # Test 2: khong co chuoi hop le -> None (video bi loai)
+    event_hits_2 = [
+        [_fake_hit("V", 100, 0.9)],
+        [_fake_hit("V", 50, 0.8)],  # frame_idx < event truoc -> khong the tang dan
+    ]
+    assert _find_best_increasing_chain(event_hits_2) is None, "Khong co chuoi hop le phai tra None"
+    print("[trake] Test khong co chuoi hop le: OK (tra None)")
+
+    # Test 3: 1 event duy nhat -> chon frame diem cao nhat
+    event_hits_3 = [[_fake_hit("V", 10, 0.5), _fake_hit("V", 20, 0.9)]]
+    chain_3 = _find_best_increasing_chain(event_hits_3)
+    assert chain_3 is not None and chain_3[0]["frame_idx"] == 20, "1 event phai chon diem cao nhat"
+    print("[trake] Test 1 event: OK")
+
+    # Test 4: cho phep frame_idx BANG NHAU giua 2 event lien tiep (du lieu that co truong hop nay —
+    # xem docs/superpowers/plans/2026-08-24-phase4-trake-dp-crosscheck.md)
+    event_hits_4 = [[_fake_hit("V", 10, 0.5)], [_fake_hit("V", 10, 0.6)]]
+    chain_4 = _find_best_increasing_chain(event_hits_4)
+    assert chain_4 is not None, "Frame_idx bang nhau giua 2 event phai HOP LE (khong giam)"
+    print("[trake] Test frame_idx bang nhau: OK")
+
+    print("[trake] Tat ca self-test PASS")
+
+
 # ─── CLI Demo ──────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
+    _run_self_tests()
+    print()
+
     query = "An athlete performing a high jump: approach, takeoff, clearance, landing"
     events = [
         "athlete running toward the bar during approach run",
