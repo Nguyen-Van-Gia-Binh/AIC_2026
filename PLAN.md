@@ -167,7 +167,7 @@ Hai việc làm nối tiếp trên cùng 1 file (`pipeline_trake.py`), nên đ�
 Success: 6 self-test PASS; `frame_id` luôn tăng dần (DP bảo đảm); cross-check chạy đúng khi margin < threshold;
 không regression (verified vs baseline).
 
-## Phase 5: OCR on-demand cho Q&A (⏳ Todo)
+## Phase 5: OCR on-demand cho Q&A (✅ Done)
 
 Thêm khả năng đọc chữ/số thật (hiện tại hệ thống chỉ nhờ LLM Vision "đọc bằng mắt", chưa có OCR nào),
 nhưng chỉ chạy khi câu hỏi thực sự cần đọc chữ/số (biển số, giá tiền, số áo...) và chỉ trên vài ảnh
@@ -176,6 +176,50 @@ quả OCR dùng làm gợi ý thêm cho LLM Vision, không thay thế nó — gi
 
 Success: thử vài câu hỏi loại "biển số xe"/"giá tiền"/"số áo", so sánh answer có/không có gợi ý OCR;
 không phát sinh crash khi OCR không đọc được gì.
+
+**Đã làm:**
+- **Task 1 (OCR engine)**: File mới `scripts/agent/tools/ocr_read.py` — `read_text_from_hits(hits,
+  top_n=3)` chạy PaddleOCR (`use_angle_cls=True, lang="vi", ocr_version="PP-OCRv4"`) trên tối đa
+  `top_n` ảnh candidate có `jpg_path` tồn tại, trả `dict[int, list[str]]` (rỗng nếu không đọc được
+  gì); `format_ocr_hint()` định dạng kết quả thành đoạn text chèn vào prompt. Singleton engine nạp 1
+  lần/process, không retry lại nếu load lỗi trong cùng phiên; toàn bộ load/OCR bọc try/except, không
+  crash pipeline nếu lỗi. Fix-round thực tế trong lúc làm: cần pin `paddleocr==2.10.0` +
+  `opencv-python`/`opencv-contrib-python==5.0.0.93`, và phải `import torch` phòng thủ trước
+  `from paddleocr import PaddleOCR` bên trong `_get_engine()` để tránh xung đột thứ tự nạp DLL trên
+  Windows (opencv nạp `shm.dll` runtime trước, che khuất DLL mà torch cần). Phát hiện thực tế trong lúc
+  làm (chưa có trong DECISION.md, ghi lại ở đây): `lang="vi"` của PaddleOCR thực chất nạp bảng ký tự
+  "latin" chứ không phải tiếng Việt có dấu thật — đọc số/chữ Latin (biển số, giá tiền, số áo) khá tốt
+  nhưng đọc sai/mất dấu chữ tiếng Việt có dấu. Self-test rỗng
+  (hits rỗng/`jpg_path` None/không tồn tại) PASS; self-test đọc ảnh thật (2 case tiếng Anh + số, 1 case
+  tiếng Việt có dấu) chạy được, không crash.
+- **Task 2 (wire vào Tier 2 Vision)**: Sửa `scripts/agent/tools/answer_qa.py` — trong nhánh Tier 2
+  (`vision_hits`), khi `skip_objects_tier` đúng (câu hỏi cần đọc chữ/số, tái dùng điều kiện
+  `_needs_text_reading()` đã có từ trước Phase 5) thì gọi `read_text_from_hits(vision_hits, top_n=3)`,
+  format qua `format_ocr_hint()`, chèn vào `ANSWER_FROM_IMAGES_PROMPT` qua placeholder `{ocr_hint}`
+  (rỗng nếu OCR không đọc được gì). Chỉ là gợi ý thêm cho Vision — `_crosscheck_answer()` giữ nguyên
+  không đổi, không có đường tắt nào bỏ qua cross-check khi có OCR hint.
+- **Task 3 (Benchmark trước/sau)**: File mới `scripts/test_phase5_ocr.py` — 3 câu hỏi tự tạo, mỗi câu
+  trỏ thẳng 1 hit duy nhất vào đúng `video_id`+`n` của 1 frame GT có sẵn trong
+  `queries/eval_ground_truth.json` (e-kis-ai-007/016/013, tra `n` từ
+  `data/extracted/map-keyframes/{video_id}.csv` khớp `gt_frame_start-1` — không gọi `fast_retrieve()`
+  để khử nhiễu benchmark, chỉ đo đúng 1 biến số là có/không OCR hint). Chạy 2 pass trong cùng 1
+  process: pass 1 monkeypatch `read_text_from_hits` (trong namespace module `answer_qa`, kỹ thuật
+  giống monkeypatch `rewrite_query` của `test_phase4_trake.py`) thành hàm trả `{}` (mô phỏng "chưa có
+  Phase 5"), pass 2 dùng hàm thật. Output thô (answer/confidence/method từng pass, `call_llm` thật qua
+  OpenRouter/Gemini, không mock):
+  - Q "What years are written on the memorial poster?" (frame GT: `L22_V001` n=120, text "DIANA 1961
+    1997"): before `answer='1961 - 1997'` confidence=0.85 method=vision; after `answer='1961 1997'`
+    confidence=0.85 method=vision.
+  - Q "What are the registration numbers painted on the two ferries?" (frame GT: `L28_V003` n=190,
+    text "AG-09399"/"AG-12627"): before `answer='AG-09399 and AG-12627'` confidence=0.60 method=vision;
+    after `answer='AG-09399 and AG-12627'` confidence=0.60 method=vision.
+  - Q "What Vietnamese phrase is written on the temple sign panel?" (frame GT: `L27_V001` n=110, text
+    "CHÚA XỨ THÁNH MẪU"): before `answer='CHUA XU THAN MAU'` confidence=0.60 method=vision; after
+    `answer='CHÚA XỨ THÁNH MẪU'` confidence=0.85 method=vision.
+
+  Không có `gt_answer` cho 3 câu tự tạo này nên script không chấm điểm đúng/sai — chỉ in answer/
+  confidence/method cạnh nhau để người dùng tự đọc và đánh giá. Không phát sinh crash ở cả 2 pass.
+  Plan chi tiết: [docs/superpowers/plans/2026-08-24-phase5-ocr-on-demand.md](docs/superpowers/plans/2026-08-24-phase5-ocr-on-demand.md).
 
 ## Phase 6: Checkpoint & Dry-run (⏳ Todo, sau khi Phase 1–5 xong)
 
