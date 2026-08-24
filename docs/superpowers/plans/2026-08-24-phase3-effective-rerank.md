@@ -188,6 +188,9 @@ Run: `.venv\Scripts\python.exe scripts\app.py`, mở `http://127.0.0.1:7860`, ta
 bấm tìm. Xác nhận terminal in `[rerank] margin=...`. Đây là bước đầu tiên Phase 3 thật sự cần mở UI để
 verify — vì đây chính là nhánh trước đó chưa từng được kiểm qua UI.
 
+**Xác nhận:** người dùng đã tự chạy `app.py` qua trình duyệt thật và xác nhận hoạt động đúng (tôi chỉ
+verify được ở mức gọi hàm `app.kis_search()` trực tiếp qua CLI, không có công cụ browser trong phiên).
+
 ---
 
 ### Task 5: Cập nhật `scripts/test_phase3_rerank.py` để phản ánh pool mới

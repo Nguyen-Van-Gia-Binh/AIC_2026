@@ -108,6 +108,15 @@ def _ensure_loaded() -> None:
     print("[retrieve] Ready.")
 
 
+def preload() -> None:
+    """Nap san index + model NGAY BAY GIO, khong doi lan goi fast_retrieve()/fast_retrieve_for_video()
+    dau tien. Mac dinh module nay lazy-load (chi nap khi can, qua _ensure_loaded()) de cac script
+    ngan/import phu khong ganh chi phi nap model neu khong dung toi. app.py goi ham nay luc khoi dong
+    de UI san sang truy xuat ngay tu lan search dau, thay vi nguoi dung dau tien phai cho load model.
+    """
+    _ensure_loaded()
+
+
 def fast_retrieve(query_text: str, top_k: int = 100) -> list[dict]:
     """
     Tìm top_k keyframe gần nhất với query_text bằng CLIP cosine similarity.

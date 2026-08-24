@@ -31,9 +31,11 @@ if str(_SCRIPTS) not in sys.path:
 import gradio as gr
 import pandas as pd
 
-print("[app] Loading index + CLIP model (one-time)...")
-from agent.tools.retrieve import fast_retrieve, fast_retrieve_for_video
+from agent.tools.retrieve import fast_retrieve, fast_retrieve_for_video, preload
 from agent.tools.rerank import apply_risk_aware_ranking, RETRIEVAL_POOL_SIZE
+
+print("[app] Loading index + CLIP model (one-time)...")
+preload()  # nap ngay luc khoi dong — khong doi lan search dau tien cua nguoi dung (lazy loading cu)
 print("[app] Ready.")
 
 # ─── Hàm hỗ trợ ──────────────────────────────────────────────────────────────────
