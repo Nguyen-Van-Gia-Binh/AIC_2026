@@ -4,9 +4,9 @@ pipeline_trake.py — Pipeline TRAKE: Retrieve video + Windowed Alignment.
 Workflow co dinh 2 giai doan (khong de LLM tu quyet dinh so buoc):
 
 Giai doan 1 - Retrieval:
-  query tong quat -> rewrite -> fast_retrieve(100)
-  -> group by video_id -> rank video theo tong score
-  -> chon top-5 video candidates
+  query tong quat -> rewrite -> fast_retrieve(top_k=RETRIEVAL_POOL_SIZE)  # =500, xem rerank.py
+  -> group by video_id -> rank video theo diem trung binh (video_avg)
+  -> chon top_k_video video candidates (mac dinh 20, xem run_trake())
 
 Giai doan 2 - Alignment (N lan, 1 lan / khoang khac):
   For moi video candidate:

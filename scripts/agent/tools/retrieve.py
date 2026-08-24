@@ -29,6 +29,16 @@ from typing import Callable, Optional
 import numpy as np
 import pandas as pd
 
+# Console Windows mac dinh dung code page cp1252, khong encode duoc ky tu co dau (vd "Đ" trong log
+# ben duoi) -> UnicodeEncodeError ngay luc import module nay. Ep stdout sang UTF-8 tai day (diem
+# import duy nhat cua module nay) thay vi doi nguoi dung phai tu set PYTHONIOENCODING=utf-8 truoc khi
+# chay (PLAN.md Phase 6). Boc try/except vi 1 so moi truong (vd stdout da bi redirect/pipe trong test)
+# khong ho tro reconfigure().
+try:
+    sys.stdout.reconfigure(encoding="utf-8")
+except Exception:
+    pass
+
 _SCRIPTS_DIR = Path(__file__).resolve().parent.parent.parent
 if str(_SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS_DIR))
