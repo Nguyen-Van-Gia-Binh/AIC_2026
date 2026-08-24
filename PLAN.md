@@ -25,8 +25,8 @@ người khác, không nhất thiết theo đúng 1 người/1 phase):
 
 - Mỗi máy có `.env` với `OPENROUTER_API_KEY` hợp lệ (xem `.env.example`); người A chuẩn bị thêm biến
   `OPENROUTER_MODEL_CONTEST` (model mạnh hơn dự kiến dùng lúc nộp thật) trước khi cần đến ở Phase 1.
-- Người D cài thử `pip install easyocr` trên máy sẽ làm Phase 5 **trước** ngày bắt đầu — lần đầu chạy
-  EasyOCR tự tải model, tốn vài phút, không nên để việc này rơi vào lúc đang code.
+- Người D cài thử `pip install paddlepaddle paddleocr` trên máy sẽ làm Phase 5 **trước** ngày bắt
+  đầu — lần đầu chạy PaddleOCR tự tải model, kiểm tra xung đột môi trường sớm nếu có.
 - **Mở rộng `queries/eval_ground_truth.json`** — hiện chỉ có ~19 câu (18 KIS + 1 QA, do AI viết từ
   ảnh, chưa có câu TRAKE nào) — không đủ để hiệu chỉnh ngưỡng cho Phase 3/4. Người D (eval owner) cần
   tự xem video thật, bổ sung ít nhất 5-10 câu TRAKE và thêm câu QA/KIS dạng phủ định (khớp Phase 2) —
@@ -217,5 +217,5 @@ Success: nộp đợt 4 với cả 5 cải tiến đã qua benchmark xác nhận
 - **Rotation key Gemini vẫn chưa nhớ trạng thái key đã cạn quota giữa các lần khởi động** (bài học
   đợt 1, xem [EXPERIMENT.md](EXPERIMENT.md)) — chưa có Phase nào ở trên xử lý việc này; cân nhắc thêm
   nếu còn thời gian sau Phase 6, không bắt buộc cho đợt 4.
-- **EasyOCR (Phase 5) là dependency mới hoàn toàn** — rủi ro cài đặt/tải model lần đầu chậm hơn dự
-  kiến trên máy nào đó trong nhóm; đã đưa vào mục chuẩn bị ngày 1 để giảm rủi ro này.
+- **PaddleOCR (Phase 5) là dependency mới** — rủi ro xung đột cài đặt `paddlepaddle` trên một số máy;
+  đã đưa vào mục chuẩn bị ngày 1 để test cài đặt sớm.
