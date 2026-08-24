@@ -40,6 +40,13 @@ BET_VIDEO_SHARE = 0.5
 # Che do "trai rui ro": so dong toi da cho 1 video khi khong co video nao noi bat.
 SPREAD_MAX_PER_VIDEO = 3
 
+# So ung vien tho can lay tu fast_retrieve TRUOC KHI rerank/cat ve top_k submission. Lon hon han so voi
+# top_k thuc te (thuong 100) vi chan doan thuc te tren eval_ground_truth.json cho thay GT frame chi nam
+# trong top-100 o 12/23 cau nhung nam trong top-500 o 20/23 cau (xem
+# docs/superpowers/plans/2026-08-24-phase3-effective-rerank.md) — trong khi chi phi tinh gan nhu mien
+# phi (fast_retrieve da nhan full ma tran 177K keyframe, chi argsort cat nhieu hon).
+RETRIEVAL_POOL_SIZE = 500
+
 
 def apply_risk_aware_ranking(
     hits: list[dict], top_k: int = 100, query_text: str | None = None
@@ -100,18 +107,33 @@ def _bet_mode(hits: list[dict], top_video_id: str, top_k: int, query_text: str |
 
 
 def _spread_mode(hits: list[dict], top_k: int) -> list[dict]:
-    per_video_count: dict[str, int] = {}
-    kept: list[dict] = []
-    deferred: list[dict] = []
+    """"Trai rui ro" = uu tien theo THU HANG CUA VIDEO (best score/video), lay het dan (den
+    SPREAD_MAX_PER_VIDEO) cho tung video truoc khi chuyen sang video ke — KHONG round-robin dan deu.
+
+    Da thu round-robin (1 hit/video/vong) truoc — bi loi: khi pool rong (vd 250+ video khac nhau,
+    xem docs/superpowers/plans/2026-08-24-phase3-effective-rerank.md), vong 0 mot minh da chiem het
+    top_k cho MOI video 1 hit, nen video dung (dang o hang tot, vd #44/255) chi duoc 1 hit dau (co the
+    khong phai frame dung) ma khong con luot vong 1/2 de lay frame dung sau do — mat han ket qua da co
+    truoc khi rerank (regression). Fix: xu ly video theo thu tu diem tot nhat, MOI video duoc lay du
+    (toi da SPREAD_MAX_PER_VIDEO) hit CUA CHINH NO truoc khi xet video ke tiep — video dung thuong nam
+    trong nhom diem kha tot (khong can toan bo hang dau), duoc dam bao co du kien de frame dung (khong
+    nhat thiet la frame diem cao nhat cua video) van lot vao top_k.
+    """
+    by_video: dict[str, list[dict]] = {}
+    video_best_score: dict[str, float] = {}
     for h in hits:
         vid = h["video_id"]
-        c = per_video_count.get(vid, 0)
-        if c < SPREAD_MAX_PER_VIDEO:
-            kept.append(h)
-            per_video_count[vid] = c + 1
-        else:
-            deferred.append(h)
-    result = kept + deferred
+        by_video.setdefault(vid, []).append(h)  # hits() da sort giam dan -> list nay cung giam dan
+        if vid not in video_best_score or h["score"] > video_best_score[vid]:
+            video_best_score[vid] = h["score"]
+
+    videos_by_score = sorted(by_video.keys(), key=lambda v: -video_best_score[v])
+
+    result: list[dict] = []
+    for vid in videos_by_score:
+        result.extend(by_video[vid][:SPREAD_MAX_PER_VIDEO])
+        if len(result) >= top_k:
+            break
     return result[:top_k]
 
 

@@ -122,7 +122,7 @@ def fast_retrieve(query_text: str, top_k: int = 100) -> list[dict]:
       jpg_path  (str|None)
     """
     _ensure_loaded()
-    top_k = min(top_k, 100)
+    top_k = min(top_k, 1000)  # tran an toan, KHONG phai gia tri mac dinh — xem rerank.RETRIEVAL_POOL_SIZE
     q_vec = _ENCODE_FN(query_text)
     scores = _MATRIX @ q_vec
     top_idx = np.argsort(-scores)[:top_k]

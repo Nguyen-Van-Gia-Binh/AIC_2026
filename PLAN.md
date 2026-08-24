@@ -108,6 +108,24 @@ trên phân bố score thật (~0.28-0.31), sẽ tinh chỉnh tiếp ở Phase 6
 hơn. Plan chi tiết:
 [docs/superpowers/plans/2026-08-24-phase2-3-rewrite-negation-risk-ranking.md](docs/superpowers/plans/2026-08-24-phase2-3-rewrite-negation-risk-ranking.md).
 
+**Đã làm (bản hiệu quả hơn — cùng ngày, follow-up sau khi thấy R@k không đổi ở bản trên):** Chẩn đoán
+thật (không đoán) cho thấy 2 nguyên nhân khiến Phase 3 "đúng nhưng vô hiệu": (1) `app.py:kis_search()`
+— tab KIS thật dùng để build submission qua `kis_add_to_queue`/`export_zip` — gọi thẳng `fast_retrieve()`,
+**chưa từng** đi qua `apply_risk_aware_ranking()`; (2) `retrieve.py` có trần cứng `top_k=min(top_k,100)`
+khiến rerank không bao giờ thấy ứng viên đúng nằm ngoài top-100 — đo trên 23 câu eval: GT nằm trong
+top-100 chỉ 12/23 (52%) nhưng nằm trong top-500 tới 20/23 (87%), chi phí tính gần như miễn phí (ma trận
+đã nhân đủ). Đã sửa: thêm `RETRIEVAL_POOL_SIZE=500` (nguồn chân lý duy nhất tại `rerank.py`), nới trần
+`retrieve.py` lên 1000, dùng pool 500 ở `pipeline_kis.py`/`pipeline_qa.py`/`app.py:kis_search()` (nối
+dây nhánh chết). Trong lúc benchmark lại còn phát hiện thêm: `_spread_mode()` bản gốc (giữ hit theo thứ
+tự điểm toàn cục, đẩy phần dư xuống cuối) không tận dụng được pool rộng hơn vì hit đúng thường ở hạng
+toàn cục sâu dù video đúng có hạng-theo-video tốt; thử round-robin (1 hit/video/vòng) thì lại gây
+regression R@50 (0.478→0.435) vì với pool có >100 video khác nhau, vòng 0 một mình đã chiếm hết ngân
+sách top_k trước khi video đúng được đào sâu — sửa lại thành "duyệt theo hạng video, lấy đủ
+`SPREAD_MAX_PER_VIDEO` cho từng video trước khi qua video kế" (depth-first theo video, không round-robin).
+Benchmark cuối (`scripts/test_phase3_rerank.py`, cùng 23 câu, đúng `retrieve.py` production): R@1=0.130,
+R@5=0.217, R@20=0.348, R@50=0.478 **không đổi**, **R@100=0.565 (tăng từ 0.522)** — không câu nào tệ đi.
+Plan chi tiết: [docs/superpowers/plans/2026-08-24-phase3-effective-rerank.md](docs/superpowers/plans/2026-08-24-phase3-effective-rerank.md).
+
 ## Phase 4: TRAKE — ràng buộc thời gian tăng dần + cross-check tầng 3 (⏳ Todo)
 
 Hai việc làm nối tiếp trên cùng 1 file (`pipeline_trake.py`), nên để 1 người phụ trách xuyên suốt:

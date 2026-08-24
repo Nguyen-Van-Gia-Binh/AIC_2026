@@ -33,6 +33,7 @@ import pandas as pd
 
 print("[app] Loading index + CLIP model (one-time)...")
 from agent.tools.retrieve import fast_retrieve, fast_retrieve_for_video
+from agent.tools.rerank import apply_risk_aware_ranking, RETRIEVAL_POOL_SIZE
 print("[app] Ready.")
 
 # ─── Hàm hỗ trợ ──────────────────────────────────────────────────────────────────
@@ -106,7 +107,9 @@ def kis_search(query: str, top_k: int, auto_translate: bool) -> tuple:
         except Exception as e:
             status_parts.append(f"⚠️ Dịch thất bại: {e}. Dùng câu gốc.")
 
-    hits = fast_retrieve(query_used, top_k=int(top_k))
+    pool_size = max(int(top_k), RETRIEVAL_POOL_SIZE)
+    hits = fast_retrieve(query_used, top_k=pool_size)
+    hits = apply_risk_aware_ranking(hits, top_k=int(top_k), query_text=query_used)
     gallery = _hits_to_gallery(hits)
     df = _hits_to_df(hits)
     status_parts.append(f"✅ Tìm thấy **{len(hits)}** kết quả | điểm cao nhất = {hits[0]['score']:.4f}")

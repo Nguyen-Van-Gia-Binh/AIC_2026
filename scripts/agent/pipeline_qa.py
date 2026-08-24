@@ -27,7 +27,7 @@ from agent.config import MAX_AGENT_LOOPS
 from agent.tools.retrieve import fast_retrieve
 from agent.tools.rewrite import rewrite_query
 from agent.tools.answer_qa import answer_from_hits
-from agent.tools.rerank import apply_risk_aware_ranking
+from agent.tools.rerank import apply_risk_aware_ranking, RETRIEVAL_POOL_SIZE
 
 CONFIDENCE_THRESHOLD = 0.5  # Duoi nguong nay: thu lai vong 2
 
@@ -60,7 +60,8 @@ def run_qa(
     query_en = rewrite_query(query_text, question=question)
     print(f"[qa]   query_en: {query_en!r}")
 
-    hits = fast_retrieve(query_en, top_k=top_k)
+    pool_size = max(top_k, RETRIEVAL_POOL_SIZE)
+    hits = fast_retrieve(query_en, top_k=pool_size)
     print(f"[qa]   Retrieved: {len(hits)} hits, top score={hits[0]['score']:.4f}")
     final_query_en = query_en
 
@@ -77,7 +78,7 @@ def run_qa(
         query_en_v2 = rewrite_query(query_text, feedback=feedback, question=question)
         print(f"[qa]   query_en_v2: {query_en_v2!r}")
 
-        hits_v2 = fast_retrieve(query_en_v2, top_k=top_k)
+        hits_v2 = fast_retrieve(query_en_v2, top_k=pool_size)
 
         qa_result_v2 = answer_from_hits(question, hits_v2, top_n=5)
         print(f"[qa]   Answer (vong 2): {qa_result_v2['answer']!r}  conf={qa_result_v2['confidence']:.2f}")

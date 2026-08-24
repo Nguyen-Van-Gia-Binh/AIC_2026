@@ -18,7 +18,7 @@ if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
 from scripts.agent.tools.retrieve import fast_retrieve
-from scripts.agent.tools.rerank import apply_risk_aware_ranking
+from scripts.agent.tools.rerank import apply_risk_aware_ranking, RETRIEVAL_POOL_SIZE
 
 K_VALUES = [1, 5, 20, 50, 100]
 EVAL_SET_PATH = _ROOT / "queries" / "eval_ground_truth.json"
@@ -42,11 +42,12 @@ def main() -> None:
 
     before_scores, after_scores = [], []
     for q in queries:
-        hits = fast_retrieve(q["text_en"], top_k=100)
-        rank_before = _rank_of_gt(hits, q["gt_video_id"], q["gt_frame_start"], q["gt_frame_end"])
+        hits_before = fast_retrieve(q["text_en"], top_k=100)  # hanh vi CU: chi top-100, khong rerank
+        rank_before = _rank_of_gt(hits_before, q["gt_video_id"], q["gt_frame_start"], q["gt_frame_end"])
         before_scores.append(_r_at_k(rank_before))
 
-        reranked = apply_risk_aware_ranking(hits, top_k=100, query_text=q["text_en"])
+        hits_pool = fast_retrieve(q["text_en"], top_k=RETRIEVAL_POOL_SIZE)  # hanh vi MOI: pool rong hon
+        reranked = apply_risk_aware_ranking(hits_pool, top_k=100, query_text=q["text_en"])
         rank_after = _rank_of_gt(reranked, q["gt_video_id"], q["gt_frame_start"], q["gt_frame_end"])
         after_scores.append(_r_at_k(rank_after))
 

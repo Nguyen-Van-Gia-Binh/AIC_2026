@@ -25,7 +25,7 @@ if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
 from agent.tools.retrieve import fast_retrieve
-from agent.tools.rerank import apply_risk_aware_ranking
+from agent.tools.rerank import apply_risk_aware_ranking, RETRIEVAL_POOL_SIZE
 
 
 def run_kis(query_text: str, top_k: int = 100) -> list[dict]:
@@ -40,7 +40,9 @@ def run_kis(query_text: str, top_k: int = 100) -> list[dict]:
         list[dict] đã xếp hạng giảm dần theo score (đã qua risk-aware rerank — xem
         agent/tools/rerank.py), mỗi item có: video_id, frame_id, frame_idx, pts_time, score, jpg_path
     """
-    results = fast_retrieve(query_text, top_k=top_k)
+    pool_size = max(top_k, RETRIEVAL_POOL_SIZE)
+    results = fast_retrieve(query_text, top_k=pool_size)
+    print(f"[kis] Lay {len(results)} ung vien tho (pool={pool_size}), rerank cat ve top_k={top_k}")
     results = apply_risk_aware_ranking(results, top_k=top_k, query_text=query_text)
     return results
 

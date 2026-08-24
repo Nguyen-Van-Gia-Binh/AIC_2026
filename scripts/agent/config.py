@@ -50,6 +50,9 @@ if AIC_MODE not in ("test", "contest"):
 # Nhieu key Google AI Studio (goi thang Gemini, khong qua OpenRouter) — chi dung o AIC_MODE=test de
 # tan dung free tier truoc khi ton tien OpenRouter. Cu phap nhieu key: xem _parse_key_list o tren
 # (phay hoac xuong dong trong GEMINI_API_KEY).
+# Luu y: Google phat hanh Gemini API key duoi nhieu dinh dang khac nhau (da xac nhan bang test that
+# qua REST API — ca dang "AIzaSy..." lan dang "AQ.Ab8..." deu la key hop le, tra ve HTTP 200). Khong
+# loc theo tien to o day — moi dong khong phai placeholder deu duoc coi la key that va dua vao vong xoay.
 GEMINI_API_KEYS = _parse_key_list(os.getenv("GEMINI_API_KEY", ""))
 
 # Danh sach model Gemini truc tiep, sap theo RPD (requests/ngay) giam dan roi RPM giam dan — de dung
