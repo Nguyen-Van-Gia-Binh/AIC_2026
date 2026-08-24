@@ -38,6 +38,22 @@ OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "google/gemini-2.5-flash").stri
 if OPENROUTER_MODEL.startswith("openrouter/"):
     OPENROUTER_MODEL = OPENROUTER_MODEL[len("openrouter/"):]
 
+# AIC_MODE chon model theo che do: "test" (re, dung khi dev) hoac "contest" (manh hon, dung luc nop
+# that). Khong doi signature call_llm() — chi doi model nao duoc PROVIDER_CHAIN tro toi.
+AIC_MODE = os.getenv("AIC_MODE", "test").strip().lower()
+if AIC_MODE not in ("test", "contest"):
+    print(f"[config] WARNING: AIC_MODE='{AIC_MODE}' khong hop le, dung 'test' hoac 'contest'. Mac dinh: 'test'")
+    AIC_MODE = "test"
+
+OPENROUTER_MODEL_CONTEST = os.getenv("OPENROUTER_MODEL_CONTEST", "").strip()
+if OPENROUTER_MODEL_CONTEST.startswith("openrouter/"):
+    OPENROUTER_MODEL_CONTEST = OPENROUTER_MODEL_CONTEST[len("openrouter/"):]
+
+_SELECTED_MODEL = OPENROUTER_MODEL_CONTEST if AIC_MODE == "contest" else OPENROUTER_MODEL
+if AIC_MODE == "contest" and not OPENROUTER_MODEL_CONTEST:
+    print("[config] WARNING: AIC_MODE=contest nhung OPENROUTER_MODEL_CONTEST trong .env trong rong. Dung OPENROUTER_MODEL thay the.")
+    _SELECTED_MODEL = OPENROUTER_MODEL
+
 MIN_OUTPUT_TOKENS = 2048
 MAX_AGENT_LOOPS = 2
 
@@ -45,8 +61,8 @@ MAX_AGENT_LOOPS = 2
 PROVIDER_CHAIN = [
     {
         "name": "openrouter",
-        "model_text": f"openrouter/{OPENROUTER_MODEL}",
-        "model_vision": f"openrouter/{OPENROUTER_MODEL}",
+        "model_text": f"openrouter/{_SELECTED_MODEL}",
+        "model_vision": f"openrouter/{_SELECTED_MODEL}",
         "api_keys": OPENROUTER_API_KEYS,
     },
 ]
@@ -121,7 +137,7 @@ def call_llm(
         chosen_model = provider["model_vision"] if is_vision else provider["model_text"]
         for key_index, api_key in enumerate(api_keys, start=1):
             try:
-                print(f"[config] OpenRouter model={OPENROUTER_MODEL} ({'vision' if is_vision else 'text'})")
+                print(f"[config] OpenRouter AIC_MODE={AIC_MODE} model={_SELECTED_MODEL} ({'vision' if is_vision else 'text'})")
                 return _call_one(chosen_model, api_key, messages, temperature, actual_max)
             except Exception as error:
                 print(f"[config] OpenRouter key {key_index}/{len(api_keys)} loi {type(error).__name__}: {error}")

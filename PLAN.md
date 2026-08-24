@@ -50,7 +50,7 @@ người khác, không nhất thiết theo đúng 1 người/1 phase):
 
 ---
 
-## Phase 1: Nền tảng — `AIC_MODE=test|contest` (⏳ Todo)
+## Phase 1: Nền tảng — `AIC_MODE=test|contest` (✅ Done)
 
 Thêm 1 biến môi trường chọn model LLM theo chế độ (rẻ lúc dev, mạnh hơn lúc nộp thật), theo đúng
 pattern đã có của `AIC_RETRIEVE_MODEL`. Không đổi `call_llm()` signature. Làm trước tiên vì không
@@ -58,6 +58,13 @@ chặn/không bị chặn bởi bất kỳ phase nào khác.
 
 Success: chạy `AIC_MODE=contest` thấy log xác nhận model mạnh hơn được dùng; không set biến môi
 trường thì hành vi y hệt hiện tại.
+
+**Đã làm:** Thêm `AIC_MODE`/`OPENROUTER_MODEL_CONTEST` vào `scripts/agent/config.py` (đọc từ `.env`,
+fallback về `test`/`OPENROUTER_MODEL` khi giá trị thiếu/sai, log `[config] OpenRouter AIC_MODE=... model=...`
+ở mọi lời gọi `call_llm()`); cập nhật `.env.example`. Đã verify qua CLI: cả 3 pipeline (KIS/QA/TRAKE)
+chạy đúng ở test và contest mode, warning fallback đúng khi `AIC_MODE` sai giá trị hoặc thiếu
+`OPENROUTER_MODEL_CONTEST`, QA pipeline xác nhận model contest áp dụng cho cả text lẫn vision call.
+Plan chi tiết: [docs/superpowers/plans/2026-08-24-phase1-aic_mode.md](docs/superpowers/plans/2026-08-24-phase1-aic_mode.md).
 
 ## Phase 2: Query rewrite — thêm rule xử lý phủ định (⏳ Todo)
 
