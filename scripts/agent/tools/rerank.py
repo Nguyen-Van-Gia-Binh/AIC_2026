@@ -98,7 +98,10 @@ def _bet_mode(hits: list[dict], top_video_id: str, top_k: int, query_text: str |
     if query_text and len(top_video_hits) < n_target:
         from agent.tools.retrieve import fast_retrieve_for_video
         deeper = fast_retrieve_for_video(query_text, top_video_id, top_k=n_target)
-        seen_frame_idx = {h["frame_idx"] for h in hits}
+        # Chi loai trung voi frame_idx CUA CHINH top_video_id — frame_idx la index cuc bo trong tung
+        # video (khong globally unique, xem index.py), so voi ca "hits" (nhieu video) se xoa nham cac
+        # ung vien dao sau hop le chi vi trung frame_idx voi 1 video khac hoan toan.
+        seen_frame_idx = {h["frame_idx"] for h in top_video_hits}
         extra = [d for d in deeper if d["frame_idx"] not in seen_frame_idx]
         hits = hits + extra
 
@@ -170,5 +173,32 @@ if __name__ == "__main__":
     # Test 3: hits rong khong crash
     assert apply_risk_aware_ranking([], top_k=10) == []
     print("[rerank] Test empty input: OK")
+
+    # Test 4: bet mode KHONG duoc loai ung vien dao sau chi vi trung frame_idx voi 1 VIDEO KHAC —
+    # frame_idx la index cuc bo tung video (khong globally unique), dedup sai o ban truoc chi kiem tra
+    # "hits" (ca pool nhieu video) thay vi chi rieng top_video_hits (code review Phase 6).
+    import agent.tools.retrieve as _retrieve_module
+
+    def _fake_fetch_deeper(query_text, video_id, top_k):
+        # Video A dat cuoc co 1 ung vien dao sau moi (frame_idx=99) chua tung xuat hien trong hits cua
+        # rieng A, nhung video KHAC (V0) trong pool da co san frame_idx=99 — dedup sai se loai nham.
+        return [_fake_hit("A", 99, 0.85)]
+
+    _orig_fetch = _retrieve_module.fast_retrieve_for_video
+    _retrieve_module.fast_retrieve_for_video = _fake_fetch_deeper
+    try:
+        hits_collision = (
+            [_fake_hit("A", i, 0.9 - i * 0.001) for i in range(3)]          # video A: chi 3 hit co san
+            + [_fake_hit("V0", 99, 0.5)]                                     # video khac trung frame_idx=99
+            + [_fake_hit(f"V{i}", i, 0.4 - i * 0.001) for i in range(1, 20)]
+        )
+        out_collision = apply_risk_aware_ranking(hits_collision, top_k=10, query_text="fake query")
+        frame_idxs_a = {h["frame_idx"] for h in out_collision if h["video_id"] == "A"}
+        assert 99 in frame_idxs_a, (
+            f"Ung vien dao sau (frame_idx=99) cua video A bi loai nham do trung voi video khac: {frame_idxs_a}"
+        )
+    finally:
+        _retrieve_module.fast_retrieve_for_video = _orig_fetch
+    print("[rerank] Test bet mode khong loai nham ung vien trung frame_idx voi video khac: OK")
 
     print("[rerank] Tat ca self-test PASS")

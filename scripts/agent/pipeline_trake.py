@@ -126,7 +126,10 @@ def _crosscheck_hit_count(chain: list[dict], keywords: set[str]) -> int:
         n = hit.get("n")
         if vid and n is not None:
             all_objects.update(o.lower() for o in get_objects(vid, int(n)))
-    return sum(1 for kw in keywords if any(kw in obj for obj in all_objects))
+    all_obj_words: set[str] = set()
+    for obj in all_objects:
+        all_obj_words.update(re.findall(r"[a-z]+", obj))
+    return sum(1 for kw in keywords if kw in all_obj_words)
 
 
 def run_trake(
@@ -160,7 +163,7 @@ def run_trake(
 
     all_hits = fast_retrieve(query_en, top_k=RETRIEVAL_POOL_SIZE)
 
-    # Group by video, tinh tong score top-3 frame moi video
+    # Group by video, tinh trung binh score TAT CA frame cua video do trong pool (khong gioi han top-3)
     video_scores: dict[str, float] = defaultdict(float)
     video_frame_count: dict[str, int] = defaultdict(int)
 
@@ -205,7 +208,7 @@ def run_trake(
     if len(video_results) >= 2:
         margin = video_results[0]["score"] - video_results[1]["score"]
         if margin < TRAKE_CROSSCHECK_MARGIN:
-            keywords = _extract_keywords(query_text + " " + " ".join(events))
+            keywords = _extract_keywords(query_en + " " + " ".join(event_queries_en))
             hits0 = _crosscheck_hit_count(video_results[0]["chain"], keywords)
             hits1 = _crosscheck_hit_count(video_results[1]["chain"], keywords)
             print(f"[trake]   Cross-check top-2 (margin={margin:.4f} < {TRAKE_CROSSCHECK_MARGIN}): "
@@ -291,6 +294,23 @@ def _run_self_tests() -> None:
     assert _crosscheck_hit_count([], set()) == 0
     assert _crosscheck_hit_count([], {"car"}) == 0
     print("[trake] Test crosscheck rong: OK")
+
+    # Test 7: _crosscheck_hit_count phai khop theo TU, khong phai substring — "man" khong duoc tinh la
+    # hit khi object detect duoc la "Woman" (code review Phase 6 phat hien substring "man" in "woman").
+    global get_objects
+
+    def _fake_get_objects(vid, n):
+        return ["woman", "car"]
+
+    _orig_get_objects = get_objects
+    get_objects = _fake_get_objects
+    try:
+        chain_fake = [_fake_hit("V", 1, 0.5)]
+        assert _crosscheck_hit_count(chain_fake, {"man"}) == 0, "'man' khong duoc khop substring vao 'woman'"
+        assert _crosscheck_hit_count(chain_fake, {"car"}) == 1, "'car' phai khop dung tu 'car'"
+    finally:
+        get_objects = _orig_get_objects
+    print("[trake] Test crosscheck khop theo tu (khong substring): OK")
 
     print("[trake] Tat ca self-test PASS")
 
