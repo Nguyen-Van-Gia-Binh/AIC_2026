@@ -19,14 +19,14 @@ người khác, không nhất thiết theo đúng 1 người/1 phase):
 | **A** | Phase 1 (`AIC_MODE`) + Phase 2 (rewrite thêm rule phủ định) | Cả 2 việc nhỏ, độc lập, không đụng pipeline TRAKE — làm xong sớm để rảnh hỗ trợ người khác                                                              |
 | **B** | Phase 3 (risk-aware ranking)                                      | Việc hậu xử lý retrieval thuần thuật toán, không cần LLM/OCR — tách biệt khỏi 2 người còn lại                                                              |
 | **C** | Phase 4 (TRAKE: DP + cross-check tầng 3)                         | 1 người ôm trọn`pipeline_trake.py` từ đầu tới cuối, tránh 2 người sửa cùng 1 file dễ đụng nhau                                                           |
-| **D** | Phase 5 (OCR on-demand)**kiêm "eval owner"**               | Việc cài thêm dependency mới (EasyOCR), tách máy riêng nếu cần; đồng thời là người duy nhất chạy`run_eval.py` trước/sau mỗi lần merge của cả nhóm |
+| **D** | Phase 5 (OCR on-demand)**kiêm "eval owner"**               | Việc cài thêm dependency mới (PaddleOCR), tách máy riêng nếu cần; đồng thời là người duy nhất chạy`run_eval.py` trước/sau mỗi lần merge của cả nhóm |
 
 **Cần chuẩn bị trước khi bắt đầu code (ngày 1):**
 
 - Mỗi máy có `.env` với `OPENROUTER_API_KEY` hợp lệ (xem `.env.example`); người A chuẩn bị thêm biến
   `OPENROUTER_MODEL_CONTEST` (model mạnh hơn dự kiến dùng lúc nộp thật) trước khi cần đến ở Phase 1.
-- Người D cài thử `pip install easyocr` trên máy sẽ làm Phase 5 **trước** ngày bắt đầu — lần đầu chạy
-  EasyOCR tự tải model, tốn vài phút, không nên để việc này rơi vào lúc đang code.
+- Người D cài thử `pip install paddlepaddle paddleocr` trên máy sẽ làm Phase 5 **trước** ngày bắt đầu —
+  lần đầu chạy PaddleOCR tự tải model, kiểm tra xung đột môi trường sớm nếu có.
 - **Mở rộng `queries/eval_ground_truth.json`** — hiện chỉ có ~19 câu (18 KIS + 1 QA, do AI viết từ
   ảnh, chưa có câu TRAKE nào) — không đủ để hiệu chỉnh ngưỡng cho Phase 3/4. Người D (eval owner) cần
   tự xem video thật, bổ sung ít nhất 5-10 câu TRAKE và thêm câu QA/KIS dạng phủ định (khớp Phase 2) —
@@ -146,10 +146,23 @@ Hai việc làm nối tiếp trên cùng 1 file (`pipeline_trake.py`), nên đ�
 - **Task 2 (Cross-check tầng 3)**: Thêm 2 hàm `_extract_keywords()` (tách từ khoá, lọc stopword) và
   `_crosscheck_hit_count()` (đếm keyword khớp với object detect), plus hằng số `TRAKE_CROSSCHECK_MARGIN=0.012`.
   2 self-test mới, cùng 4 cũ = 6/6 PASS. Cross-check gọi `ocr_lookup.get_objects()` khi margin top-2 video
-  < ngưỡng, swap nếu video #2 có keyword-hit nhiều hơn. Verify: chạy qua LLM rewrite thật (do nó non-deterministic),
-  ít nhất 1 lần hit rank #1 đúng (baseline Task 1 là 1/4) — các lần khác variance từ LLM, không phải
-  cross-check code gây regression (xác nhận bằng disable cross-check, kết quả vẫn fluctuate như vậy).
-  Benchmark 4 câu TRAKE từ `eval_ground_truth.json`: tùy run (LLM non-determinism), từ 0-1 correct rank #1.
+  < ngưỡng, swap nếu video #2 có keyword-hit nhiều hơn.
+- **Task 2 fix round 1 (benchmark không đáng tin)**: `scripts/test_phase4_trake.py` gọi `run_trake()`,
+  và `run_trake()` luôn gọi `rewrite_query()` (LLM, temperature=0.2, không cache) kể cả khi input đã là
+  `text_en` tiếng Anh sẵn — khiến retrieval đổi kết quả giữa các lần chạy (xác nhận: 3 lần chạy ra 3
+  top-1 video khác nhau cho cùng 1 câu), nên số liệu "trước/sau" benchmark ban đầu không phải so sánh
+  đúng nghĩa. Đã sửa **chỉ trong `scripts/test_phase4_trake.py`** (không đụng `pipeline_trake.py`):
+  monkeypatch `rewrite_query` thành identity function (chỉ trong benchmark này) để retrieval
+  deterministic, rồi chạy cùng bộ câu 2 lần trong 1 process — pass 1 tắt cross-check
+  (`TRAKE_CROSSCHECK_MARGIN=-1.0`, mô phỏng "chỉ Task 1"), pass 2 bật lại ngưỡng thật (`0.012`, "Task 1
+  + Task 2") — cùng chung 1 lần retrieval nên chênh lệch giữa 2 pass quy thẳng về cross-check. Verify:
+  chạy `scripts/test_phase4_trake.py` 2 lần liên tiếp, số liệu 2 lần giống hệt nhau (identity-patch xoá
+  đúng nguồn non-determinism). Benchmark 4 câu TRAKE từ `eval_ground_truth.json` (before = Task 1 only
+  → after = Task 1 + Task 2): Video đúng hạng #1: 0/4 → 0/4; Video xuất hiện (bất kỳ hạng): 1/4 → 1/4;
+  Event frame đúng (video #1 đúng): 0/11 → 0/11 — không đổi trên bộ 4 câu này (cross-check được kích
+  hoạt ở cả 4 câu do margin top-2 < 0.012, nhưng keyword-hit hoà hoặc video top-1 vẫn thắng nên không
+  câu nào bị swap; không có regression). Mẫu quá nhỏ (4 câu) để kết luận cross-check có ích hay không —
+  cần bộ eval TRAKE lớn hơn ở Phase 6 checkpoint.
 
 Success: 6 self-test PASS; `frame_id` luôn tăng dần (DP bảo đảm); cross-check chạy đúng khi margin < threshold;
 không regression (verified vs baseline).
@@ -185,5 +198,5 @@ Success: nộp đợt 4 với cả 5 cải tiến đã qua benchmark xác nhận
 - **Rotation key Gemini vẫn chưa nhớ trạng thái key đã cạn quota giữa các lần khởi động** (bài học
   đợt 1, xem [EXPERIMENT.md](EXPERIMENT.md)) — chưa có Phase nào ở trên xử lý việc này; cân nhắc thêm
   nếu còn thời gian sau Phase 6, không bắt buộc cho đợt 4.
-- **EasyOCR (Phase 5) là dependency mới hoàn toàn** — rủi ro cài đặt/tải model lần đầu chậm hơn dự
-  kiến trên máy nào đó trong nhóm; đã đưa vào mục chuẩn bị ngày 1 để giảm rủi ro này.
+- **PaddleOCR (Phase 5) là dependency mới** — rủi ro xung đột cài đặt trên một số máy; đã đưa vào
+  mục chuẩn bị ngày 1 để test cài đặt `paddlepaddle` + `paddleocr` sớm.
