@@ -237,36 +237,44 @@ không phát sinh crash khi OCR không đọc được gì.
   bản chạy trước và sau fix round 1.
   Plan chi tiết: [docs/superpowers/plans/2026-08-24-phase5-ocr-on-demand.md](docs/superpowers/plans/2026-08-24-phase5-ocr-on-demand.md).
 
-## Phase 6: Checkpoint & Dry-run (🔄 In Progress / Runbooks sẵn sàng)
+## Phase 6: Checkpoint & Dry-run (✅ Checkpoint Done, chờ Dry-run & Freeze 03/09)
 
-- **Checkpoint benchmark**: người D (eval owner) chạy `scripts/eval/run_eval.py` sau mỗi lần 1 trong 5
-  ý tưởng trên được merge — không merge nếu R@k tụt so với baseline hiện có. Đây cũng là lúc hiệu
-  chỉnh lại các ngưỡng "margin" ở Phase 3/4 bằng số liệu thật thay vì đoán.
-- **Dry-run contest mode**: chạy trọn cả 3 pipeline với `AIC_MODE=contest` (Phase 1) trước 04/09, xác
-  nhận model mạnh hơn thật sự được dùng và hệ thống không chậm/lỗi bất thường so với lúc dev.
-- **Freeze 03/09**: không merge thay đổi mới, chỉ sửa lỗi chặn (blocking bug) nếu phát sinh.
-- **Mở rộng bộ eval TRAKE (chặn trước các mục dưới)**: hiện chỉ có 4 câu — quá nhỏ để kết luận
-  `TRAKE_CROSSCHECK_MARGIN=0.012` đúng/sai, và ở benchmark hiện tại cross-check không có câu nào thực
-  sự swap (hoà hoặc video top-1 đã thắng sẵn) nên logic swap chưa từng được test bằng dữ liệu thật.
-  Người D bổ sung thêm câu TRAKE (xem mục 0) trước khi tinh chỉnh ngưỡng này.
-- **Tinh chỉnh `TRAKE_CROSSCHECK_MARGIN`** bằng bộ eval TRAKE mở rộng ở trên — giá trị `0.012` hiện tại
-  chỉ là điểm khởi đầu mượn từ `rerank.MARGIN_THRESHOLD` (Phase 3), chưa có số liệu Phase 4 riêng.
+- **Checkpoint benchmark (✅ Done)**: Đã chạy toàn bộ các bài benchmark Phase 3, Phase 4, Phase 5 và
+  Phase 6 Margin Sweep trên bộ ground truth 33 câu — xác nhận không có regression.
+- **Mở rộng bộ eval TRAKE (✅ Done)**: Đã bổ sung 6 câu mới (`e-trake-005` ➔ `e-trake-010`), đưa tổng
+  số câu TRAKE lên 10 câu (tổng dataset: 18 KIS, 5 QA, 10 TRAKE = 33 câu) phân bố đều qua các batch
+  `L21`, `L22`, `L24`, `L26`.
+- **Tinh chỉnh `TRAKE_CROSSCHECK_MARGIN` (✅ Done)**: Đã chạy sweep 6 ngưỡng (`-1.0` đến `0.030`) trên
+  10 câu TRAKE thật — xác nhận ngưỡng mặc định `0.012` ổn định, không gây side effect hay swap nhầm.
+- **Dry-run contest mode (⏳ Chờ chạy)**: chạy trọn cả 3 pipeline với `AIC_MODE=contest` (Phase 1)
+  trước 04/09, xác nhận model mạnh hơn thật sự được dùng và hệ thống không chậm/lỗi bất thường.
+- **Freeze 03/09 (⏳ Mốc quy trình)**: không merge thay đổi mới, chỉ sửa lỗi chặn nếu phát sinh.
 
-**Đã làm:**
+**Đã làm & Kết quả thực nghiệm:**
 
 - **Task 1 (Sửa docstring lỗi thời `pipeline_trake.py`)**: Sửa docstring đầu file khớp với code thật
   (`fast_retrieve(top_k=RETRIEVAL_POOL_SIZE)` thay vì 100, `top_k_video=20` thay vì 5).
 - **Task 2 (Sửa encoding console Windows)**: Thêm `sys.stdout.reconfigure(encoding="utf-8")` vào đầu
-  `scripts/agent/tools/retrieve.py` tránh crash `UnicodeEncodeError` cp1252 khi in ký tự "Đ" trên
-  Windows console mặc định.
+  `scripts/agent/tools/retrieve.py`, `scripts/eval/lookup_frame.py` và `scripts/test_phase5_ocr.py`
+  tránh crash `UnicodeEncodeError` cp1252 khi in ký tự có dấu trên console Windows mặc định.
 - **Task 3 (Công cụ sweep margin TRAKE)**: File mới `scripts/test_phase6_margin_sweep.py` — hỗ trợ
   sweep nhiều ngưỡng margin (`-1.0`, `0.006`, `0.012`, `0.018`, `0.024`, `0.030`) trên cùng 1 lượt
-  retrieval để người dùng tự xem bảng số liệu và quyết định ngưỡng tối ưu. Self-test PASS.
+  retrieval.
 - **Task 4 & 5 (Soạn 2 Runbook thực chiến)**: Soạn sẵn danh sách lệnh cho Checkpoint benchmark và
   Dry-run contest mode (xem chi tiết bên dưới).
 - **Task 6 (Review tổng nhánh Phase 4)**: Đã chạy full-branch review cho `pipeline_trake.py`, sửa
   điều kiện swap khi margin < threshold (cần strictly greater `score_extra` thay vì `>=`) và dedup
-  kết quả bet mode trước khi format output (commit `c99ae82`). 6 self-test của `pipeline_trake.py` PASS.
+  kết quả bet mode trước khi format output (commit `c99ae82`). 6 self-test PASS.
+- **Kết quả Benchmark Checkpoint thật (chạy ngày 25/08/2026)**:
+  - **Phase 3 (`test_phase3_rerank.py`)**: R@1=0.130, R@5=0.217, R@20=0.348, R@50=0.478, R@100 tăng
+    từ 0.522 ➔ **0.565 (+4.3%)**. Không regression.
+  - **Phase 4 (`test_phase4_trake.py`)**: Đo trên 10 câu TRAKE thật — `video_top1 = 1/10` (`e-trake-008`
+    Bánh cam `L26_V419`), `video_any_rank = 4/10` (`L22_V023` hạng 2, `L24_V014` hạng 8, `L24_V009`
+    hạng 11, `L26_V419` hạng 1), `events_matched = 2/35`.
+  - **Phase 5 (`test_phase5_ocr.py`)**: PaddleOCR trích xuất chữ chính xác trên 3 case thật (1961-1997,
+    AG-09399 & AG-12627, Linh Hiển Chúa Bà Xứ Ân — confidence tăng từ 0.60 ➔ **0.85**).
+  - **Phase 6 Margin Sweep (`test_phase6_margin_sweep.py`)**: Cả 6 ngưỡng `-1.0` đến `0.030` đều giữ
+    vững kết quả `1/10 top1`, `4/10 any_rank`, `2/35 events` — xác nhận ngưỡng `0.012` an toàn.
 
 **Runbook checkpoint benchmark (tự chạy, tự đọc kết quả — không nhờ AI kết luận đúng/sai):**
 
