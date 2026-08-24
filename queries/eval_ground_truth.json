@@ -4,7 +4,9 @@
     "type": "KIS",
     "text_vi": "Một tia nước phun thẳng lên trời từ một giếng khô giữa cánh đồng, phía trước có hàng rào gỗ cũ, bầu trời nhiều mây xám.",
     "text_en": "A tall jet of water shoots straight up into the sky from a dry well in an open field, with an old wooden fence in front and a cloudy grey sky.",
-    "difficulty_tags": ["easy_sanity_check"],
+    "difficulty_tags": [
+      "easy_sanity_check"
+    ],
     "gt_video_id": "L21_V001",
     "gt_frame_start": 5761,
     "gt_frame_end": 5761
@@ -14,7 +16,9 @@
     "type": "KIS",
     "text_vi": "Nữ MC bản tin thời sự mặc áo trắng hoa văn kẻ ô, đứng trước phông nền thành phố lúc hoàng hôn có tòa nhà Bitexco phía sau bên phải.",
     "text_en": "A female news anchor wearing a white patterned blazer stands in front of a sunset city skyline backdrop featuring the Bitexco Financial Tower on the right.",
-    "difficulty_tags": ["multi_similar_object"],
+    "difficulty_tags": [
+      "multi_similar_object"
+    ],
     "gt_video_id": "L21_V001",
     "gt_frame_start": 17881,
     "gt_frame_end": 17881
@@ -24,7 +28,9 @@
     "type": "KIS",
     "text_vi": "Cảnh đua xe đạp, ống kính lia qua một lá cờ đỏ sao vàng lớn cắm giữa đường đua, phía sau có xe máy dẫn đoàn và vận động viên đạp xe mờ phía xa, góc trên trái hiển thị đồng hồ đua 'CHẶNG 1'.",
     "text_en": "A cycling race scene with a large red flag bearing a yellow star planted in the middle of the road, an escort motorbike in the foreground, and cyclists blurred in the distance; a race timer reading 'CHẶNG 1' is shown in the top-left corner.",
-    "difficulty_tags": ["small_object"],
+    "difficulty_tags": [
+      "small_object"
+    ],
     "gt_video_id": "L23_V001",
     "gt_frame_start": 626,
     "gt_frame_end": 626
@@ -34,7 +40,9 @@
     "type": "KIS",
     "text_vi": "Cảnh toàn đường đua xe đạp với hai hàng cờ đỏ dọc hai bên vỉa hè, khán giả đứng xem đông, phía xa có cổng chào trang trí hoa mai bắc ngang đường, góc trên màn hình hiện khoảng cách còn lại '2.9 Km'.",
     "text_en": "A wide shot of a cycling race road lined with rows of red flags on both sides and crowds of spectators watching, with a decorated flower-arch banner spanning the road in the distance; the on-screen graphic shows a remaining distance of '2.9 Km'.",
-    "difficulty_tags": ["easy_sanity_check"],
+    "difficulty_tags": [
+      "easy_sanity_check"
+    ],
     "gt_video_id": "L23_V001",
     "gt_frame_start": 1906,
     "gt_frame_end": 1906
@@ -44,7 +52,9 @@
     "type": "KIS",
     "text_vi": "Cận cảnh một bàn tay cầm bút chì màu cam đang viết vào một cuốn vở có cả chữ tiếng Việt và tiếng Anh viết tay, hình ảnh hơi mờ do lấy nét gần.",
     "text_en": "A close-up shot of a hand holding an orange pencil writing in a notebook containing handwritten Vietnamese and English text, slightly blurred due to close focus.",
-    "difficulty_tags": ["small_object"],
+    "difficulty_tags": [
+      "small_object"
+    ],
     "gt_video_id": "L25_V001",
     "gt_frame_start": 2195,
     "gt_frame_end": 2195
@@ -54,7 +64,9 @@
     "type": "KIS",
     "text_vi": "Một nữ sinh đeo kính, mặc đồng phục cổ đỏ có huy hiệu trường quốc tế, đang ngồi vẽ/tô màu tại bàn trong lớp học trang trí nhiều tranh giấy sặc sỡ, một bạn học khác ngồi cạnh không đeo kính.",
     "text_en": "A schoolgirl wearing glasses and a white uniform with a maroon collar bearing an international-school patch sits drawing/coloring at a desk in a colorfully decorated classroom, with another classmate without glasses sitting beside her.",
-    "difficulty_tags": ["multi_similar_object"],
+    "difficulty_tags": [
+      "multi_similar_object"
+    ],
     "gt_video_id": "L25_V001",
     "gt_frame_start": 19479,
     "gt_frame_end": 19479
@@ -65,7 +77,9 @@
     "text_vi": "Trong cảnh lớp học có nữ sinh đeo kính đang vẽ, có bao nhiêu học sinh đang ngồi tại bàn trong khung hình?",
     "text_en": "In the classroom scene with the girl wearing glasses drawing, how many students are seated at the desk in this frame?",
     "question": "How many students are seated at the desk in this frame?",
-    "difficulty_tags": ["counting"],
+    "difficulty_tags": [
+      "counting"
+    ],
     "gt_video_id": "L25_V001",
     "gt_frame_start": 19479,
     "gt_frame_end": 19479,
@@ -76,7 +90,9 @@
     "type": "KIS",
     "text_vi": "Một tấm áp phích lớn in hình chân dung công nương Diana kèm dòng chữ 'DIANA 1961 1997' được dựng cạnh một đống hoa tưởng niệm dưới gốc cây, phía sau có vài người đi ngang qua.",
     "text_en": "A large poster with a portrait of Princess Diana and the text 'DIANA 1961 1997' stands next to a pile of memorial flowers under a tree, with a few people walking by in the background.",
-    "difficulty_tags": ["fine_detail"],
+    "difficulty_tags": [
+      "fine_detail"
+    ],
     "gt_video_id": "L22_V001",
     "gt_frame_start": 13198,
     "gt_frame_end": 13198
@@ -86,7 +102,9 @@
     "type": "KIS",
     "text_vi": "Mũi một chiếc thuyền gỗ sơn đỏ-xanh ngọc với dây thừng cuộn tròn ở góc phải, nhìn ra mặt biển phẳng lặng và một dải đồi núi mờ phía xa.",
     "text_en": "The bow of a red-and-turquoise wooden fishing boat with coiled rope on the right, facing a calm sea and a hazy line of hills in the distance.",
-    "difficulty_tags": ["small_object"],
+    "difficulty_tags": [
+      "small_object"
+    ],
     "gt_video_id": "L22_V003",
     "gt_frame_start": 12031,
     "gt_frame_end": 12031
@@ -96,7 +114,9 @@
     "type": "KIS",
     "text_vi": "Một nhóm thanh niên mặc đồ rằn ri xanh lá biểu diễn múa rồng vàng trên sân khấu trong nhà, phía sau có màn hình lớn chiếu hình đàn cừu, hai người mặc đồ đỏ đứng 2 bên làm nền.",
     "text_en": "A group of young performers in green camouflage outfits perform a golden dragon dance on an indoor stage, with a large screen behind them showing a herd of sheep, and two people in red costumes standing on either side.",
-    "difficulty_tags": ["multi_similar_object"],
+    "difficulty_tags": [
+      "multi_similar_object"
+    ],
     "gt_video_id": "L24_V002",
     "gt_frame_start": 8193,
     "gt_frame_end": 8193
@@ -106,7 +126,9 @@
     "type": "KIS",
     "text_vi": "Cũng đội múa rồng mặc đồ rằn ri xanh lá nhưng biểu diễn ngoài trời vào ban đêm, có đèn lồng đỏ hình quả bóng bay lớn và cờ đuôi nheo xanh phía sau, khán giả ngồi quanh dưới ánh đèn sân khấu.",
     "text_en": "The same green-camouflage dragon dance team performing outdoors at night, with a large red lantern balloon and a green pennant flag behind them, and an audience seated around under stage lighting.",
-    "difficulty_tags": ["multi_similar_object"],
+    "difficulty_tags": [
+      "multi_similar_object"
+    ],
     "gt_video_id": "L24_V004",
     "gt_frame_start": 9046,
     "gt_frame_end": 9046
@@ -116,7 +138,9 @@
     "type": "KIS",
     "text_vi": "Một bát thủy tinh trong suốt đặt trên bàn gỗ, bên trong chỉ có một ít hạt gạo trắng nằm gọn ở đáy bát.",
     "text_en": "A clear glass bowl sits on a wooden table, containing only a small amount of white rice grains resting at the bottom.",
-    "difficulty_tags": ["small_object"],
+    "difficulty_tags": [
+      "small_object"
+    ],
     "gt_video_id": "L26_V001",
     "gt_frame_start": 2589,
     "gt_frame_end": 2589
@@ -126,7 +150,9 @@
     "type": "KIS",
     "text_vi": "Một miếng ức gà sống đã lột da đặt trên đĩa sứ trắng, để trên thớt gỗ, có thể thấy vài hạt gia vị nhỏ dính trên bề mặt thịt.",
     "text_en": "A raw, skinless chicken breast sits on a white ceramic plate placed on a wooden cutting board, with a few small seasoning grains visible on the meat's surface.",
-    "difficulty_tags": ["small_object"],
+    "difficulty_tags": [
+      "small_object"
+    ],
     "gt_video_id": "L26_V003",
     "gt_frame_start": 2628,
     "gt_frame_end": 2628
@@ -136,7 +162,9 @@
     "type": "KIS",
     "text_vi": "Không gian nội thất một ngôi miếu/chùa với đèn chùm mạ vàng lớn treo trần, bên cạnh là các bức hoành phi sơn son thếp vàng khắc chữ Hán, một tấm có dòng chữ Việt 'CHÚA XỨ THÁNH MẪU'.",
     "text_en": "The interior of a temple with a large gold-plated chandelier hanging from the ceiling, next to red-and-gold lacquered panels carved with Chinese characters, one of which reads 'CHÚA XỨ THÁNH MẪU' in Vietnamese.",
-    "difficulty_tags": ["fine_detail"],
+    "difficulty_tags": [
+      "fine_detail"
+    ],
     "gt_video_id": "L27_V001",
     "gt_frame_start": 3985,
     "gt_frame_end": 3985
@@ -146,7 +174,9 @@
     "type": "KIS",
     "text_vi": "Một người đàn ông trẻ và một phụ nữ đang xem xét các bó hoa/vòng lá xanh tại một sạp hoa ngoài trời có mái tôn, xung quanh bày nhiều chậu hoa màu sắc.",
     "text_en": "A young man and a woman examine green leaf wreaths/bouquets at an outdoor flower stall with a tin roof, surrounded by many colorful potted flower arrangements.",
-    "difficulty_tags": ["multi_similar_object"],
+    "difficulty_tags": [
+      "multi_similar_object"
+    ],
     "gt_video_id": "L27_V003",
     "gt_frame_start": 3241,
     "gt_frame_end": 3241
@@ -156,7 +186,9 @@
     "type": "KIS",
     "text_vi": "Đoạn tư liệu cũ tông màu ngả vàng có ghi chú 'Tư liệu MÊ KÔNG KÝ SỰ', quay cảnh 2 người đàn ông lớn tuổi đi bộ dọc bờ nước trên con đường đất.",
     "text_en": "An old, sepia-toned archival clip labeled 'Tư liệu MÊ KÔNG KÝ SỰ' showing two elderly men walking along a dirt path beside the water.",
-    "difficulty_tags": ["fine_detail"],
+    "difficulty_tags": [
+      "fine_detail"
+    ],
     "gt_video_id": "L28_V002",
     "gt_frame_start": 8101,
     "gt_frame_end": 8101
@@ -166,7 +198,9 @@
     "type": "KIS",
     "text_vi": "Hai chiếc phà sông lớn màu trắng mang số hiệu 'AG-09399' và 'AG-12627' đậu ở bến, một thuyền nhỏ hơn đang chạy qua giữa hai phà.",
     "text_en": "Two large white river ferries bearing the registration numbers 'AG-09399' and 'AG-12627' are docked at the pier, with a smaller boat passing between them.",
-    "difficulty_tags": ["fine_detail"],
+    "difficulty_tags": [
+      "fine_detail"
+    ],
     "gt_video_id": "L28_V003",
     "gt_frame_start": 10821,
     "gt_frame_end": 10821
@@ -176,7 +210,9 @@
     "type": "KIS",
     "text_vi": "Hai phụ nữ lớn tuổi ngồi đan/tước sợi cói khô, một người mặc áo tím không đeo kính, người còn lại mặc áo đỏ đô và đeo kính, phía sau là tấm bảng xanh có chữ và các bó cói dựng đứng.",
     "text_en": "Two elderly women sit weaving dried reed strands; one wears a purple shirt without glasses, the other wears a maroon shirt and glasses, with a green signboard and bundles of standing reeds behind them.",
-    "difficulty_tags": ["multi_similar_object"],
+    "difficulty_tags": [
+      "multi_similar_object"
+    ],
     "gt_video_id": "L29_V001",
     "gt_frame_start": 7351,
     "gt_frame_end": 7351
@@ -186,7 +222,9 @@
     "type": "KIS",
     "text_vi": "Cận cảnh phía sau đầu một người đang cầm điện thoại xem một đoạn video/ảnh khác hiển thị trên màn hình điện thoại, phía sau là cửa sổ có chấn song và cây xanh, logo 'Tuổi Trẻ TV' góc trên phải.",
     "text_en": "A close-up from behind someone's head holding a phone displaying another video/photo on its screen, with a barred window and greenery behind, and a 'Tuổi Trẻ TV' logo in the top-right corner.",
-    "difficulty_tags": ["image_in_image"],
+    "difficulty_tags": [
+      "image_in_image"
+    ],
     "gt_video_id": "L30_V001",
     "gt_frame_start": 1604,
     "gt_frame_end": 1604
@@ -196,98 +234,357 @@
     "type": "TRAKE",
     "text_vi": "Đoạn video một người đàn ông đang cắt dây khánh thành một dự án, bao gồm ông và các đồng nghiệp của mình",
     "text_en": "A view of a man cutting the ribbon to inaugurate a project, including him and his colleagues.",
-    "difficulty_tags": ["temporal_order", "short_action"],
+    "difficulty_tags": [
+      "temporal_order",
+      "short_action"
+    ],
     "gt_video_id": "L21_V016",
     "events": [
-      {"text_en": "the first moment the ribbon is being cut", "gt_frame_start": 25654, "gt_frame_end": 25654},
-      {"text_en": "the moment the ribbon is cut", "gt_frame_start": 25714, "gt_frame_end": 25714}
+      {
+        "text_en": "the first moment the ribbon is being cut",
+        "gt_frame_start": 25654,
+        "gt_frame_end": 25654
+      },
+      {
+        "text_en": "the moment the ribbon is cut",
+        "gt_frame_start": 25714,
+        "gt_frame_end": 25714
+      }
     ]
   },
   {
-  "query_id": "e-trake-002",
-  "type": "TRAKE",
-  "text_vi": "Cảnh một người đàn ông đi bộ qua đường, tay cầm một cái xe đẩy em bé đã được xếp vào",
-  "text_en": "View of a man crossing the street, holding a baby stroller that has been folded up.",
-  "difficulty_tags": ["temporal_order"],
-  "gt_video_id": "L21_V025",
-  "events": [
-    {"text_en": "man starts crossing the street", "gt_frame_start": 13770,  "gt_frame_end": 13770},
-    {"text_en": "man is halfway across the street", "gt_frame_start": 13923, "gt_frame_end": 13923},
-    {"text_en": "man reaches the other side", "gt_frame_start": 13923, "gt_frame_end": 13923}
-  ]
+    "query_id": "e-trake-002",
+    "type": "TRAKE",
+    "text_vi": "Cảnh một người đàn ông đi bộ qua đường, tay cầm một cái xe đẩy em bé đã được xếp vào",
+    "text_en": "View of a man crossing the street, holding a baby stroller that has been folded up.",
+    "difficulty_tags": [
+      "temporal_order"
+    ],
+    "gt_video_id": "L21_V025",
+    "events": [
+      {
+        "text_en": "man starts crossing the street",
+        "gt_frame_start": 13770,
+        "gt_frame_end": 13770
+      },
+      {
+        "text_en": "man is halfway across the street",
+        "gt_frame_start": 13923,
+        "gt_frame_end": 13923
+      },
+      {
+        "text_en": "man reaches the other side",
+        "gt_frame_start": 13923,
+        "gt_frame_end": 13923
+      }
+    ]
   },
   {
     "query_id": "e-trake-003",
     "type": "TRAKE",
     "text_vi": "Cảnh một người đàn ông bị thương đang được diều đi bởi 2 người khác, vừa rời đi từ trực thăng, đang di chuyển đến xe cứu thương",
     "text_en": "A view of a wounded man being carried by two other people, just disembarked from a helicopter, moving towards an ambulance.",
-    "difficulty_tags": ["temporal_order"],
+    "difficulty_tags": [
+      "temporal_order"
+    ],
     "gt_video_id": "L22_V023",
     "events": [
-      {"text_en": "man starts walking while being carried by two other people", "gt_frame_start": 12778, "gt_frame_end": 12900},
-      {"text_en": "man arriving at the ambulance", "gt_frame_start": 13020, "gt_frame_end": 13170},
-      {"text_en": "man lays in the ambulance", "gt_frame_start": 13170, "gt_frame_end": 13278}
-  ]
+      {
+        "text_en": "man starts walking while being carried by two other people",
+        "gt_frame_start": 12778,
+        "gt_frame_end": 12900
+      },
+      {
+        "text_en": "man arriving at the ambulance",
+        "gt_frame_start": 13020,
+        "gt_frame_end": 13170
+      },
+      {
+        "text_en": "man lays in the ambulance",
+        "gt_frame_start": 13170,
+        "gt_frame_end": 13278
+      }
+    ]
   },
   {
     "query_id": "e-trake-004",
     "type": "TRAKE",
     "text_vi": "Cảnh một người tội phạm đang bị áp giải bởi một cảnh sát mặc quân phục màu xanh, đang đi đến phòng tra khảo",
     "text_en": "A view of a criminal being escorted by a blue-uniformed police officer, walking towards the interrogation room.",
-    "difficulty_tags": ["short_action"],
+    "difficulty_tags": [
+      "short_action"
+    ],
     "gt_video_id": "L22_V003",
     "events": [
-      {"text_en": "criminal starts being escorted", "gt_frame_start": 28531, "gt_frame_end": 28530},
-      {"text_en": "criminal is escorted", "gt_frame_start": 28531, "gt_frame_end": 28531},
-      {"text_en": "criminal is being interrogated", "gt_frame_start": 28532, "gt_frame_end": 29363}
-  ]
+      {
+        "text_en": "criminal starts being escorted",
+        "gt_frame_start": 28531,
+        "gt_frame_end": 28531
+      },
+      {
+        "text_en": "criminal is escorted",
+        "gt_frame_start": 28531,
+        "gt_frame_end": 28531
+      },
+      {
+        "text_en": "criminal is being interrogated",
+        "gt_frame_start": 28532,
+        "gt_frame_end": 29363
+      }
+    ]
   },
   {
-  "query_id": "e-qa-ai-002",
-  "type": "QA",
-  "text_vi": "Trong video thông báo giải thưởng của cuộc thi lan tỏa tích cực lần 5 năm 2024, có tổng cộng bao nhiêu giải khuyến khích?",
-  "text_en": "In the video announcing the awards for the 5th Spreading Positivity contest (2024), how many Consolation Prizes were awarded in total?",
-  "question": "Có tổng cộng bao nhiêu giải khuyến khích?",   
-  "difficulty_tags": ["counting"],
-  "gt_video_id": "L30_V096",
-  "gt_frame_start": 820,
-  "gt_frame_end": 1100,
-  "gt_answer": "15"  
-},
-{
-"query_id": "e-qa-ai-003",
-  "type": "QA",
-  "text_vi": "Trong video nói về thiên nga, nhóm nhà nghiên cứu đứng ở trên bãi cỏ có bao nhiu người?",
-  "text_en": "In the video about swans, how many researchers are standing on the grass?",
-  "question": "Có bao nhiêu nhà nghiên cứu đang đứng trên bãi cỏ?",   
-  "difficulty_tags": ["counting"],
-  "gt_video_id": "L30_V096",
-  "gt_frame_start": 25828,
-  "gt_frame_end": 25993,
-  "gt_answer": "8"  
-},
-{
-"query_id": "e-qa-ai-004",
-  "type": "QA",
-  "text_vi": "Trong video nói về chương trình món ngon mỗi ngày, chai nước tương trên bàn có nhãn hiệu gì?",
-  "text_en": "In the video about the daily delicious meal program, what brand is the soy sauce bottle on the table?",
-  "question": "Chai nước tương trên bàn có nhãn hiệu gì?",   
-  "difficulty_tags": ["naming"],
-  "gt_video_id": "L26_V296",
-  "gt_frame_start": 1537,
-  "gt_frame_end": 1665,
-  "gt_answer": "Phú Sĩ"  
-},
-{
-"query_id": "e-qa-ai-005",
-  "type": "QA",
-  "text_vi": "Trong video có người đàn ông áo xám cầm hai đĩa bánh xèo, bên trái anh ta là gì?",
-  "text_en": "In the video where a man in a gray shirt is holding two plates of Vietnamese pancakes, what is to his left?",
-  "question": "Bên trái người đàn ông áo xám là gì?",   
-  "difficulty_tags": ["naming"],
-  "gt_video_id": "L27_V003",
-  "gt_frame_start": 7021,
-  "gt_frame_end": 7156,
-  "gt_answer": "Rau sống"  
-}
+    "query_id": "e-qa-ai-002",
+    "type": "QA",
+    "text_vi": "Trong video thông báo giải thưởng của cuộc thi lan tỏa tích cực lần 5 năm 2024, có tổng cộng bao nhiêu giải khuyến khích?",
+    "text_en": "In the video announcing the awards for the 5th Spreading Positivity contest (2024), how many Consolation Prizes were awarded in total?",
+    "question": "Có tổng cộng bao nhiêu giải khuyến khích?",
+    "difficulty_tags": [
+      "counting"
+    ],
+    "gt_video_id": "L30_V096",
+    "gt_frame_start": 820,
+    "gt_frame_end": 1100,
+    "gt_answer": "15"
+  },
+  {
+    "query_id": "e-qa-ai-003",
+    "type": "QA",
+    "text_vi": "Trong video nói về thiên nga, nhóm nhà nghiên cứu đứng ở trên bãi cỏ có bao nhiu người?",
+    "text_en": "In the video about swans, how many researchers are standing on the grass?",
+    "question": "Có bao nhiêu nhà nghiên cứu đang đứng trên bãi cỏ?",
+    "difficulty_tags": [
+      "counting"
+    ],
+    "gt_video_id": "L30_V096",
+    "gt_frame_start": 25828,
+    "gt_frame_end": 25993,
+    "gt_answer": "8"
+  },
+  {
+    "query_id": "e-qa-ai-004",
+    "type": "QA",
+    "text_vi": "Trong video nói về chương trình món ngon mỗi ngày, chai nước tương trên bàn có nhãn hiệu gì?",
+    "text_en": "In the video about the daily delicious meal program, what brand is the soy sauce bottle on the table?",
+    "question": "Chai nước tương trên bàn có nhãn hiệu gì?",
+    "difficulty_tags": [
+      "naming"
+    ],
+    "gt_video_id": "L26_V296",
+    "gt_frame_start": 1537,
+    "gt_frame_end": 1665,
+    "gt_answer": "Phú Sĩ"
+  },
+  {
+    "query_id": "e-qa-ai-005",
+    "type": "QA",
+    "text_vi": "Trong video có người đàn ông áo xám cầm hai đĩa bánh xèo, bên trái anh ta là gì?",
+    "text_en": "In the video where a man in a gray shirt is holding two plates of Vietnamese pancakes, what is to his left?",
+    "question": "Bên trái người đàn ông áo xám là gì?",
+    "difficulty_tags": [
+      "naming"
+    ],
+    "gt_video_id": "L27_V003",
+    "gt_frame_start": 7021,
+    "gt_frame_end": 7156,
+    "gt_answer": "Rau sống"
+  },
+  {
+    "query_id": "e-trake-005",
+    "type": "TRAKE",
+    "text_vi": "Cảnh múa lân sư rồng với con lân màu vàng đang biểu diễn trên sàn và dàn cột Mai Hoa Thung, bắt đầu từ lắc đầu, chuẩn bị bật nhảy, bật nhảy đứng lên cho đến khi nhảy từ cột này qua cột khác.",
+    "text_en": "A lion dance performance with a yellow lion performing on stage and high poles, starting from shaking its head, crouching to prepare to jump, jumping up standing on its hind legs, and leaping from pole to pole.",
+    "difficulty_tags": [
+      "temporal_order",
+      "action_sequence"
+    ],
+    "gt_video_id": "L24_V009",
+    "events": [
+      {
+        "text_en": "yellow lion shaking its head on the stage",
+        "gt_frame_start": 125,
+        "gt_frame_end": 249
+      },
+      {
+        "text_en": "yellow lion crouching and preparing to jump",
+        "gt_frame_start": 1457,
+        "gt_frame_end": 1489
+      },
+      {
+        "text_en": "yellow lion jumping and standing up on hind legs",
+        "gt_frame_start": 1613,
+        "gt_frame_end": 1613
+      },
+      {
+        "text_en": "yellow lion leaping from one pole to another on high stilts",
+        "gt_frame_start": 1737,
+        "gt_frame_end": 1861
+      }
+    ]
+  },
+    {
+    "query_id": "e-trake-006",
+    "type": "TRAKE",
+    "text_vi": "Cảnh múa lân sư rồng với con lân màu trắng biểu diễn trên dàn cột Mai Hoa Thung, bắt đầu từ quay đầu lại phía sau, nhảy lên bậc tiếp theo, bật nhảy lùi cho đến khi cúi đầu xuống.",
+    "text_en": "A lion dance performance with a white lion performing on high poles, starting from turning its head to look back, jumping up to the next level, leaping backward, and bowing its head down.",
+    "difficulty_tags": [
+      "temporal_order",
+      "action_sequence"
+    ],
+    "gt_video_id": "L24_V014",
+    "events": [
+      {
+        "text_en": "white lion turns its head to look back on the pole",
+        "gt_frame_start": 869,
+        "gt_frame_end": 993
+      },
+      {
+        "text_en": "white lion jumps up to the next pole level",
+        "gt_frame_start": 1241,
+        "gt_frame_end": 1365
+      },
+      {
+        "text_en": "white lion leaps backward on the high poles",
+        "gt_frame_start": 1489,
+        "gt_frame_end": 1613
+      },
+      {
+        "text_en": "white lion bows its head down on the pole",
+        "gt_frame_start": 1861,
+        "gt_frame_end": 1985
+      }
+    ]
+  },
+    {
+    "query_id": "e-trake-007",
+    "type": "TRAKE",
+    "text_vi": "Chương trình nấu ăn với các công đoạn chế biến món cua, bắt đầu từ cảnh người đầu bếp cầm đĩa cua trên tay, cắt hành tây thành múi cau, cắt cà chua thành múi cau, cho đến khi dùng muỗng khuấy bột chiên giòn với nước.",
+    "text_en": "A cooking show preparing a crab dish, starting from the chef holding a plate of fresh crabs, slicing onions into wedges, cutting tomatoes into wedges, to stirring crispy frying flour batter with water in a bowl.",
+    "difficulty_tags": [
+      "temporal_order",
+      "action_sequence"
+    ],
+    "gt_video_id": "L26_V412",
+    "events": [
+      {
+        "text_en": "the chef holding a plate of fresh crabs",
+        "gt_frame_start": 1194,
+        "gt_frame_end": 1236
+      },
+      {
+        "text_en": "the chef slicing an onion into wedges on the cutting board",
+        "gt_frame_start": 2177,
+        "gt_frame_end": 2185
+      },
+      {
+        "text_en": "cutting ripe red tomatoes into wedges",
+        "gt_frame_start": 2258,
+        "gt_frame_end": 2305
+      },
+      {
+        "text_en": "stirring crispy frying flour batter with water in a bowl using a spoon",
+        "gt_frame_start": 3329,
+        "gt_frame_end": 3373
+      }
+    ]
+  },
+    {
+    "query_id": "e-trake-008",
+    "type": "TRAKE",
+    "text_vi": "Chương trình làm bánh cam với các bước thực hiện, bắt đầu từ dùng dao cắt lát trái cam trên thớt gỗ, đổ bột bánh vào tô thủy tinh, đặt chảo phẳng lên bếp ga bật lửa, cho đến khi múc bột đổ vào khuôn tròn trên chảo.",
+    "text_en": "A cooking show demonstrating how to make orange pancakes, starting from slicing an orange on a cutting board, pouring flour into a glass bowl, placing a pan on the gas stove with flames, to pouring batter into a round mold.",
+    "difficulty_tags": [
+      "temporal_order",
+      "action_sequence"
+    ],
+    "gt_video_id": "L26_V419",
+    "events": [
+      {
+        "text_en": "slicing an orange into thin round slices on a wooden cutting board",
+        "gt_frame_start": 2305,
+        "gt_frame_end": 2358
+      },
+      {
+        "text_en": "pouring pancake flour mix from the package into a glass bowl",
+        "gt_frame_start": 2594,
+        "gt_frame_end": 2660
+      },
+      {
+        "text_en": "placing a flat square pan onto the gas stove with blue burning flames",
+        "gt_frame_start": 3386,
+        "gt_frame_end": 3457
+      },
+      {
+        "text_en": "pouring pancake batter with a spoon into a round metal mold on the pan",
+        "gt_frame_start": 4016,
+        "gt_frame_end": 4097
+      }
+    ]
+  },
+  {
+    "query_id": "e-trake-009",
+    "type": "TRAKE",
+    "text_vi": "Chương trình ẩm thực chuẩn bị món cá hồi sa-kê, bắt đầu từ dùng dao cắt miếng cá hồi tươi trên thớt gỗ, xếp các lát cá hồi vào đĩa sứ trắng, dùng muỗng trộn đều nguyên liệu trong tô, cho đến khi xếp các lát sa-kê chiên vào đĩa.",
+    "text_en": "A cooking show preparing a salmon and breadfruit dish, starting from slicing fresh salmon fillet on a cutting board, arranging salmon slices on a plate, mixing ingredients in a bowl, to adding fried breadfruit slices onto the plate.",
+    "difficulty_tags": [
+      "temporal_order",
+      "action_sequence"
+    ],
+    "gt_video_id": "L26_V425",
+    "events": [
+      {
+        "text_en": "slicing fresh raw salmon fillet on a wooden cutting board",
+        "gt_frame_start": 1973,
+        "gt_frame_end": 2049
+      },
+      {
+        "text_en": "arranging the sliced salmon pieces neatly onto a white ceramic plate",
+        "gt_frame_start": 2267,
+        "gt_frame_end": 2305
+      },
+      {
+        "text_en": "mixing salmon and seasonings together in a white bowl with a spoon",
+        "gt_frame_start": 2627,
+        "gt_frame_end": 2670
+      },
+      {
+        "text_en": "adding crispy fried breadfruit sake slices into the serving dish",
+        "gt_frame_start": 3505,
+        "gt_frame_end": 3578
+      }
+    ]
+  },
+  {
+    "query_id": "e-trake-010",
+    "type": "TRAKE",
+    "text_vi": "Chương trình làm món bánh tráng miệng lá dứa, bắt đầu từ rót nước cốt dừa vào cối hỗn hợp màu xanh, đập thêm 2 quả trứng gà, đặt nồi thủy tinh màu vàng hổ phách lên bếp ga bật lửa, cho đến khi dùng nĩa múc một miếng bánh kẹp nhân trên đĩa.",
+    "text_en": "A cooking show preparing a pandan dessert pancake, starting from pouring coconut milk into the green pandan mixture, cracking and adding two eggs, placing an amber glass pot on the stove with flame, to lifting a slice of pancake dessert with a fork.",
+    "difficulty_tags": [
+      "temporal_order",
+      "action_sequence"
+    ],
+    "gt_video_id": "L26_V430",
+    "events": [
+      {
+        "text_en": "pouring coconut milk into a measuring container containing green pandan liquid",
+        "gt_frame_start": 2545,
+        "gt_frame_end": 2561
+      },
+      {
+        "text_en": "cracking and adding two whole chicken eggs into the container",
+        "gt_frame_start": 2810,
+        "gt_frame_end": 2817
+      },
+      {
+        "text_en": "placing an amber-yellow glass cooking pot onto the gas stove and turning on the flame",
+        "gt_frame_start": 3255,
+        "gt_frame_end": 3305
+      },
+      {
+        "text_en": "lifting a slice of the finished layered dessert pancake with a fork from the plate",
+        "gt_frame_start": 6824,
+        "gt_frame_end": 6913
+      }
+    ]
+  }
 ]
