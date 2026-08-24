@@ -33,6 +33,11 @@ You are answering a question about a video frame. You have:
 - The original question (may be in Vietnamese or English)
 - A list of objects detected in the top candidate frames (from object detection AI)
 
+Note: this object list only contains generic OBJECT NAMES (person, car, fish, ...) detected by an
+object detector — it does NOT contain any text, digits, prices, or signage content read from the image.
+If the question asks for a specific NUMBER, PRICE, or TEXT shown on screen, reply with exactly:
+CANNOT_ANSWER_FROM_OBJECTS — do not guess a number from the object list.
+
 Based on the detected objects, answer the question concisely.
 If you cannot answer from objects alone, reply with exactly: CANNOT_ANSWER_FROM_OBJECTS
 
@@ -43,16 +48,20 @@ Detected objects in candidate frames:
 
 Answer (concise, in the same language as the question):"""
 
-ANSWER_FROM_IMAGE_PROMPT = """\
-You are analyzing a video keyframe to answer a question.
+ANSWER_FROM_IMAGES_PROMPT = """\
+You are analyzing up to 3 candidate video keyframes retrieved for the same scene to answer a question.
+They may show the same moment at slightly different times — one may be clearer than the others.
 
 Question: {question}
 
-Look at the image carefully and answer concisely.
-- If the question is in Vietnamese, answer in Vietnamese
-- If in English, answer in English
-- Keep the answer SHORT (1-5 words if possible)
-- Be factual, based only on what you can see
+Look at the image(s) carefully and answer concisely:
+- If the question asks for a NUMBER, COUNT, or TEXT visible on a display/gauge/sign/banner/scoreboard/
+    price tag, read the digits/characters literally, one by one, and report EXACTLY what is shown across
+    the clearest frame — do not round, estimate, or invent a "plausible" number.
+- If the question asks to COUNT people/objects, count carefully what is visible in the frame(s).
+- If the target detail is not visible/legible in ANY of the frames, say so briefly instead of guessing.
+- If the question is in Vietnamese, answer in Vietnamese; if in English, answer in English.
+- Keep the answer SHORT (1-5 words if possible) and factual, based only on what you can see.
 
 Answer:"""
 
@@ -80,6 +89,21 @@ Question: {question}
 Answer:"""
 
 MAX_ANSWER_CHARS = 100
+
+# Cau hoi doi hoi doc so/chu/dem tren man hinh (bien bao, dong ho, chu giai ban do, ten dia danh...).
+# Objects JSON (Faster R-CNN/OpenImages) chi tra ve TEN OBJECT chung chung, khong doc duoc text/so, nen
+# voi nhom cau hoi nay bo qua thang Tang 1 va di thang vao Tang 2 (vision doc anh truc tiep) de tranh
+# doan bay tu danh sach object khong lien quan.
+_TEXT_READING_HINTS = re.compile(
+    r"(bao nhiêu|con số|số (?:mấy|hiển thị|ghi)|biển báo|biển số|giá(?:\s*tiền)?|"
+    r"dòng chữ|chữ gì|tên (?:là gì|của|gọi)|ghi (?:là )?gì|cấp độ|number|how many|what number)",
+    re.IGNORECASE,
+)
+
+
+def _needs_text_reading(question: str) -> bool:
+    """True neu cau hoi can doc so/chu/dem tren man hinh — nen bo qua Tang 1 (objects JSON)."""
+    return bool(_TEXT_READING_HINTS.search(question))
 
 
 def _normalize_answer(raw_answer: str) -> str:
@@ -122,65 +146,71 @@ def answer_from_hits(
         return {"answer": "", "best_hit": {}, "confidence": 0.0, "method": "fallback"}
 
     candidates = hits[:top_n]
+    skip_objects_tier = _needs_text_reading(question)
 
-    # --- Tang 1: Objects JSON ---
-    all_objects = []
-    objects_by_hit = {}
-    for i, hit in enumerate(candidates):
-        vid = hit.get("video_id", "")
-        n   = hit.get("n")
-        if vid and n is not None:
-            objs = get_objects(vid, int(n))
-            objects_by_hit[i] = objs
-            all_objects.extend(objs)
-        else:
-            objects_by_hit[i] = []
+    # --- Tang 1: Objects JSON (bo qua neu cau hoi can doc so/chu — xem _needs_text_reading) ---
+    if not skip_objects_tier:
+        all_objects = []
+        objects_by_hit = {}
+        for i, hit in enumerate(candidates):
+            vid = hit.get("video_id", "")
+            n   = hit.get("n")
+            if vid and n is not None:
+                objs = get_objects(vid, int(n))
+                objects_by_hit[i] = objs
+                all_objects.extend(objs)
+            else:
+                objects_by_hit[i] = []
 
-    unique_objects = list(dict.fromkeys(all_objects))  # preserve order, deduplicate
+        unique_objects = list(dict.fromkeys(all_objects))  # preserve order, deduplicate
 
-    if unique_objects:
-        obj_text = ", ".join(unique_objects[:30])  # cap 30 objects
-        prompt1  = ANSWER_FROM_OBJECTS_PROMPT.format(
-            question=question,
-            objects_text=obj_text,
-        )
-        ans1 = call_llm(prompt1, model="text", temperature=0.1, max_tokens=80)
-
-        if "CANNOT_ANSWER_FROM_OBJECTS" not in ans1:
-            # Cross-check
-            crosscheck = _crosscheck_answer(question, ans1, unique_objects[:15])
-            conf = 0.75 if crosscheck else 0.45
-            return {
-                "answer":     _normalize_answer(ans1),
-                "best_hit":   candidates[0],
-                "confidence": conf,
-                "method":     "objects",
-            }
-
-    # --- Tang 2: Gemini Vision (chi khi co anh) ---
-    for hit in candidates:
-        jpg = hit.get("jpg_path")
-        if jpg and Path(jpg).exists():
-            prompt2 = ANSWER_FROM_IMAGE_PROMPT.format(question=question)
-            ans2 = call_llm(
-                prompt2,
-                image_paths=[jpg],
-                model="vision",
-                temperature=0.1,
-                max_tokens=80,
+        if unique_objects:
+            obj_text = ", ".join(unique_objects[:30])  # cap 30 objects
+            prompt1  = ANSWER_FROM_OBJECTS_PROMPT.format(
+                question=question,
+                objects_text=obj_text,
             )
-            # Cross-check voi objects
-            hit_n = hit.get("n")
-            hit_vid = hit.get("video_id", "")
-            hit_objs = get_objects(hit_vid, int(hit_n)) if hit_n else []
-            crosscheck = _crosscheck_answer(question, ans2, hit_objs)
-            conf = 0.85 if crosscheck else 0.6
-            return {
-                "answer":     _normalize_answer(ans2),
-                "best_hit":   hit,
-                "confidence": conf,
-                "method":     "vision",
-            }
+            ans1 = call_llm(prompt1, model="text", temperature=0.1, max_tokens=80)
+
+            if "CANNOT_ANSWER_FROM_OBJECTS" not in ans1:
+                # Cross-check
+                crosscheck = _crosscheck_answer(question, ans1, unique_objects[:15])
+                conf = 0.75 if crosscheck else 0.45
+                return {
+                    "answer":     _normalize_answer(ans1),
+                    "best_hit":   candidates[0],
+                    "confidence": conf,
+                    "method":     "objects",
+                }
+
+    # --- Tang 2: Vision (chi khi co anh) ---
+    # Gom toi da 3 anh candidate dau tien (thay vi chi anh top-1) de model doi chieu giua cac frame —
+    # frame chua so/chu can doc co the khong phai frame co score CLIP cao nhat.
+    vision_hits = [h for h in candidates if h.get("jpg_path") and Path(h["jpg_path"]).exists()][:3]
+    if vision_hits:
+        image_paths = [h["jpg_path"] for h in vision_hits]
+        prompt2 = ANSWER_FROM_IMAGES_PROMPT.format(question=question)
+        ans2 = call_llm(
+            prompt2,
+            image_paths=image_paths,
+            model="vision",
+            temperature=0.1,
+            max_tokens=80,
+        )
+        # Cross-check voi objects gom tu tat ca anh da gui cho vision
+        combined_objs = []
+        for h in vision_hits:
+            hit_n, hit_vid = h.get("n"), h.get("video_id", "")
+            if hit_n:
+                combined_objs.extend(get_objects(hit_vid, int(hit_n)))
+        crosscheck = _crosscheck_answer(question, ans2, list(dict.fromkeys(combined_objs)))
+        conf = 0.85 if crosscheck else 0.6
+        return {
+            "answer":     _normalize_answer(ans2),
+            "best_hit":   vision_hits[0],
+            "confidence": conf,
+            "method":     "vision",
+        }
 
     # --- Fallback: chi dung kien thuc nen khi khong con bang chung tu video ---
     knowledge_prompt = KNOWLEDGE_FALLBACK_PROMPT.format(question=question)

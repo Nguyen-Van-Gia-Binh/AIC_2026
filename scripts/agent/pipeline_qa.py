@@ -56,7 +56,7 @@ def run_qa(
 
     # ─── Vong 1 ────────────────────────────────────────────────────────────────
     print(f"[qa] Vong 1: rewrite + retrieve...", flush=True)
-    query_en = rewrite_query(query_text)
+    query_en = rewrite_query(query_text, question=question)
     print(f"[qa]   query_en: {query_en!r}")
 
     hits = fast_retrieve(query_en, top_k=top_k)
@@ -72,7 +72,7 @@ def run_qa(
         feedback = f"Top results did not clearly answer: {question}. Objects found: {_summarize_top_objects(hits[:5])}"
         print(f"[qa] Confidence thap ({qa_result['confidence']:.2f}), thu vong 2...")
 
-        query_en_v2 = rewrite_query(query_text, feedback=feedback)
+        query_en_v2 = rewrite_query(query_text, feedback=feedback, question=question)
         print(f"[qa]   query_en_v2: {query_en_v2!r}")
 
         hits_v2 = fast_retrieve(query_en_v2, top_k=top_k)

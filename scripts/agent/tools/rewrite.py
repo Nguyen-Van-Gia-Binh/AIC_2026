@@ -21,44 +21,78 @@ if str(_ROOT) not in sys.path:
 from agent.config import call_llm  # noqa: E402
 
 REWRITE_PROMPT = """\
-You are a visual search query optimizer for a video retrieval system using CLIP (image-text matching).
+You are a visual search query optimizer for a video retrieval system using CLIP (image-text matching)
+on Vietnamese TV/news-style footage (cooking, wildlife, sports, education, disaster coverage, festivals).
 
-Task: Translate and rewrite the following query into a concise English description optimized for CLIP image search.
+Task: Translate and rewrite the following query into ONE concise English sentence describing a SINGLE
+video frame, optimized for CLIP image search.
 
 Rules:
 - Output ONLY the rewritten query (no explanations, no quotes)
-- Keep it concise (max 35 words)
-- FIRST identify and preserve the most distinctive visual anchor object or landmark
-    (for example: helicopter, wind turbine, red octopus toy, sand sculpture)
+- Keep it concise (max 40 words), plain visual language (no camera/editing jargon like "shot", "cut")
+- If the query describes MULTIPLE sequential moments ("starts with X, then Y, ends with Z" /
+    "bắt đầu bằng... sau đó... kết thúc bằng..."), do NOT blend everything into one vague sentence —
+    but also do NOT silently drop a rare/specific object just because it was mentioned in an earlier
+    moment. Keep a short mention (a few words) of EVERY moment that contains a rare or specific visual
+    detail (an unusual object, a measuring instrument, a display/gauge/sign/number board, a close-up
+    action); only drop moments that are generic/common (plain establishing shots, ordinary people
+    standing/walking with no distinguishing detail). If you must pick just ONE moment as the primary
+    target because of the length limit, pick the one with the rarest, most specific object — NOT
+    automatically the first or the last one described; ordering in the query is not a reliable signal
+    of which moment is the target.
+- A measuring/display object mentioned anywhere in the query (a scale, gauge, meter, sign, scoreboard,
+    price/number board) is almost always more distinctive than a generic action (a hand holding
+    something, someone walking) — when choosing what to keep, this kind of object outranks a generic
+    action even if the generic action is described later in the query.
+- Preserve EXACT counts and colors mentioned for people/objects (e.g. "5 people", "one person wearing
+    glasses", "three red hats", "yellow car") — these are strong CLIP-matchable attributes, keep them
+    verbatim rather than summarizing them away
+- Preserve distinctive proper nouns or on-screen signage/text mentioned in the query (e.g. place/brand
+    names like "London Zoo", a price/number board, a scoreboard) — CLIP cannot read text reliably, but
+    naming it tells CLIP what KIND of shot to match (a sign, a gauge, a display)
+- FIRST identify and preserve the single most distinctive visual anchor object or landmark for the
+    chosen moment (for example: helicopter, wind turbine, red octopus toy, sand sculpture, a scale/gauge
+    display, a lion-dance head)
 - Put that anchor object near the START of the rewritten query; never omit it even
     when the query also describes people or an action
-- Then include the main action and the important people/clothing, followed by location
+- Then include the main action and the important people/clothing/colors, followed by location
     or background context if useful
 - Prefer concrete visual nouns and verbs; remove vague filler and factual details
-    that cannot be seen in a frame
-- Remove temporal/sequential words (first, then, after) — this rewrite is for
-    single-frame retrieval, including each individual TRAKE event
-- If already in English, just clean and optimize it while preserving the anchor object
+    that cannot be seen in a single still frame (sounds, durations, "sau đó", "tiếp theo")
+- Remove leftover temporal/sequential connector words (first, then, after) once the single target
+    moment has been chosen — this rewrite is for single-frame retrieval, including each individual
+    TRAKE event
+- If already in English, just clean and optimize it while preserving the anchor object and rules above
 
-Preferred format: "[distinctive anchor object] + [main action] + [people/clothing] + [visible setting]"
+Preferred format: "[distinctive anchor object/display] + [main action] + [people/clothing/colors] + [visible setting]"
 
 Query: {query}
 
 Rewritten query:"""
 
 
-def rewrite_query(query: str, feedback: str | None = None) -> str:
+def rewrite_query(query: str, feedback: str | None = None, question: str | None = None) -> str:
     """
     Dich va toi uu query cho CLIP search.
 
     Args:
         query:    Query goc (tieng Viet hoac Anh).
         feedback: Feedback tu lan search truoc (de cai thien, dung cho vong lap thu 2).
+        question: Cau hoi Q&A cu the neu co (dung cho pipeline_qa.py) — giup rewrite giu lai dung
+                  vat the/canh can nhin thay de tra loi, thay vi vo tinh bo qua no khi query mo ta
+                  nhieu canh noi tiep nhau.
 
     Returns:
         Query tieng Anh da toi uu.
     """
     prompt = REWRITE_PROMPT.format(query=query)
+    if question:
+        prompt += (
+            f"\n\nThis rewritten query will be used to retrieve the video frame needed to answer this "
+            f"question: {question}\nMake sure the object/detail the question asks about (e.g. a number "
+            f"on a display, a sign, a specific item) is kept in the rewritten query, even if it was "
+            f"described earlier in the query than other moments."
+        )
     if feedback:
         prompt += f"\n\nPrevious search failed. Feedback: {feedback}\nRewrite with different keywords:"
 
