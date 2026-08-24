@@ -19,14 +19,14 @@ người khác, không nhất thiết theo đúng 1 người/1 phase):
 | **A** | Phase 1 (`AIC_MODE`) + Phase 2 (rewrite thêm rule phủ định) | Cả 2 việc nhỏ, độc lập, không đụng pipeline TRAKE — làm xong sớm để rảnh hỗ trợ người khác                                                              |
 | **B** | Phase 3 (risk-aware ranking)                                      | Việc hậu xử lý retrieval thuần thuật toán, không cần LLM/OCR — tách biệt khỏi 2 người còn lại                                                              |
 | **C** | Phase 4 (TRAKE: DP + cross-check tầng 3)                         | 1 người ôm trọn`pipeline_trake.py` từ đầu tới cuối, tránh 2 người sửa cùng 1 file dễ đụng nhau                                                           |
-| **D** | Phase 5 (OCR on-demand)**kiêm "eval owner"**               | Việc cài thêm dependency mới (PaddleOCR), tách máy riêng nếu cần; đồng thời là người duy nhất chạy`run_eval.py` trước/sau mỗi lần merge của cả nhóm |
+| **D** | Phase 5 (OCR on-demand)**kiêm "eval owner"**               | Việc cài thêm dependency mới (EasyOCR), tách máy riêng nếu cần; đồng thời là người duy nhất chạy`run_eval.py` trước/sau mỗi lần merge của cả nhóm |
 
 **Cần chuẩn bị trước khi bắt đầu code (ngày 1):**
 
 - Mỗi máy có `.env` với `OPENROUTER_API_KEY` hợp lệ (xem `.env.example`); người A chuẩn bị thêm biến
   `OPENROUTER_MODEL_CONTEST` (model mạnh hơn dự kiến dùng lúc nộp thật) trước khi cần đến ở Phase 1.
-- Người D cài thử `pip install paddlepaddle paddleocr` trên máy sẽ làm Phase 5 **trước** ngày bắt đầu —
-  lần đầu chạy PaddleOCR tự tải model, kiểm tra xung đột môi trường sớm nếu có.
+- Người D cài thử `pip install easyocr` trên máy sẽ làm Phase 5 **trước** ngày bắt đầu — lần đầu chạy
+  EasyOCR tự tải model, tốn vài phút, không nên để việc này rơi vào lúc đang code.
 - **Mở rộng `queries/eval_ground_truth.json`** — hiện chỉ có ~19 câu (18 KIS + 1 QA, do AI viết từ
   ảnh, chưa có câu TRAKE nào) — không đủ để hiệu chỉnh ngưỡng cho Phase 3/4. Người D (eval owner) cần
   tự xem video thật, bổ sung ít nhất 5-10 câu TRAKE và thêm câu QA/KIS dạng phủ định (khớp Phase 2) —
@@ -198,5 +198,5 @@ Success: nộp đợt 4 với cả 5 cải tiến đã qua benchmark xác nhận
 - **Rotation key Gemini vẫn chưa nhớ trạng thái key đã cạn quota giữa các lần khởi động** (bài học
   đợt 1, xem [EXPERIMENT.md](EXPERIMENT.md)) — chưa có Phase nào ở trên xử lý việc này; cân nhắc thêm
   nếu còn thời gian sau Phase 6, không bắt buộc cho đợt 4.
-- **PaddleOCR (Phase 5) là dependency mới** — rủi ro xung đột cài đặt trên một số máy; đã đưa vào
-  mục chuẩn bị ngày 1 để test cài đặt `paddlepaddle` + `paddleocr` sớm.
+- **EasyOCR (Phase 5) là dependency mới hoàn toàn** — rủi ro cài đặt/tải model lần đầu chậm hơn dự
+  kiến trên máy nào đó trong nhóm; đã đưa vào mục chuẩn bị ngày 1 để giảm rủi ro này.
