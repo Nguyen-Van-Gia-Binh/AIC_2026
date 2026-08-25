@@ -168,6 +168,33 @@ def _build_siglip_encoder() -> Callable[[list[str]], np.ndarray]:
     return encode
 
 
+def _build_siglip2_encoder() -> Callable[[list[str]], np.ndarray]:
+    """SigLIP2 base — bản cải tiến của SigLIP v1 đang dùng (siglip), Google công bố cải thiện rõ
+    khả năng đa ngôn ngữ. features_siglip2/*.npy do người dùng tự encode ngoài repo (không qua
+    kaggle_jobs/), KHÔNG rõ chắc chắn model_id/độ phân giải gốc — chỉ biết dim=768 (loại trừ
+    so400m, dim 1152). Đoán google/siglip2-base-patch16-384 (cùng độ phân giải 384 với job siglip
+    hiện có trong kaggle_jobs/02_siglip). Tự kiểm chứng bằng R@k của run_eval.py: nếu 'siglip2' ra
+    điểm gần 0 so với 'siglip' đang có điểm thật -> model_id đoán sai, đổi sang biến thể khác
+    (patch16-256/224) rồi thử lại."""
+    import torch
+    from transformers import AutoModel, AutoProcessor
+    model_id = "google/siglip2-base-patch16-384"
+    print(f"[multi_index]   tải {model_id} (lần đầu sẽ tải checkpoint vài trăm MB)...")
+    model = AutoModel.from_pretrained(model_id)
+    model.eval()
+    processor = AutoProcessor.from_pretrained(model_id)
+
+    def encode(texts: list[str]) -> np.ndarray:
+        # Giống SigLIP v1: huấn luyện với padding cố định "max_length".
+        inputs = processor(text=list(texts), return_tensors="pt", padding="max_length", truncation=True)
+        with torch.no_grad():
+            out = model.get_text_features(**inputs)
+        vec = _extract_embedding(out, model, projection_attr=None)
+        vec = torch.nn.functional.normalize(vec, dim=-1)
+        return vec.numpy().astype(np.float32)
+    return encode
+
+
 def _build_dfn_encoder() -> Callable[[list[str]], np.ndarray]:
     import torch
     import open_clip
@@ -257,6 +284,7 @@ MODEL_REGISTRY: dict[str, ModelSpec] = {
     "clip_vitb32": ModelSpec("clip_vitb32", "clip-features-32", _build_clip_vitb32_encoder),
     "vitl14":      ModelSpec("vitl14",      "features_vitl14",  _build_vitl14_encoder),
     "siglip":      ModelSpec("siglip",      "features_siglip",  _build_siglip_encoder),
+    "siglip2":     ModelSpec("siglip2",     "features_siglip2", _build_siglip2_encoder),
     "dfn":         ModelSpec("dfn",         "features_dfn",     _build_dfn_encoder),
     "jina":        ModelSpec("jina",        "features_jina",    _build_jina_encoder),
 }

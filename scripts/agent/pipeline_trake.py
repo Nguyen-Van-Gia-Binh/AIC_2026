@@ -15,7 +15,10 @@ Giai doan 2 - Alignment (N lan, 1 lan / khoang khac):
       -> fast_retrieve_for_video(query_i, video_id, top_k=10)
       -> chon frame tot nhat, CO THOI GIAN sau frame[i-1] (world model nhe)
     -> tinh trake_score = trung binh score cac event
-  -> Sap xep theo trake_score -> chon video tot nhat
+    -> LLM crosscheck 1 lan/video: doc objects (ocr_lookup) + transcript (asr_lookup) tung frame
+       trong chain, hoi LLM 1 diem plausibility 0.0-1.0 (_llm_crosscheck_chain) -> final_score =
+       trake_score + LLM_SCORE_WEIGHT * llm_score
+  -> Sap xep theo final_score -> chon video tot nhat
 
 Output: list[dict] {video_id, frame_id_1, ..., frame_id_N}
 """
@@ -31,10 +34,12 @@ _ROOT = Path(__file__).resolve().parent.parent
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
+from agent.config import call_llm
 from agent.tools.retrieve import fast_retrieve, fast_retrieve_for_video
 from agent.tools.rewrite import rewrite_query
 from agent.tools.rerank import RETRIEVAL_POOL_SIZE
 from agent.tools.ocr_lookup import get_objects
+from agent.tools.asr_lookup import get_transcript
 
 
 def _find_best_increasing_chain(event_hits: list[list[dict]]) -> list[dict] | None:
@@ -92,44 +97,60 @@ def _find_best_increasing_chain(event_hits: list[list[dict]]) -> list[dict] | No
     return chain  # type: ignore[return-value]
 
 
-# Nguong chenh lech trake_score (trung binh cosine similarity qua N event) giua video #1 va #2 de coi
-# la "chua du ro rang, can cross-check bang object detection" — cung thang do voi
-# rerank.MARGIN_THRESHOLD (~0.012, xem scripts/agent/tools/rerank.py). Diem khoi dau, se tinh chinh o
-# Phase 6 khi co benchmark rong hon (xem PLAN.md "Blockers").
-TRAKE_CROSSCHECK_MARGIN = 0.012
+# Trong so cua diem LLM crosscheck (0.0-1.0) khi cong vao trake_score (trung binh cosine similarity,
+# cung thang do voi rerank.MARGIN_THRESHOLD ~0.012) de ra final_score dung de rank. Diem khoi dau, se
+# tinh chinh o Phase 6 khi co benchmark rong hon (xem PLAN.md "Blockers").
+LLM_SCORE_WEIGHT = 0.05
 
-# Tu loai khoi keyword khi doi chieu voi object detect duoc — chi loai tu ngu phap, GIU LAI danh tu chi
-# doi tuong (man/woman/car/...) vi do chinh la thu can khop voi ten object (Person/Car/...).
-_STOPWORDS = frozenset({
-    "a", "an", "the", "of", "in", "on", "at", "to", "and", "or", "is", "are", "was", "were",
-    "with", "this", "that", "these", "those", "his", "her", "their", "its", "for", "from",
-    "by", "as", "be", "being", "been", "has", "have", "had", "it", "he", "she", "they",
-    "just", "while", "first", "moment", "view",
-})
+# Diem trung lap khi LLM crosscheck loi hoac khong parse duoc — khong lam lech ranking so voi trake_score.
+DEFAULT_LLM_CROSSCHECK_SCORE = 0.5
+
+_SCORE_RE = re.compile(r"SCORE:\s*(-?\d+(?:\.\d+)?)", re.IGNORECASE)
+
+TRAKE_CROSSCHECK_PROMPT = """\
+You are verifying whether a candidate sequence of video frames matches a described sequence of events.
+
+Overall scene: {query}
+
+Events in order, with evidence found in each candidate frame:
+{events_block}
+
+Rate how well this evidence (detected objects + spoken transcript) supports that the frames truly show \
+this sequence of events, in order. Detected objects and transcript may be incomplete or noisy — judge \
+based on overall plausibility, not on requiring every event to have full evidence.
+
+Reply with exactly one line in the form: SCORE: <a number between 0.00 and 1.00>"""
 
 
-def _extract_keywords(text: str) -> set[str]:
-    """Tach tu khoa tho tu mo ta (khong LLM) de doi chieu voi ten object detect duoc — loc stopword
-    ngu phap, giu tu >= 3 ky tu."""
-    words = re.findall(r"[a-zA-Z]+", text.lower())
-    return {w for w in words if len(w) >= 3 and w not in _STOPWORDS}
+def _llm_crosscheck_chain(query_en: str, event_queries_en: list[str], chain: list[dict]) -> float:
+    """Goi LLM 1 lan de danh gia plausibility cua ca chain (object + transcript moi frame) so voi
+    chuoi event mo ta — thay cho crosscheck rule-based (keyword-matching) truoc day (xem
+    DECISION.md/EXPERIMENT.md neu can boi canh doi huong). Loi/parse fail -> tra ve
+    DEFAULT_LLM_CROSSCHECK_SCORE (trung lap, khong lam lech ranking)."""
+    lines = []
+    for i, (eq, hit) in enumerate(zip(event_queries_en, chain)):
+        vid, n, pts = hit.get("video_id", ""), hit.get("n"), hit.get("pts_time")
+        objs = get_objects(vid, int(n)) if vid and n is not None else []
+        transcript = get_transcript(vid, float(pts)) if vid and pts is not None else ""
+        lines.append(
+            f"Event {i + 1}: {eq}\n"
+            f"  Objects: {', '.join(objs[:10]) or 'none'}\n"
+            f"  Transcript: {transcript or 'none'}"
+        )
+    prompt = TRAKE_CROSSCHECK_PROMPT.format(query=query_en, events_block="\n".join(lines))
 
+    try:
+        response = call_llm(prompt, model="text", temperature=0.0, max_tokens=20)
+    except Exception as error:
+        print(f"[trake]   LLM crosscheck loi ({type(error).__name__}: {error}), dung diem trung lap {DEFAULT_LLM_CROSSCHECK_SCORE}")
+        return DEFAULT_LLM_CROSSCHECK_SCORE
 
-def _crosscheck_hit_count(chain: list[dict], keywords: set[str]) -> int:
-    """Dem so keyword co it nhat 1 object detect duoc (gop tu toan bo frame trong chain) chua no —
-    khong goi LLM, chi doc Objects JSON co san (ocr_lookup.get_objects)."""
-    if not keywords or not chain:
-        return 0
-    all_objects: set[str] = set()
-    for hit in chain:
-        vid = hit.get("video_id", "")
-        n = hit.get("n")
-        if vid and n is not None:
-            all_objects.update(o.lower() for o in get_objects(vid, int(n)))
-    all_obj_words: set[str] = set()
-    for obj in all_objects:
-        all_obj_words.update(re.findall(r"[a-z]+", obj))
-    return sum(1 for kw in keywords if kw in all_obj_words)
+    match = _SCORE_RE.search(response)
+    if not match:
+        print(f"[trake]   LLM crosscheck khong parse duoc score tu: {response!r}, dung diem trung lap")
+        return DEFAULT_LLM_CROSSCHECK_SCORE
+
+    return max(0.0, min(1.0, float(match.group(1))))
 
 
 def run_trake(
@@ -194,29 +215,27 @@ def run_trake(
             print(f"[trake]   {vid}: khong tim duoc chuoi moc tang dan hop le -> loai")
             continue
 
+        trake_score = sum(h["score"] for h in chain) / len(chain)
         video_results.append({
-            "video_id":  vid,
-            "frame_ids": [h["frame_id"] for h in chain],
-            "score":     sum(h["score"] for h in chain) / len(chain),
-            "chain":     chain,  # giu hit day du (co "n") de cross-check tang 3 dung — khong vao CSV
+            "video_id":    vid,
+            "frame_ids":   [h["frame_id"] for h in chain],
+            "trake_score": trake_score,
+            "chain":       chain,  # giu hit day du (co "n") de cross-check tang 3 dung — khong vao CSV
         })
 
-    # Sap xep theo score
-    video_results.sort(key=lambda x: x["score"], reverse=True)
+    # ─── LLM crosscheck (objects + transcript) cho MOI video candidate ─────────
+    # Thay cho crosscheck rule-based (keyword-matching, chi chay khi margin top-2 sat) truoc day —
+    # xem scripts/agent/tools/asr_lookup.py va _llm_crosscheck_chain(). Danh doi: cham hon (toi da
+    # len(video_results) LLM call / lan chay TRAKE) doi lay danh gia ngu nghia thay vi khop tu tho.
+    for vr in video_results:
+        llm_score = _llm_crosscheck_chain(query_en, event_queries_en, vr["chain"])
+        vr["llm_score"] = llm_score
+        vr["score"] = vr["trake_score"] + LLM_SCORE_WEIGHT * llm_score
+        print(f"[trake]   {vr['video_id']}: trake_score={vr['trake_score']:.4f} "
+              f"llm_score={llm_score:.2f} -> final_score={vr['score']:.4f}")
 
-    # Cross-check top-2 khi margin sac diem < nguong
-    if len(video_results) >= 2:
-        margin = video_results[0]["score"] - video_results[1]["score"]
-        if margin < TRAKE_CROSSCHECK_MARGIN:
-            keywords = _extract_keywords(query_en + " " + " ".join(event_queries_en))
-            hits0 = _crosscheck_hit_count(video_results[0]["chain"], keywords)
-            hits1 = _crosscheck_hit_count(video_results[1]["chain"], keywords)
-            print(f"[trake]   Cross-check top-2 (margin={margin:.4f} < {TRAKE_CROSSCHECK_MARGIN}): "
-                  f"{video_results[0]['video_id']}={hits0} keyword-hit vs "
-                  f"{video_results[1]['video_id']}={hits1}")
-            if hits1 > hits0:
-                video_results[0], video_results[1] = video_results[1], video_results[0]
-                print(f"[trake]   -> Doi cho: {video_results[0]['video_id']} len #1")
+    # Sap xep theo final_score (trake_score + LLM_SCORE_WEIGHT * llm_score)
+    video_results.sort(key=lambda x: x["score"], reverse=True)
 
     # Moi video la 1 phuong an; giu tran 100 dong theo rule BTC.
     results = []
@@ -284,33 +303,42 @@ def _run_self_tests() -> None:
     assert chain_4 is not None, "Frame_idx bang nhau giua 2 event phai HOP LE (khong giam)"
     print("[trake] Test frame_idx bang nhau: OK")
 
-    # Test 5: trich keyword tho — giu danh tu chi doi tuong (khop ten object), loai stopword ngu phap
-    kws = _extract_keywords("A man cutting the ribbon with his colleagues")
-    assert "man" in kws and "ribbon" in kws and "colleagues" in kws, f"Thieu keyword: {kws}"
-    assert "the" not in kws and "his" not in kws and "with" not in kws, f"Con sot stopword: {kws}"
-    print("[trake] Test extract keywords: OK")
+    # Test 5-8: _llm_crosscheck_chain — monkeypatch call_llm (module-level, import truc tiep nen
+    # gan lai bien global de "thay the ham that").
+    global call_llm
+    _orig_call_llm = call_llm
+    fake_chain = [_fake_hit("V", 1, 0.5), _fake_hit("V", 2, 0.6)]
+    fake_events = ["athlete takes off", "athlete lands"]
 
-    # Test 6: _crosscheck_hit_count khong crash voi keyword rong / chain rong
-    assert _crosscheck_hit_count([], set()) == 0
-    assert _crosscheck_hit_count([], {"car"}) == 0
-    print("[trake] Test crosscheck rong: OK")
-
-    # Test 7: _crosscheck_hit_count phai khop theo TU, khong phai substring — "man" khong duoc tinh la
-    # hit khi object detect duoc la "Woman" (code review Phase 6 phat hien substring "man" in "woman").
-    global get_objects
-
-    def _fake_get_objects(vid, n):
-        return ["woman", "car"]
-
-    _orig_get_objects = get_objects
-    get_objects = _fake_get_objects
     try:
-        chain_fake = [_fake_hit("V", 1, 0.5)]
-        assert _crosscheck_hit_count(chain_fake, {"man"}) == 0, "'man' khong duoc khop substring vao 'woman'"
-        assert _crosscheck_hit_count(chain_fake, {"car"}) == 1, "'car' phai khop dung tu 'car'"
+        # Test 5: parse dung score tu response chuan
+        call_llm = lambda *a, **k: "SCORE: 0.82"
+        score5 = _llm_crosscheck_chain("high jump", fake_events, fake_chain)
+        assert abs(score5 - 0.82) < 1e-9, f"Phai parse dung 0.82, duoc {score5}"
+        print("[trake] Test LLM crosscheck parse dung: OK")
+
+        # Test 6: call_llm loi -> tra ve diem trung lap, khong crash
+        def _raise(*a, **k):
+            raise RuntimeError("simulated failure")
+        call_llm = _raise
+        score6 = _llm_crosscheck_chain("high jump", fake_events, fake_chain)
+        assert score6 == DEFAULT_LLM_CROSSCHECK_SCORE, f"Loi call_llm phai tra diem trung lap, duoc {score6}"
+        print("[trake] Test LLM crosscheck loi -> diem trung lap: OK")
+
+        # Test 7: response khong parse duoc -> diem trung lap
+        call_llm = lambda *a, **k: "I cannot determine this."
+        score7 = _llm_crosscheck_chain("high jump", fake_events, fake_chain)
+        assert score7 == DEFAULT_LLM_CROSSCHECK_SCORE, f"Response khong hop le phai tra diem trung lap, duoc {score7}"
+        print("[trake] Test LLM crosscheck khong parse duoc -> diem trung lap: OK")
+
+        # Test 8: clamp ve [0, 1] khi LLM tra so ngoai khoang
+        call_llm = lambda *a, **k: "SCORE: 1.50"
+        assert _llm_crosscheck_chain("q", fake_events, fake_chain) == 1.0, "Phai clamp ve 1.0"
+        call_llm = lambda *a, **k: "SCORE: -0.20"
+        assert _llm_crosscheck_chain("q", fake_events, fake_chain) == 0.0, "Phai clamp ve 0.0"
+        print("[trake] Test LLM crosscheck clamp [0,1]: OK")
     finally:
-        get_objects = _orig_get_objects
-    print("[trake] Test crosscheck khop theo tu (khong substring): OK")
+        call_llm = _orig_call_llm
 
     print("[trake] Tat ca self-test PASS")
 
