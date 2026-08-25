@@ -17,3 +17,12 @@ sentencepiece==0.2.2
 einops
 timm
 accelerate
+
+# scripts/agent/tools/vlm_ocr_caption.py + scripts/index_ocr_es.py (OCR/caption qua Qwen2.5-VL-3B-
+# Instruct + index vào Elasticsearch — KHÔNG phải baseline production KIS/QA/TRAKE, xem CLAUDE.md):
+qwen-vl-utils==0.0.14     # helper resize/normalize ảnh chính thức của Qwen team
+elasticsearch==8.15.0     # đổi version cho khớp bản server ES thật đang dùng nếu khác
+
+# CLI để push/theo dõi/tải kết quả kaggle_jobs/ (xem kaggle_jobs/README.md) — thiếu từ trước, phát
+# hiện lúc chạy thử kaggle_jobs/05_qwen_vl_ocr_caption/ (2026-08-23):
+kaggle==2.2.4
