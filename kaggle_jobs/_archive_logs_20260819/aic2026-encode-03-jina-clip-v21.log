@@ -1,0 +1,95 @@
+4.3s 1 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 44.0/44.0 kB 1.5 MB/s eta 0:00:00
+5.2s 2 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 12.0/12.0 MB 97.0 MB/s eta 0:00:00
+5.2s 3 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 566.4/566.4 kB 36.0 MB/s eta 0:00:00
+34.0s 4 [encode_jina] device=cuda
+34.0s 5 [encode_jina] tải model jinaai/jina-clip-v2 ...
+52.3s 6 A new version of the following files was downloaded from https://huggingface.co/jinaai/jina-clip-implementation:
+52.3s 7 - configuration_clip.py
+52.3s 8 . Make sure to double-check they do not contain any added malicious code. To avoid downloading new versions of the code file, you can pin a revision.
+52.3s 9 `torch_dtype` is deprecated! Use `dtype` instead!
+52.6s 10 A new version of the following files was downloaded from https://huggingface.co/jinaai/jina-clip-implementation:
+52.6s 11 - hf_model.py
+52.6s 12 . Make sure to double-check they do not contain any added malicious code. To avoid downloading new versions of the code file, you can pin a revision.
+52.8s 13 A new version of the following files was downloaded from https://huggingface.co/jinaai/jina-clip-implementation:
+52.8s 14 - rope_embeddings.py
+52.8s 15 . Make sure to double-check they do not contain any added malicious code. To avoid downloading new versions of the code file, you can pin a revision.
+52.8s 16 A new version of the following files was downloaded from https://huggingface.co/jinaai/jina-clip-implementation:
+52.8s 17 - eva_model.py
+52.8s 18 - rope_embeddings.py
+52.8s 19 . Make sure to double-check they do not contain any added malicious code. To avoid downloading new versions of the code file, you can pin a revision.
+56.8s 20 A new version of the following files was downloaded from https://huggingface.co/jinaai/jina-clip-implementation:
+56.8s 21 - transform.py
+56.8s 22 . Make sure to double-check they do not contain any added malicious code. To avoid downloading new versions of the code file, you can pin a revision.
+56.8s 23 A new version of the following files was downloaded from https://huggingface.co/jinaai/jina-clip-implementation:
+56.8s 24 - modeling_clip.py
+56.8s 25 - hf_model.py
+56.8s 26 - eva_model.py
+56.8s 27 - transform.py
+56.8s 28 . Make sure to double-check they do not contain any added malicious code. To avoid downloading new versions of the code file, you can pin a revision.
+56.8s 29 `torch_dtype` is deprecated! Use `dtype` instead!
+62.6s 30 /root/.cache/huggingface/modules/transformers_modules/jinaai/jina_hyphen_clip_hyphen_implementation/39e6a55ae971b59bea6e44675d237c99762e7ee2/modeling_clip.py:140: UserWarning: Flash attention is not installed. Check https://github.com/Dao-AILab/flash-attention?tab=readme-ov-file#installation-and-features for installation instructions, disabling
+62.6s 31 warnings.warn(
+62.6s 32 /root/.cache/huggingface/modules/transformers_modules/jinaai/jina_hyphen_clip_hyphen_implementation/39e6a55ae971b59bea6e44675d237c99762e7ee2/modeling_clip.py:175: UserWarning: xFormers is not installed. Check https://github.com/facebookresearch/xformers?tab=readme-ov-file#installing-xformers for installation instructions, disabling
+62.6s 33 warnings.warn(
+62.9s 34 A new version of the following files was downloaded from https://huggingface.co/jinaai/xlm-roberta-flash-implementation:
+62.9s 35 - configuration_xlm_roberta.py
+62.9s 36 . Make sure to double-check they do not contain any added malicious code. To avoid downloading new versions of the code file, you can pin a revision.
+63.4s 37 A new version of the following files was downloaded from https://huggingface.co/jinaai/xlm-roberta-flash-implementation:
+63.4s 38 - mlp.py
+63.4s 39 . Make sure to double-check they do not contain any added malicious code. To avoid downloading new versions of the code file, you can pin a revision.
+63.6s 40 A new version of the following files was downloaded from https://huggingface.co/jinaai/xlm-roberta-flash-implementation:
+63.6s 41 - rotary.py
+63.6s 42 . Make sure to double-check they do not contain any added malicious code. To avoid downloading new versions of the code file, you can pin a revision.
+63.6s 43 A new version of the following files was downloaded from https://huggingface.co/jinaai/xlm-roberta-flash-implementation:
+63.6s 44 - mha.py
+63.6s 45 - rotary.py
+63.6s 46 . Make sure to double-check they do not contain any added malicious code. To avoid downloading new versions of the code file, you can pin a revision.
+63.7s 47 A new version of the following files was downloaded from https://huggingface.co/jinaai/xlm-roberta-flash-implementation:
+63.7s 48 - stochastic_depth.py
+63.7s 49 . Make sure to double-check they do not contain any added malicious code. To avoid downloading new versions of the code file, you can pin a revision.
+63.7s 50 A new version of the following files was downloaded from https://huggingface.co/jinaai/xlm-roberta-flash-implementation:
+63.7s 51 - block.py
+63.7s 52 - mlp.py
+63.7s 53 - mha.py
+63.7s 54 - stochastic_depth.py
+63.7s 55 . Make sure to double-check they do not contain any added malicious code. To avoid downloading new versions of the code file, you can pin a revision.
+63.8s 56 A new version of the following files was downloaded from https://huggingface.co/jinaai/xlm-roberta-flash-implementation:
+63.8s 57 - xlm_padding.py
+63.8s 58 . Make sure to double-check they do not contain any added malicious code. To avoid downloading new versions of the code file, you can pin a revision.
+63.9s 59 A new version of the following files was downloaded from https://huggingface.co/jinaai/xlm-roberta-flash-implementation:
+63.9s 60 - embedding.py
+63.9s 61 . Make sure to double-check they do not contain any added malicious code. To avoid downloading new versions of the code file, you can pin a revision.
+63.9s 62 A new version of the following files was downloaded from https://huggingface.co/jinaai/xlm-roberta-flash-implementation:
+63.9s 63 - modeling_xlm_roberta.py
+63.9s 64 - block.py
+63.9s 65 - xlm_padding.py
+63.9s 66 - embedding.py
+63.9s 67 . Make sure to double-check they do not contain any added malicious code. To avoid downloading new versions of the code file, you can pin a revision.
+63.9s 68 A new version of the following files was downloaded from https://huggingface.co/jinaai/xlm-roberta-flash-implementation:
+63.9s 69 - modeling_lora.py
+63.9s 70 - modeling_xlm_roberta.py
+63.9s 71 . Make sure to double-check they do not contain any added malicious code. To avoid downloading new versions of the code file, you can pin a revision.
+69.2s 72 [encode_jina] keyframes root: /kaggle/input/datasets/kiet1106/aic26-frames/keyframes
+637.5s 73 [encode_jina] tổng số video tìm thấy: 873
+637.8s 74 Using a slow image processor as `use_fast` is unset and a slow processor was saved with this model. `use_fast=True` will be the default behavior in v4.52, even if the model was saved with a slow processor. This will result in minor differences in outputs. You'll still be able to use a slow processor with `use_fast=False`.
+637.9s 75 A new version of the following files was downloaded from https://huggingface.co/jinaai/jina-clip-implementation:
+637.9s 76 - processing_clip.py
+637.9s 77 . Make sure to double-check they do not contain any added malicious code. To avoid downloading new versions of the code file, you can pin a revision.
+3240.0s 78 [encode_jina] 20/873 video đã xử lý (mới encode: 20, đã có sẵn/skip: 0), 2602s trôi qua
+6056.4s 79 [encode_jina] 40/873 video đã xử lý (mới encode: 40, đã có sẵn/skip: 0), 5419s trôi qua
+8932.6s 80 [encode_jina] 60/873 video đã xử lý (mới encode: 60, đã có sẵn/skip: 0), 8295s trôi qua
+9759.7s 81 [encode_jina] 80/873 video đã xử lý (mới encode: 80, đã có sẵn/skip: 0), 9122s trôi qua
+11365.0s 82 [encode_jina] 100/873 video đã xử lý (mới encode: 100, đã có sẵn/skip: 0), 10727s trôi qua
+12981.6s 83 [encode_jina] 120/873 video đã xử lý (mới encode: 120, đã có sẵn/skip: 0), 12344s trôi qua
+15834.1s 84 [encode_jina] 140/873 video đã xử lý (mới encode: 140, đã có sẵn/skip: 0), 15197s trôi qua
+19846.3s 85 [encode_jina] 160/873 video đã xử lý (mới encode: 160, đã có sẵn/skip: 0), 19209s trôi qua
+24155.4s 86 [encode_jina] 180/873 video đã xử lý (mới encode: 180, đã có sẵn/skip: 0), 23518s trôi qua
+28176.2s 87 [encode_jina] 200/873 video đã xử lý (mới encode: 200, đã có sẵn/skip: 0), 27539s trôi qua
+32006.8s 88 [encode_jina] 220/873 video đã xử lý (mới encode: 220, đã có sẵn/skip: 0), 31369s trôi qua
+33324.7s 89 [encode_jina] 240/873 video đã xử lý (mới encode: 240, đã có sẵn/skip: 0), 32687s trôi qua
+34724.8s 90 [encode_jina] 260/873 video đã xử lý (mới encode: 260, đã có sẵn/skip: 0), 34087s trôi qua
+36135.6s 91 [encode_jina] 280/873 video đã xử lý (mới encode: 280, đã có sẵn/skip: 0), 35498s trôi qua
+37672.6s 92 [encode_jina] 300/873 video đã xử lý (mới encode: 300, đã có sẵn/skip: 0), 37035s trôi qua
+39130.5s 93 [encode_jina] 320/873 video đã xử lý (mới encode: 320, đã có sẵn/skip: 0), 38493s trôi qua
+40644.9s 94 [encode_jina] 340/873 video đã xử lý (mới encode: 340, đã có sẵn/skip: 0), 40007s trôi qua
+42147.6s 95 [encode_jina] 360/873 video đã xử lý (mới encode: 360, đã có sẵn/skip: 0), 41510s trôi qua

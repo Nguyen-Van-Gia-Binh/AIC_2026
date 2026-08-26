@@ -8,6 +8,10 @@ sentence-transformers==5.7.0
 torch==2.13.0+cpu
 litellm==1.97.0
 python-dotenv==1.2.3
+paddlepaddle==2.6.2
+paddleocr==2.10.0
+opencv-python==5.0.0.93
+opencv-contrib-python==5.0.0.93
 
 # scripts/eval/ (Phase 6 — so sánh baseline embedding, không phải app sản xuất KIS/QA/TRAKE):
 transformers==5.15.0

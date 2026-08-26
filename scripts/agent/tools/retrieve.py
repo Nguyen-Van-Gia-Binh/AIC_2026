@@ -29,6 +29,16 @@ from typing import Callable, Optional
 import numpy as np
 import pandas as pd
 
+# Console Windows mac dinh dung code page cp1252, khong encode duoc ky tu co dau (vd "Đ" trong log
+# ben duoi) -> UnicodeEncodeError ngay luc import module nay. Ep stdout sang UTF-8 tai day (diem
+# import duy nhat cua module nay) thay vi doi nguoi dung phai tu set PYTHONIOENCODING=utf-8 truoc khi
+# chay (PLAN.md Phase 6). Boc try/except vi 1 so moi truong (vd stdout da bi redirect/pipe trong test)
+# khong ho tro reconfigure().
+try:
+    sys.stdout.reconfigure(encoding="utf-8")
+except Exception:
+    pass
+
 _SCRIPTS_DIR = Path(__file__).resolve().parent.parent.parent
 if str(_SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS_DIR))
@@ -108,6 +118,15 @@ def _ensure_loaded() -> None:
     print("[retrieve] Ready.")
 
 
+def preload() -> None:
+    """Nap san index + model NGAY BAY GIO, khong doi lan goi fast_retrieve()/fast_retrieve_for_video()
+    dau tien. Mac dinh module nay lazy-load (chi nap khi can, qua _ensure_loaded()) de cac script
+    ngan/import phu khong ganh chi phi nap model neu khong dung toi. app.py goi ham nay luc khoi dong
+    de UI san sang truy xuat ngay tu lan search dau, thay vi nguoi dung dau tien phai cho load model.
+    """
+    _ensure_loaded()
+
+
 def fast_retrieve(query_text: str, top_k: int = 100) -> list[dict]:
     """
     Tìm top_k keyframe gần nhất với query_text bằng CLIP cosine similarity.
@@ -122,7 +141,7 @@ def fast_retrieve(query_text: str, top_k: int = 100) -> list[dict]:
       jpg_path  (str|None)
     """
     _ensure_loaded()
-    top_k = min(top_k, 100)
+    top_k = min(top_k, 1000)  # tran an toan, KHONG phai gia tri mac dinh — xem rerank.RETRIEVAL_POOL_SIZE
     q_vec = _ENCODE_FN(query_text)
     scores = _MATRIX @ q_vec
     top_idx = np.argsort(-scores)[:top_k]

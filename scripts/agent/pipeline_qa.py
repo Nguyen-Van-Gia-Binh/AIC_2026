@@ -27,6 +27,7 @@ from agent.config import MAX_AGENT_LOOPS
 from agent.tools.retrieve import fast_retrieve
 from agent.tools.rewrite import rewrite_query
 from agent.tools.answer_qa import answer_from_hits
+from agent.tools.rerank import apply_risk_aware_ranking, RETRIEVAL_POOL_SIZE
 
 CONFIDENCE_THRESHOLD = 0.5  # Duoi nguong nay: thu lai vong 2
 
@@ -56,11 +57,13 @@ def run_qa(
 
     # ─── Vong 1 ────────────────────────────────────────────────────────────────
     print(f"[qa] Vong 1: rewrite + retrieve...", flush=True)
-    query_en = rewrite_query(query_text)
+    query_en = rewrite_query(query_text, question=question)
     print(f"[qa]   query_en: {query_en!r}")
 
-    hits = fast_retrieve(query_en, top_k=top_k)
+    pool_size = max(top_k, RETRIEVAL_POOL_SIZE)
+    hits = fast_retrieve(query_en, top_k=pool_size)
     print(f"[qa]   Retrieved: {len(hits)} hits, top score={hits[0]['score']:.4f}")
+    final_query_en = query_en
 
     qa_result = answer_from_hits(question, hits, top_n=5)
     print(f"[qa]   Answer (vong 1): {qa_result['answer']!r}  conf={qa_result['confidence']:.2f}  method={qa_result['method']}")
@@ -72,10 +75,10 @@ def run_qa(
         feedback = f"Top results did not clearly answer: {question}. Objects found: {_summarize_top_objects(hits[:5])}"
         print(f"[qa] Confidence thap ({qa_result['confidence']:.2f}), thu vong 2...")
 
-        query_en_v2 = rewrite_query(query_text, feedback=feedback)
+        query_en_v2 = rewrite_query(query_text, feedback=feedback, question=question)
         print(f"[qa]   query_en_v2: {query_en_v2!r}")
 
-        hits_v2 = fast_retrieve(query_en_v2, top_k=top_k)
+        hits_v2 = fast_retrieve(query_en_v2, top_k=pool_size)
 
         qa_result_v2 = answer_from_hits(question, hits_v2, top_n=5)
         print(f"[qa]   Answer (vong 2): {qa_result_v2['answer']!r}  conf={qa_result_v2['confidence']:.2f}")
@@ -84,8 +87,12 @@ def run_qa(
         if qa_result_v2["confidence"] > qa_result["confidence"]:
             qa_result = qa_result_v2
             hits      = hits_v2
+            final_query_en = query_en_v2
 
         n_loops = 2
+
+    # ─── Risk-aware rerank (Phase 3 — xem agent/tools/rerank.py) ────────────────
+    hits = apply_risk_aware_ranking(hits, top_k=top_k, query_text=final_query_en)
 
     # ─── Build submission results ───────────────────────────────────────────────
     # Gan answer cho toan bo hits (submission cho phep 100 rows)
