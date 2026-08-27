@@ -14,5 +14,9 @@ submissions/*.zip
 # Output tải về từ Kaggle GPU job (embedding .npy/.zip nặng, không phải code)
 kaggle_jobs/*/output/
 
+# Frontend (Node/Vite) — cây sinh ra, không commit
+frontend/node_modules/
+frontend/dist/
+
 providers_import.csv
 providers_import.json

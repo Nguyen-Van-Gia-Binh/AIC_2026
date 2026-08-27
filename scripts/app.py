@@ -23,16 +23,16 @@ logging.getLogger("litellm").setLevel(logging.ERROR)
 logging.getLogger("httpx").setLevel(logging.ERROR)
 
 # ─── Thiết lập đường dẫn ────────────────────────────────────────────────────────
-_SCRIPTS = Path(__file__).resolve().parent
-if str(_SCRIPTS) not in sys.path:
-    sys.path.insert(0, str(_SCRIPTS))
+_ROOT = Path(__file__).resolve().parent.parent  # repo root — cho `import scripts.*`
+if str(_ROOT) not in sys.path:
+    sys.path.insert(0, str(_ROOT))
 
 # ─── Import (nặng — chỉ load 1 lần lúc khởi động) ───────────────────────────────
 import gradio as gr
 import pandas as pd
 
-from agent.tools.retrieve import fast_retrieve, fast_retrieve_for_video, preload
-from agent.tools.rerank import apply_risk_aware_ranking, RETRIEVAL_POOL_SIZE
+from scripts.agent.tools.retrieve import fast_retrieve, fast_retrieve_for_video, preload
+from scripts.agent.tools.rerank import apply_risk_aware_ranking, RETRIEVAL_POOL_SIZE
 
 print("[app] Loading index + CLIP model (one-time)...")
 preload()  # nap ngay luc khoi dong — khong doi lan search dau tien cua nguoi dung (lazy loading cu)
@@ -96,7 +96,7 @@ def _rewrite_candidates(query: str, **kwargs) -> tuple:
     if not query.strip():
         return gr.update(choices=[], value=None), "⚠️ Nhập query trước khi Rewrite."
     try:
-        from agent.tools.rewrite import rewrite_query_candidates
+        from scripts.agent.tools.rewrite import rewrite_query_candidates
         candidates = rewrite_query_candidates(query, max_n=3, **kwargs)
     except Exception as e:
         return gr.update(choices=[], value=None), f"⚠️ Rewrite thất bại: {e}"
@@ -152,7 +152,7 @@ def qa_run(query: str, question: str, top_k: int, query_final: str) -> tuple:
     if not query.strip():
         return [], pd.DataFrame(), "", 0.0, "⚠️ Nhập query trước."
     try:
-        from agent.pipeline_qa import run_qa
+        from scripts.agent.pipeline_qa import run_qa
         out = run_qa(query, question=question or None, top_k=int(top_k), query_en=query_final or None)
         hits = out["results"]
         gallery = _hits_to_gallery(hits[:10])
@@ -206,7 +206,7 @@ def trake_run(global_query: str, events_text: str, top_k_video: int, global_quer
     if not events:
         return pd.DataFrame(), "⚠️ Nhập ít nhất 1 event."
     try:
-        from agent.pipeline_trake import run_trake
+        from scripts.agent.pipeline_trake import run_trake
         out = run_trake(
             global_query, events, top_k_video=int(top_k_video), top_k_frame=10,
             query_en=global_query_final or None,
@@ -297,12 +297,12 @@ def export_zip(queue: list) -> tuple:
     if not queue:
         return None, "⚠️ Queue trống."
 
-    from submit.build_submission import (
+    from scripts.submit.build_submission import (
         build_kis_csv, build_qa_csv, build_trake_csv, build_zip_submission
     )
-    from submit.validate_submission import validate_file
+    from scripts.submit.validate_submission import validate_file
 
-    out_dir = _SCRIPTS.parent / "submissions"
+    out_dir = _ROOT / "submissions"
     csv_files = []
     errors = []
 

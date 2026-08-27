@@ -186,11 +186,11 @@ if __name__ == "__main__":
     import sys
 
     # Import pipeline KIS để demo end-to-end
-    _SCRIPTS = Path(__file__).resolve().parent.parent
-    if str(_SCRIPTS) not in sys.path:
-        sys.path.insert(0, str(_SCRIPTS))
+    _ROOT = Path(__file__).resolve().parent.parent.parent  # repo root — cho `import scripts.*`
+    if str(_ROOT) not in sys.path:
+        sys.path.insert(0, str(_ROOT))
 
-    from agent.pipeline_kis import run_kis
+    from scripts.agent.pipeline_kis import run_kis
 
     demo_queries = [
         ("query-1-kis", "a person giving a speech at a podium"),

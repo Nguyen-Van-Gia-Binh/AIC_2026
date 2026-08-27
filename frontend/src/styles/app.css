@@ -1,0 +1,110 @@
+/* app.css — Bo cuc rieng cua app (rail nav, luoi ket qua, panel...), dung tren nen token/component
+   cua organic.css (bien --color-*, --radius-*, --shadow-*, class .btn/.card/.tag/.table). */
+
+.app-shell { display: flex; height: 100vh; background: var(--color-bg); color: var(--color-text); }
+
+.rail {
+  width: 88px; flex: none; display: flex; flex-direction: column; align-items: center; gap: 8px;
+  padding: 16px 0; background: var(--color-surface); border-right: 1px solid var(--color-divider);
+}
+.rail-logo {
+  width: 40px; height: 40px; border-radius: 999px; background: var(--color-accent);
+  color: var(--color-bg); display: grid; place-items: center; font-family: var(--font-heading);
+  margin-bottom: 8px;
+}
+.rail-item {
+  width: 64px; padding: 9px 0; border-radius: 999px; text-align: center;
+  font: 600 11px var(--font-body); color: color-mix(in srgb, var(--color-text) 65%, transparent);
+  background: none; border: none; cursor: pointer;
+}
+.rail-item.active { background: var(--color-accent); color: var(--color-bg); }
+.rail-item:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.main-panel { flex: 1; min-width: 0; overflow: auto; padding: 24px 28px; }
+.screen { display: flex; flex-direction: column; gap: 16px; max-width: 1180px; }
+
+.topbar { display: flex; gap: 10px; }
+.search-input { flex: 1; }
+.status-line { font-size: 12.5px; color: color-mix(in srgb, var(--color-text) 60%, transparent); white-space: pre-wrap; }
+
+.kis-empty { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 60px 0; text-align: center; }
+.kis-body { display: flex; gap: 20px; align-items: flex-start; }
+.shortlist-panel { width: 300px; flex: none; background: var(--color-neutral-100); border-radius: var(--radius-lg); padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.shortlist-list { display: flex; flex-direction: column; gap: 6px; }
+
+/* Mot dong shortlist = [#] [thumb 54x40] [meta co gian] [score] [x] — moi phan flex:none tru meta,
+   meta min-width:0 + ellipsis de KHONG bao gio de chu len score/nut xoa (bug chong chu truoc day
+   do .thumb-placeholder width:100% nuot het chieu ngang cua hang). */
+.shortlist-row {
+  display: flex; align-items: center; gap: 10px; padding: 6px 8px;
+  border-radius: var(--radius-md); border: 1px solid var(--color-divider); cursor: grab;
+}
+.shortlist-row.dragging { background: var(--color-accent-100); border-color: var(--color-accent-400); }
+.shortlist-row .rank {
+  flex: none; width: 16px; text-align: center; font-weight: 700;
+  color: color-mix(in srgb, var(--color-text) 55%, transparent);
+}
+.shortlist-thumb { flex: none; width: 54px; height: 40px; border-radius: var(--radius-sm); overflow: hidden; }
+.shortlist-meta { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.shortlist-meta > div { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; line-height: 1.3; }
+.shortlist-row .score { flex: none; font-size: 10.5px; color: color-mix(in srgb, var(--color-text) 60%, transparent); }
+.remove-btn {
+  flex: none; background: none; border: none; cursor: pointer; font-size: 15px; line-height: 1;
+  padding: 0 2px; color: color-mix(in srgb, var(--color-text) 40%, transparent);
+}
+.remove-btn:hover { color: var(--color-accent); }
+
+.kis-grid { flex: 1; display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.kis-card { position: relative; border-radius: var(--radius-md); overflow: hidden; border: 1px solid var(--color-divider); aspect-ratio: 16/10; cursor: pointer; }
+.kis-card:hover { border-color: var(--color-accent); box-shadow: var(--shadow-md); }
+.card-rank, .card-score { position: absolute; top: 6px; font-size: 10px; padding: 2px 7px; border-radius: 999px; background: color-mix(in srgb, var(--color-bg) 90%, transparent); }
+.card-rank { left: 6px; }
+.card-score { right: 6px; }
+.card-caption { position: absolute; bottom: 0; left: 0; right: 0; display: flex; justify-content: space-between; padding: 5px 8px; font-size: 10px; background: color-mix(in srgb, var(--color-bg) 92%, transparent); }
+
+/* Anh keyframe that (Thumb.tsx) — thay cho khung soc gia lap .thumb-placeholder cu.
+   .thumb lap day o cha (cha tu dat kich thuoc + overflow:hidden de bo goc). */
+.thumb {
+  position: relative; width: 100%; height: 100%; overflow: hidden;
+  background: var(--color-neutral-200); display: flex; align-items: center; justify-content: center;
+}
+.thumb-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.thumb-fallback {
+  width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
+  font-size: 16px; color: color-mix(in srgb, var(--color-text) 45%, transparent);
+  background: repeating-linear-gradient(135deg, var(--color-neutral-200) 0 8px, var(--color-neutral-300) 8px 16px);
+}
+.thumb-label {
+  position: absolute; left: 6px; bottom: 6px; font-size: 10px; padding: 2px 7px; border-radius: 999px;
+  background: color-mix(in srgb, var(--color-bg) 88%, transparent); pointer-events: none;
+}
+/* Giu ten cu de tuong thich neu con cho nao chua doi — hien giong .thumb-fallback. */
+.thumb-placeholder {
+  width: 100%; height: 100%; min-height: 60px;
+  background: repeating-linear-gradient(135deg, var(--color-neutral-200) 0 8px, var(--color-neutral-300) 8px 16px);
+}
+
+.detail-header { display: flex; align-items: center; gap: 10px; }
+.detail-body { display: flex; flex-direction: column; gap: 14px; }
+.detail-player { height: 360px; border-radius: var(--radius-lg); overflow: hidden; }
+.detail-strip { display: flex; gap: 8px; }
+.strip-frame { position: relative; flex: 1; aspect-ratio: 16/10; border-radius: var(--radius-sm); overflow: hidden; }
+.strip-frame.current { outline: 2px solid var(--color-accent); outline-offset: -2px; }
+.detail-meta { display: flex; flex-direction: column; gap: 4px; font-size: 12px; }
+.detail-meta > div { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--color-divider); }
+
+.qa-body { display: flex; gap: 18px; }
+.qa-frame { flex: 1; height: 260px; border-radius: var(--radius-lg); overflow: hidden; }
+.qa-side { width: 280px; flex: none; display: flex; flex-direction: column; gap: 10px; }
+.answer-input { font: 400 20px var(--font-heading); }
+.confidence-bar { height: 8px; border-radius: 999px; background: var(--color-neutral-300); overflow: hidden; }
+.confidence-bar div { height: 100%; background: var(--color-accent-2); }
+
+.trake-table td { vertical-align: top; }
+.trake-strip { display: flex; gap: 6px; flex-wrap: wrap; }
+.trake-strip-item { display: flex; flex-direction: column; align-items: center; gap: 2px; width: 92px; }
+.trake-strip-item .thumb { width: 92px; height: 58px; border-radius: var(--radius-sm); }
+.trake-strip-item > span { font-size: 10px; }
+
+.queue-header { display: flex; align-items: center; justify-content: space-between; }
+.queue-header > div { display: flex; gap: 8px; }

@@ -11,6 +11,8 @@ site-packages/
 *.egg-info/
 dist/
 build/
+frontend/node_modules/
+frontend/dist/
 
 # 2. Dataset & Large Binary Files (GBs dữ liệu không đưa vào context)
 data/

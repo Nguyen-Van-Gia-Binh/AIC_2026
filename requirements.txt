@@ -13,6 +13,12 @@ paddleocr==2.10.0
 opencv-python==5.0.0.93
 opencv-contrib-python==5.0.0.93
 
+# scripts/api/ (Phase 7 — backend FastAPI bridge sang pipeline KIS/QA/TRAKE + submission):
+# Lưu ý: fastapi đã có sẵn trong .venv do gradio==6.24.0 kéo theo (0.141.x). KHÔNG hạ về bản cũ hơn
+# — sẽ vỡ gradio (scripts/app.py, UI fallback). Pin đúng bản đang cài để không đụng gradio.
+fastapi==0.141.1
+uvicorn[standard]==0.52.4
+
 # scripts/eval/ (Phase 6 — so sánh baseline embedding, không phải app sản xuất KIS/QA/TRAKE):
 transformers==5.15.0
 open_clip_torch==2.32.0

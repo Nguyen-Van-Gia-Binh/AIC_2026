@@ -15,11 +15,11 @@ import re
 import sys
 from pathlib import Path
 
-_ROOT = Path(__file__).resolve().parent.parent.parent
+_ROOT = Path(__file__).resolve().parent.parent.parent.parent  # repo root — cho `import scripts.*`
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
-from agent.config import call_llm  # noqa: E402
+from scripts.agent.config import call_llm  # noqa: E402
 
 # Phan "rules" dung chung cho ca che do rewrite 1 cau (REWRITE_PROMPT) va nhieu cau
 # (REWRITE_CANDIDATES_PROMPT) — tach rieng de khong lap lai/lech nhau giua 2 prompt.

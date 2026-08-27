@@ -19,14 +19,14 @@ import sys
 import re
 from pathlib import Path
 
-_ROOT = Path(__file__).resolve().parent.parent.parent
+_ROOT = Path(__file__).resolve().parent.parent.parent.parent  # repo root — cho `import scripts.*`
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
-from agent.config import call_llm
-from agent.tools.ocr_lookup import get_objects, objects_contain_keywords
-from agent.tools.ocr_read import read_text_from_hits, format_ocr_hint
-from agent.tools.asr_lookup import get_transcript
+from scripts.agent.config import call_llm
+from scripts.agent.tools.ocr_lookup import get_objects, objects_contain_keywords
+from scripts.agent.tools.ocr_read import read_text_from_hits, format_ocr_hint
+from scripts.agent.tools.asr_lookup import get_transcript
 
 # ─── Prompts ───────────────────────────────────────────────────────────────────
 
@@ -333,8 +333,7 @@ if __name__ == "__main__":
     _run_self_tests()
     print()
 
-    sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
-    from agent.tools.retrieve import fast_retrieve
+    from scripts.agent.tools.retrieve import fast_retrieve
 
     question = "What objects can be seen in the background of this scene?"
     print(f"[answer_qa] Testing with: {question!r}")

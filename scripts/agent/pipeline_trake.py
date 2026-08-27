@@ -30,16 +30,16 @@ from pathlib import Path
 from collections import defaultdict
 from typing import Optional
 
-_ROOT = Path(__file__).resolve().parent.parent
+_ROOT = Path(__file__).resolve().parent.parent.parent  # repo root — cho `import scripts.*`
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
-from agent.config import call_llm
-from agent.tools.retrieve import fast_retrieve, fast_retrieve_for_video
-from agent.tools.rewrite import rewrite_query
-from agent.tools.rerank import RETRIEVAL_POOL_SIZE
-from agent.tools.ocr_lookup import get_objects
-from agent.tools.asr_lookup import get_transcript
+from scripts.agent.config import call_llm
+from scripts.agent.tools.retrieve import fast_retrieve, fast_retrieve_for_video
+from scripts.agent.tools.rewrite import rewrite_query
+from scripts.agent.tools.rerank import RETRIEVAL_POOL_SIZE
+from scripts.agent.tools.ocr_lookup import get_objects
+from scripts.agent.tools.asr_lookup import get_transcript
 
 
 def _find_best_increasing_chain(event_hits: list[list[dict]]) -> list[dict] | None:

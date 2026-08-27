@@ -19,15 +19,15 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-_ROOT = Path(__file__).resolve().parent.parent
+_ROOT = Path(__file__).resolve().parent.parent.parent  # repo root — cho `import scripts.*`
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
-from agent.config import MAX_AGENT_LOOPS
-from agent.tools.retrieve import fast_retrieve
-from agent.tools.rewrite import rewrite_query
-from agent.tools.answer_qa import answer_from_hits
-from agent.tools.rerank import apply_risk_aware_ranking, RETRIEVAL_POOL_SIZE
+from scripts.agent.config import MAX_AGENT_LOOPS
+from scripts.agent.tools.retrieve import fast_retrieve
+from scripts.agent.tools.rewrite import rewrite_query
+from scripts.agent.tools.answer_qa import answer_from_hits
+from scripts.agent.tools.rerank import apply_risk_aware_ranking, RETRIEVAL_POOL_SIZE
 
 CONFIDENCE_THRESHOLD = 0.5  # Duoi nguong nay: thu lai vong 2
 
@@ -129,7 +129,7 @@ def run_qa(
 
 def _summarize_top_objects(hits: list[dict]) -> str:
     """Tom tat objects cua top hits thanh chuoi ngan."""
-    from agent.tools.ocr_lookup import get_objects
+    from scripts.agent.tools.ocr_lookup import get_objects
     all_objs = []
     for h in hits:
         n = h.get("n")

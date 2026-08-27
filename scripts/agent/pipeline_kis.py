@@ -20,12 +20,12 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-_ROOT = Path(__file__).resolve().parent.parent
+_ROOT = Path(__file__).resolve().parent.parent.parent  # repo root — cho `import scripts.*`
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
-from agent.tools.retrieve import fast_retrieve
-from agent.tools.rerank import apply_risk_aware_ranking, RETRIEVAL_POOL_SIZE
+from scripts.agent.tools.retrieve import fast_retrieve
+from scripts.agent.tools.rerank import apply_risk_aware_ranking, RETRIEVAL_POOL_SIZE
 
 
 def run_kis(query_text: str, top_k: int = 100) -> list[dict]:

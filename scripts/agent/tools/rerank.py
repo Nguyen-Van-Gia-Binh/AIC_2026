@@ -26,7 +26,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-_ROOT = Path(__file__).resolve().parent.parent.parent
+_ROOT = Path(__file__).resolve().parent.parent.parent.parent  # repo root — cho `import scripts.*`
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
@@ -96,7 +96,7 @@ def _bet_mode(hits: list[dict], top_video_id: str, top_k: int, query_text: str |
     top_video_hits = [h for h in hits if h["video_id"] == top_video_id]
 
     if query_text and len(top_video_hits) < n_target:
-        from agent.tools.retrieve import fast_retrieve_for_video
+        from scripts.agent.tools.retrieve import fast_retrieve_for_video
         deeper = fast_retrieve_for_video(query_text, top_video_id, top_k=n_target)
         # Chi loai trung voi frame_idx CUA CHINH top_video_id — frame_idx la index cuc bo trong tung
         # video (khong globally unique, xem index.py), so voi ca "hits" (nhieu video) se xoa nham cac
@@ -177,7 +177,7 @@ if __name__ == "__main__":
     # Test 4: bet mode KHONG duoc loai ung vien dao sau chi vi trung frame_idx voi 1 VIDEO KHAC —
     # frame_idx la index cuc bo tung video (khong globally unique), dedup sai o ban truoc chi kiem tra
     # "hits" (ca pool nhieu video) thay vi chi rieng top_video_hits (code review Phase 6).
-    import agent.tools.retrieve as _retrieve_module
+    import scripts.agent.tools.retrieve as _retrieve_module
 
     def _fake_fetch_deeper(query_text, video_id, top_k):
         # Video A dat cuoc co 1 ung vien dao sau moi (frame_idx=99) chua tung xuat hien trong hits cua

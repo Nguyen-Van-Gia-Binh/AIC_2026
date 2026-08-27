@@ -69,6 +69,25 @@ Cơ chế chấm điểm so model/phương án chưa bám đúng công thức BT
 - [ ] **Chạy lại `run_eval.py` đủ 5 model** + `score_pipelines.py` cho QA/TRAKE (cần API key) sau khi
   user dò tay xong ground truth — cập nhật `docs/eval_baseline_comparison.md` / `docs/eval_e2e_scores.md`.
 
+## Phase 8: Tách Frontend/Backend — FastAPI + React (vòng sau)
+
+Bối cảnh đầy đủ: `docs/superpowers/specs/2026-08-27-multiagent-chat-architecture-design.md`.
+Roadmap 4 phase con (thứ tự do user chốt 2026-08-27): 1) khung FastAPI + frontend React theo mockup
+Claude Design (plan: `docs/superpowers/plans/2026-08-27-phase1-fastapi-react-frontend-skeleton.md`)
+2) LangGraph AI graph 3) nối Agent Backend hoàn chỉnh vào frontend mới 4) pytest suite.
+
+- [ ] Phase con 1 — khung FastAPI (`scripts/api/`) + frontend React (`frontend/`) theo mockup
+  (xem plan link ở trên). Backend bridge sang `run_kis/run_qa/run_trake` + `build_submission.py`,
+  giữ 2 luật single-call-site (LLM chỉ ở `config.py:call_llm()`, ghi CSV/ZIP chỉ ở
+  `build_submission.py`). Frontend 4 màn KIS/Q&A/TRAKE/Hàng đợi chạy dữ liệu thật qua proxy Vite;
+  màn Chat để nút disabled (Phase con 2). Gradio `scripts/app.py` giữ nguyên làm fallback.
+- [ ] Phase con 2 — AI Graph (LangGraph)
+- [ ] Phase con 3 — nối Agent Backend hoàn chỉnh vào frontend
+- [ ] Phase con 4 — pytest suite + hoàn thiện end-to-end
+
+Đánh dấu `[x]` cho Phase con 1 chỉ sau khi Task 11 Step 3 (walkthrough end-to-end trên trình duyệt)
+thật sự chạy qua.
+
 ---
 
 ## Blockers / Risks

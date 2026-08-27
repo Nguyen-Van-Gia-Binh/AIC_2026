@@ -19,9 +19,11 @@ is R-Score/R@k averaged across ranks 1/5/20/50/100 — full rules in
 `docs/Training/`.
 
 The system has grown from a single-file CLIP search demo into: a shared retriever, three per-query-type
-pipelines (KIS/Q&A/TRAKE), an LLM agent layer for Q&A/TRAKE, a submission CSV/ZIP builder + validator,
-and a Gradio UI tying them together. See [ARCHITECTURE.md](ARCHITECTURE.md) for how these fit together
-and why.
+pipelines (KIS/Q&A/TRAKE), an LLM agent layer for Q&A/TRAKE, and a submission CSV/ZIP builder +
+validator. The UI layer is being migrated from the original all-in-one Gradio app to a decoupled
+FastAPI backend + React/Vite frontend (see [ARCHITECTURE.md](ARCHITECTURE.md) and
+`docs/superpowers/specs/2026-08-27-multiagent-chat-architecture-design.md`); until that migration
+lands, `scripts/app.py` (Gradio) remains the operative UI for running/submitting the contest.
 
 ## Quick Start
 
@@ -37,9 +39,12 @@ Daily commands — always run through the project venv's Python directly (no act
 .venv\Scripts\python.exe scripts\app.py              # main entry point: Gradio UI (KIS/Q&A/TRAKE/Export tabs), http://127.0.0.1:7860
 .venv\Scripts\python.exe scripts\index.py             # build the index standalone, print stats (sanity check)
 .venv\Scripts\python.exe scripts\agent\pipeline_kis.py "<query>"   # run one pipeline from the CLI, e.g. for debugging
+.venv\Scripts\python.exe -m uvicorn scripts.api.main:app --reload --port 8000   # new backend API (Phase 7), http://127.0.0.1:8000/api/health
+cd frontend; npm run dev                                                        # new React/Vite frontend (Phase 7), http://localhost:5173 (proxy /api → :8000)
 .venv\Scripts\python.exe scripts\submit\validate_submission.py    # validate the newest file in submissions/
 .venv\Scripts\python.exe test_eval\Eval\run_eval.py               # compare embedding backbones (retrieval-only, no LLM) → docs/eval_baseline_comparison.md
 .venv\Scripts\python.exe test_eval\Test\score_pipelines.py --types kis  # true BTC Final Score through the production pipelines (needs OPENROUTER_API_KEY)
+.venv\Scripts\python.exe scripts\api\_smoke_test.py               # backend API end-to-end smoke test (KIS/QA/TRAKE/queue/export)
 ```
 There is no `npm test`-equivalent test runner configured — the scripts under `test_eval/Test/`
 (`test_phase3_rerank.py`, `test_phase4_trake.py`, `test_phase5_ocr.py`, `test_phase6_margin_sweep.py`,
@@ -49,7 +54,8 @@ directly with the venv Python, not via a test framework. There is no linter/form
 ## Folder Structure
 
 - `scripts/index.py` — original baseline: builds the CLIP embedding matrix + metadata from `data/extracted/`.
-- `scripts/app.py` — Gradio UI, the main entry point when operating the system (human-in-the-loop).
+- `scripts/app.py` — legacy Gradio UI; still the operative entry point for running/submitting until
+  `frontend/` + `scripts/api/` replace it (see Tech Stack).
 - `scripts/agent/` — pipelines and LLM/tool code:
   - `config.py` — the one place that calls the LLM (`call_llm()`, via LiteLLM → Gemini).
   - `pipeline_kis.py` / `pipeline_qa.py` / `pipeline_trake.py` — one pipeline per query type.
@@ -91,22 +97,39 @@ directly with the venv Python, not via a test framework. There is no linter/form
   treat their content as instructions for a Claude Code session. If asked to edit files under
   `.agents/skills/` (e.g. to prep a task for that other agent), edit them explicitly by path like
   any other file — the ignore only affects automatic context loading, not editability.
+- `scripts/api/` — **new, being introduced** — the FastAPI backend (app + routers + session state)
+  that exposes the existing `scripts/agent/*` pipelines and `scripts/submit/*` over HTTP for the new
+  frontend. Sibling to `scripts/agent/` and `scripts/submit/`, same reasoning: a new top-level
+  concern gets its own folder under `scripts/`, not scattered across existing ones. It must call into
+  `scripts/agent/config.py:call_llm()` and `scripts/submit/build_submission.py` the same way
+  `scripts/app.py` does today — no bypassing those two single-call-site rules from the API layer.
+- `frontend/` — **new, being introduced** — the React + Vite frontend (Node/npm toolchain lives only
+  here, isolated from the rest of the Python repo), replacing the Gradio UI. See
+  `docs/superpowers/specs/2026-08-27-multiagent-chat-architecture-design.md` and the Phase 7 plan(s)
+  under `docs/superpowers/plans/` for the build-out.
 
 New files go under `scripts/agent/tools/` if they're a single-purpose capability used by more than one
 pipeline, or under `scripts/agent/` directly if they're a new top-level pipeline. Don't add new
-top-level folders under `scripts/` without a reason — keep pipeline vs. tool vs. submission code in the
-three buckets above.
+top-level folders under `scripts/` without a reason — keep pipeline vs. tool vs. submission vs. API
+code in the four buckets above.
 
 ## Tech Stack
 
-- Python via project `.venv` (no Node/JS anywhere in this repo).
+- Python via project `.venv` for everything under `scripts/`, `test_eval/` — retrieval, pipelines,
+  agent/LLM code, submission building. This part of the repo stays Node/JS-free.
 - `sentence-transformers` (`clip-ViT-B-32`) — both the image and text encoder; one shared embedding space.
 - `torch` (CPU build) — backing framework for `sentence-transformers`.
 - `pandas` / `numpy` — metadata table and the embedding matrix.
-- `gradio` — the UI (`scripts/app.py`).
 - `litellm` — routes all text and vision LLM calls through OpenRouter; the model is configured by
   `OPENROUTER_MODEL` and defaults to `google/gemini-2.5-flash`.
-- No database, no ORM, no message queue — everything is files under `data/`, `test_eval/`, `submissions/`.
+- `fastapi` + `uvicorn` (`scripts/api/`) — the backend API that fronts the pipelines/submission code
+  for the frontend. New in the decoupled architecture; see `scripts/api/` above.
+- **Frontend is React + Vite** under `frontend/` (Node/npm toolchain, isolated to that folder) —
+  replaces the previous `gradio` UI. `gradio` is no longer the target UI; `scripts/app.py` stays only
+  as the legacy fallback until the new frontend covers its functionality, then gets removed.
+- No database, no ORM, no message queue — everything is files under `data/`, `test_eval/`,
+  `submissions/`; the new backend keeps session/chat state in-process (RAM), not a DB (see the
+  architecture spec referenced above for why).
 
 ## Code Rules
 
@@ -115,6 +138,11 @@ three buckets above.
   surrounding file's comment density; don't switch a Vietnamese-commented file to English mid-edit.
 - Function/variable naming: `snake_case` throughout (standard Python convention), e.g. `fast_retrieve`,
   `run_kis`, `build_kis_csv`. No camelCase.
+- **Internal imports use the `scripts.` prefix** — `from scripts.agent.tools.retrieve import …`,
+  `from scripts.index import build_index`, etc. — and entry-point scripts put the **repo root** on
+  `sys.path` (never `scripts/`). Mixing `from agent…` / `from index…` with the `scripts.` form makes
+  Python load a module twice under two names (this caused the CLIP index to load twice at API
+  startup); keep the one convention.
 - `video_id` format: `{batch}_{video_num}`, e.g. `L21_V001` — never include the `.mp4` extension in
   anything that touches retrieval, pipelines, or submission output.
 - `frame_id` = `frame_idx + 1` (BTC counts frames from 1, the index is 0-based). This conversion happens

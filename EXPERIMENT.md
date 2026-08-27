@@ -118,6 +118,47 @@ Muốn Final Score có LLM crosscheck + đúng đường nộp → `test_eval/Te
 không (ở đây `mean` thay `max`, và bỏ mất precondition có sức nặng nhất). Docstring có ghi "xấp xỉ"
 nhưng header report vẫn tự nhận "đúng công thức thi" — cả 2 giờ đã sửa cho khớp thực tế.
 
+## Phase 8 (Tách FE/BE) — Phase con 1: lỗi giao diện lọt lưới vì nghiệm thu toàn headless
+
+**Triệu chứng:** chạy thử frontend Phase‑con‑1 trên trình duyệt mới lộ: (a) cột "Danh sách nộp"
+(shortlist KIS) đè chữ — thứ hạng / video_id / frame / score / nút × chồng lên nhau; (b) mọi ô ảnh là
+khung sọc giả, không xem được keyframe thật; (c) bấm ô ảnh trong lưới KIS mở ra màn chi tiết nhưng đó
+là ảnh tĩnh — không video, dải frame lân cận không bấm được, gần như không tương tác gì ngoài 2 nút
+back / thêm.
+
+**Nguyên nhân — 3 tầng:**
+1. **Có chủ đích (một phần):** plan ghi rõ "Explicitly out of scope" — ô ảnh cố tình để placeholder
+   sọc, serve ảnh thật là task sau. Video *chưa từng* có trong mockup nên không nằm trong plan, không
+   được dựng — dù `data/extracted/video/Videos_L*_a/*.mp4` có sẵn, không route nào serve, không thẻ
+   `<video>` nào tồn tại. Class `detail-player` lấy từ mockup, mockup vẽ nó là hộp placeholder.
+2. **Lỗi CSS thật, bê nguyên từ plan:** `.thumb-placeholder { width: 100% }` đặt làm con trực tiếp
+   của `.shortlist-row` (`display:flex`) mà không `flex: none` → `flex-basis` nở hết cỡ, nuốt chiều
+   ngang của hàng → các phần tử anh em bị bóp ~0px, chữ tràn đè nhau. Chỉ lộ ở cột shortlist 300px;
+   lưới `.kis-card` dùng đúng class đó nhưng là con duy nhất của hộp aspect‑ratio cố định nên trông
+   vẫn ổn → dễ bỏ sót.
+3. **Lọt lưới vì verify Phase‑con‑1 100% headless:** mọi "verify" trong plan là `assert`/`print`,
+   `TestClient`, hoặc `npm run build` (chỉ type‑check) — không cái nào render CSS/DOM. Plan *có* 1
+   bước xem trình duyệt (Task 11 Step 3), là cổng tick checkbox PLAN.md — nhưng bị bỏ qua (đã note và
+   để trống checkbox, nhưng không ai mở trình duyệt xem 60 giây).
+
+**Điều làm sai khi "sửa" (đợt fix #2):** thêm `/api/images` + `<Thumb>` cho thumbnail thật, nhưng vẫn
+để `.detail-player` là ảnh tĩnh, không thêm route video, không nối `onClick` cho dải lân cận → màn chi
+tiết *trông* hoàn thiện hơn *hành xử* → mời bấm rồi hụt. Sửa bề mặt mà không thu hẹp khoảng cách kỳ
+vọng, không ghi "chưa có video" lên UI.
+
+**Bài học:**
+- Skeleton dựng theo mockup: verify headless (build + đường dữ liệu API) KHÔNG thay được 1 lần mở
+  trình duyệt. Bước xem trình duyệt phải là verify bắt buộc, không phải cổng phụ để tick checkbox —
+  nhất là lỗi layout flex/grid mà `tsc`/`build` không bao giờ bắt.
+- Khi làm media "thật hơn" ở 1 chỗ, phải rà các chỗ liền kề mà thay đổi đó tạo kỳ vọng mới (ảnh tĩnh
+  trông như trình phát video) → hoặc làm nốt, hoặc ghi rõ "chưa có" ngay trên UI.
+- CSS bê từ plan vào repo vẫn là code phải review: `width:100%` trên flex‑child không `flex:none` là
+  lỗi kinh điển, cần bắt lúc đọc plan.
+
+_Nguồn: phiên 2026‑08‑27, Phase 8 Phase‑con‑1
+(`docs/superpowers/plans/2026-08-27-phase1-fastapi-react-frontend-skeleton.md`) + đợt fix #1–#4 ngay
+sau._
+
 ## TODO — bổ sung dần
 
 - Bài học/lỗi cụ thể trong lúc dựng 4 job Kaggle (ViT-L/14, SigLIP, Jina, DFN) ở round 1 — đã có tóm
