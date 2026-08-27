@@ -31,12 +31,17 @@ if str(_ROOT) not in sys.path:
 import gradio as gr
 import pandas as pd
 
-from scripts.agent.tools.retrieve import fast_retrieve, fast_retrieve_for_video, preload
+from scripts.agent.tools.retrieve import (
+    fast_retrieve,
+    fast_retrieve_for_video,
+    fast_retrieve_qa,
+    preload,
+)
 from scripts.agent.tools.rerank import apply_risk_aware_ranking, RETRIEVAL_POOL_SIZE
 
-print("[app] Loading index + CLIP model (one-time)...")
-preload()  # nap ngay luc khoi dong — khong doi lan search dau tien cua nguoi dung (lazy loading cu)
-print("[app] Ready.")
+print("[app] Nạp index + model (siglip cho KIS/TRAKE, siglip2 cho Q&A)...")
+preload()  # nap san ca 2 model -- khong doi lan search dau tien cua nguoi dung
+print("[app] Sẵn sàng.")
 
 # ─── Hàm hỗ trợ ──────────────────────────────────────────────────────────────────
 
