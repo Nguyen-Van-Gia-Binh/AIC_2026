@@ -1,22 +1,29 @@
 """
 Công cụ truy xuất keyframe dùng chung cho cả 3 pipeline (KIS / Q&A / TRAKE).
 
-Bọc index.py với singleton pattern: build_index() chỉ chạy 1 lần per process.
+Bọc multi_index.py với per-task singleton pattern — 2 model load độc lập:
+  - KIS / TRAKE → siglip  (google/siglip-so400m-patch14-384, features_siglip/)
+  - Q&A         → siglip2 (google/siglip2-so400m-patch14-384, features_siglip2/)
 
-Chọn model embedding qua biến môi trường AIC_RETRIEVE_MODEL (mặc định / không set =
-"clip_vitb32" — baseline duy nhất đã kiểm chứng, luồng này KHÔNG đổi, không route qua
-test_eval/Eval/multi_index.py). Set thành "vitl14" / "siglip" / "dfn" để dùng thử model khác đã
-encode sẵn (Kaggle jobs, xem PLAN.md Phase 6) qua test_eval/Eval/multi_index.py — chỉ dùng để
-so sánh điểm ở Vòng thử nghiệm, KHÔNG đổi mặc định.
+Lý do chọn: benchmark 33 query (2026-08-28):
+  siglip : KIS=0.744, TRAKE=0.412, ALL=0.549
+  siglip2: QA-retrieval=0.440, ALL=0.551
+  clip_vitb32 (baseline cũ, đã xoá): ALL=0.290
+
+Escape-hatch (dùng khi thử nghiệm, không phải production):
+  AIC_RETRIEVE_MODEL=<tag>  override model cho KIS/TRAKE  (mặc định "siglip")
+  AIC_QA_MODEL=<tag>        override model cho Q&A        (mặc định "siglip2")
+  Tag hợp lệ: xem MODEL_REGISTRY trong test_eval/Eval/multi_index.py
 
 Usage:
-    from scripts.agent.tools.retrieve import fast_retrieve
-    results = fast_retrieve("a person walking on the street", top_k=100)
+    from scripts.agent.tools.retrieve import fast_retrieve, fast_retrieve_qa
+    # KIS / TRAKE:
+    results = fast_retrieve("a cyclist on a mountain road", top_k=100)
+    # Q&A:
+    results = fast_retrieve_qa("a speaker in a white shirt in front of crowd", top_k=100)
 
-    # PowerShell — chọn model khác baseline cho 1 phiên chạy app.py:
-    #   $env:AIC_RETRIEVE_MODEL = "dfn"; .venv\\Scripts\\python.exe scripts\\app.py
-    # Revert về baseline (bỏ biến môi trường, hoặc set lại "clip_vitb32"):
-    #   Remove-Item Env:\\AIC_RETRIEVE_MODEL; .venv\\Scripts\\python.exe scripts\\app.py
+PowerShell — thử model khác cho KIS/TRAKE:
+    $env:AIC_RETRIEVE_MODEL = "dfn"; .venv\\Scripts\\python.exe scripts\\app.py
 """
 
 from __future__ import annotations
@@ -29,11 +36,11 @@ from typing import Callable, Optional
 import numpy as np
 import pandas as pd
 
-# Console Windows mac dinh dung code page cp1252, khong encode duoc ky tu co dau (vd "Đ" trong log
-# ben duoi) -> UnicodeEncodeError ngay luc import module nay. Ep stdout sang UTF-8 tai day (diem
-# import duy nhat cua module nay) thay vi doi nguoi dung phai tu set PYTHONIOENCODING=utf-8 truoc khi
-# chay (PLAN.md Phase 6). Boc try/except vi 1 so moi truong (vd stdout da bi redirect/pipe trong test)
-# khong ho tro reconfigure().
+# Console Windows mặc định dùng code page cp1252, không encode được ký tự có dấu (vd "Đ" trong log
+# bên dưới) -> UnicodeEncodeError ngay lúc import module này. Ép stdout sang UTF-8 tại đây (điểm
+# import duy nhất của module này) thay vì đòi người dùng phải tự set PYTHONIOENCODING=utf-8 trước khi
+# chạy. Bọc try/except vì 1 số môi trường (vd stdout đã bị redirect/pipe trong test) không hỗ trợ
+# reconfigure().
 try:
     sys.stdout.reconfigure(encoding="utf-8")
 except Exception:
@@ -41,21 +48,26 @@ except Exception:
 
 _SCRIPTS_DIR = Path(__file__).resolve().parent.parent.parent
 _REPO_ROOT = _SCRIPTS_DIR.parent
-# Chuan hoa: MOI import noi bo dung tien to `scripts.` (xem EXPERIMENT.md — truoc day file nay nap
-# theo 2 duong dan module khac nhau `agent.tools.retrieve` vs `scripts.agent.tools.retrieve`, thanh 2
-# object rieng trong sys.modules -> index + CLIP model bi nap 2 lan). Chi can repo root tren sys.path.
+# Chuẩn hoá: MỌI import nội bộ dùng tiền tố `scripts.` (xem EXPERIMENT.md — trước đây file này nạp
+# theo 2 đường dẫn module khác nhau `agent.tools.retrieve` vs `scripts.agent.tools.retrieve`, thành 2
+# object riêng trong sys.modules -> index + CLIP model bị nạp 2 lần). Chỉ cần repo root trên sys.path.
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from scripts.index import build_index  # noqa: E402
-
-# Tag model đang dùng — đọc 1 lần lúc import module, không đổi giữa chừng trong 1 process.
-_MODEL_TAG = os.environ.get("AIC_RETRIEVE_MODEL", "").strip() or "clip_vitb32"
+# ─── Singleton KIS/TRAKE (mặc định: siglip) ─────────────────────────────────
+# Đọc 1 lần lúc import module, không đổi giữa chừng trong 1 process.
+_MODEL_TAG = os.environ.get("AIC_RETRIEVE_MODEL", "").strip() or "siglip"
 
 _MATRIX: Optional[np.ndarray] = None
 _META = None
-_MODEL = None                                   # chỉ dùng cho baseline clip_vitb32 (giữ nguyên như cũ)
-_ENCODE_FN: Optional[Callable[[str], np.ndarray]] = None  # encode(text) -> vector float32, dùng chung mọi model
+_ENCODE_FN: Optional[Callable[[str], np.ndarray]] = None
+
+# ─── Singleton Q&A (mặc định: siglip2) ──────────────────────────────────────
+_QA_MODEL_TAG = os.environ.get("AIC_QA_MODEL", "").strip() or "siglip2"
+
+_QA_MATRIX: Optional[np.ndarray] = None
+_QA_META = None
+_QA_ENCODE_FN: Optional[Callable[[str], np.ndarray]] = None
 
 
 def _add_jpg_paths(meta: pd.DataFrame) -> pd.DataFrame:
@@ -82,61 +94,61 @@ def _add_jpg_paths(meta: pd.DataFrame) -> pd.DataFrame:
     return meta
 
 
-def _ensure_loaded() -> None:
-    global _MATRIX, _META, _MODEL, _ENCODE_FN
-    if _MATRIX is not None:
-        return
-
-    print(f"[retrieve] ĐANG DÙNG MODEL: {_MODEL_TAG}")
-
-    if _MODEL_TAG == "clip_vitb32":
-        # Luồng mặc định — GIỮ NGUYÊN 100% như trước khi có AIC_RETRIEVE_MODEL. Model duy nhất đã
-        # kiểm chứng, không route qua multi_index.py, không được phép có regression ở đây.
-        print("[retrieve] Building index...", flush=True)
-        _MATRIX, _META = build_index()
-        n_kf = len(_META)
-        n_vid = _META["video_id"].nunique()
-        print(f"[retrieve] Index ready: {n_kf} keyframes / {n_vid} videos")
-        print("[retrieve] Loading CLIP model...", flush=True)
-        from sentence_transformers import SentenceTransformer
-        _MODEL = SentenceTransformer("clip-ViT-B-32")
-        _ENCODE_FN = lambda text: _MODEL.encode([text], normalize_embeddings=True)[0].astype(np.float32)  # noqa: E731
-        print("[retrieve] Ready.")
-        return
-
-    # Model khác baseline (vitl14 / siglip / dfn) — nạp qua test_eval/Eval/multi_index.py (đã viết
-    # sẵn cho Phase 6), KHÔNG viết lại logic load model ở đây.
-    _eval_dir = _SCRIPTS_DIR.parent / "test_eval" / "Eval"
+def _load_model(tag: str) -> tuple[np.ndarray, object, Callable[[str], np.ndarray]]:
+    """Nạp index + encoder cho 1 model tag qua multi_index.py.
+    Trả về (matrix, meta_with_jpg_paths, encode_fn).
+    """
+    _eval_dir = _REPO_ROOT / "test_eval" / "Eval"
     if str(_eval_dir) not in sys.path:
         sys.path.insert(0, str(_eval_dir))
-    from multi_index import get_index, get_encoder, MODEL_REGISTRY
-    if _MODEL_TAG not in MODEL_REGISTRY:
+    from multi_index import get_index, get_encoder, MODEL_REGISTRY  # noqa: E402
+    if tag not in MODEL_REGISTRY:
         raise ValueError(
-            f"[retrieve] AIC_RETRIEVE_MODEL='{_MODEL_TAG}' không hợp lệ — có sẵn: "
-            f"{list(MODEL_REGISTRY.keys())}"
+            f"[retrieve] Tag '{tag}' không hợp lệ — có sẵn: {list(MODEL_REGISTRY.keys())}"
         )
-    _MATRIX, _META = get_index(_MODEL_TAG)
-    _META = _add_jpg_paths(_META)
-    n_kf = len(_META)
-    n_vid = _META["video_id"].nunique()
-    print(f"[retrieve] Index ready: {n_kf} keyframes / {n_vid} videos")
-    encoder = get_encoder(_MODEL_TAG)
-    _ENCODE_FN = lambda text: encoder([text])[0].astype(np.float32)  # noqa: E731
-    print("[retrieve] Ready.")
+    matrix, meta = get_index(tag)
+    meta = _add_jpg_paths(meta)
+    n_kf = len(meta)
+    n_vid = meta["video_id"].nunique()
+    print(f"[retrieve] '{tag}': index ready — {n_kf} keyframe / {n_vid} video")
+    encoder = get_encoder(tag)
+    encode_fn: Callable[[str], np.ndarray] = (
+        lambda text: encoder([text])[0].astype(np.float32)  # noqa: E731
+    )
+    return matrix, meta, encode_fn
+
+
+def _ensure_loaded() -> None:
+    """Nạp model KIS/TRAKE (siglip) nếu chưa nạp."""
+    global _MATRIX, _META, _ENCODE_FN
+    if _MATRIX is not None:
+        return
+    print(f"[retrieve] Nạp model KIS/TRAKE: {_MODEL_TAG}")
+    _MATRIX, _META, _ENCODE_FN = _load_model(_MODEL_TAG)
+
+
+def _ensure_qa_loaded() -> None:
+    """Nạp model Q&A (siglip2) nếu chưa nạp."""
+    global _QA_MATRIX, _QA_META, _QA_ENCODE_FN
+    if _QA_MATRIX is not None:
+        return
+    print(f"[retrieve] Nạp model Q&A: {_QA_MODEL_TAG}")
+    _QA_MATRIX, _QA_META, _QA_ENCODE_FN = _load_model(_QA_MODEL_TAG)
 
 
 def preload() -> None:
-    """Nap san index + model NGAY BAY GIO, khong doi lan goi fast_retrieve()/fast_retrieve_for_video()
-    dau tien. Mac dinh module nay lazy-load (chi nap khi can, qua _ensure_loaded()) de cac script
-    ngan/import phu khong ganh chi phi nap model neu khong dung toi. app.py goi ham nay luc khoi dong
-    de UI san sang truy xuat ngay tu lan search dau, thay vi nguoi dung dau tien phai cho load model.
+    """Nạp sẵn index + model cho CẢ HAI task ngay bây giờ (không đợi lần gọi đầu tiên).
+    KIS/TRAKE dùng siglip; Q&A dùng siglip2. app.py gọi hàm này lúc khởi động để UI sẵn sàng
+    truy xuất ngay từ lần search đầu, thay vì người dùng đầu tiên phải chờ load model.
     """
     _ensure_loaded()
+    _ensure_qa_loaded()
 
 
 def fast_retrieve(query_text: str, top_k: int = 100) -> list[dict]:
     """
-    Tìm top_k keyframe gần nhất với query_text bằng CLIP cosine similarity.
+    Tìm top_k keyframe gần nhất với query_text bằng siglip cosine similarity.
+    Dùng cho pipeline KIS và TRAKE.
 
     Returns list of dict:
       video_id  (str):   "L21_V001" (không .mp4)
@@ -148,7 +160,7 @@ def fast_retrieve(query_text: str, top_k: int = 100) -> list[dict]:
       jpg_path  (str|None)
     """
     _ensure_loaded()
-    top_k = min(top_k, 1000)  # tran an toan, KHONG phai gia tri mac dinh — xem rerank.RETRIEVAL_POOL_SIZE
+    top_k = min(top_k, 1000)  # trần an toàn, KHÔNG phải giá trị mặc định — xem rerank.RETRIEVAL_POOL_SIZE
     q_vec = _ENCODE_FN(query_text)
     scores = _MATRIX @ q_vec
     top_idx = np.argsort(-scores)[:top_k]
@@ -186,6 +198,38 @@ def fast_retrieve_for_video(query_text: str, video_id: str, top_k: int = 20) -> 
         results.append({
             "video_id":  row["video_id"],
             "n":         int(row["n"]),        # keyframe sequence no (for ocr_lookup)
+            "frame_idx": frame_idx,
+            "frame_id":  frame_idx + 1,
+            "pts_time":  float(row["pts_time"]),
+            "score":     float(scores[idx]),
+            "jpg_path":  row["jpg_path"] if isinstance(row["jpg_path"], str) else None,
+        })
+    return results
+
+
+def fast_retrieve_qa(query_text: str, top_k: int = 100) -> list[dict]:
+    """
+    Tìm top_k keyframe bằng model siglip2 — dùng cho pipeline Q&A.
+
+    Dùng không gian embedding siglip2 (tối ưu đa ngữ cảnh + OCR/VLM reasoning),
+    khác với fast_retrieve() dùng siglip (tối ưu visual spotting cho KIS/TRAKE).
+
+    Returns: cùng format với fast_retrieve() — list[dict] với các key:
+      video_id (str), n (int), frame_idx (int), frame_id (int),
+      pts_time (float), score (float), jpg_path (str|None)
+    """
+    _ensure_qa_loaded()
+    top_k = min(top_k, 1000)
+    q_vec = _QA_ENCODE_FN(query_text)
+    scores = _QA_MATRIX @ q_vec
+    top_idx = np.argsort(-scores)[:top_k]
+    results = []
+    for idx in top_idx:
+        row = _QA_META.iloc[idx]
+        frame_idx = int(row["frame_idx"])
+        results.append({
+            "video_id":  row["video_id"],
+            "n":         int(row["n"]),
             "frame_idx": frame_idx,
             "frame_id":  frame_idx + 1,
             "pts_time":  float(row["pts_time"]),
@@ -241,7 +285,7 @@ if __name__ == "__main__":
     query = " ".join(sys.argv[1:]) or "a person walking on the street"
     print(f"\nQuery: {query!r}")
     hits = fast_retrieve(query, top_k=5)
-    print(f"\nTop {len(hits)} results:")
+    print(f"\nTop {len(hits)} results (KIS/TRAKE model = {_MODEL_TAG}):")
     for i, h in enumerate(hits, 1):
         img = "  [img]" if h["jpg_path"] else ""
         print(f"  #{i}  {h['video_id']}  frame_id={h['frame_id']}  t={h['pts_time']:.1f}s  score={h['score']:.4f}{img}")
