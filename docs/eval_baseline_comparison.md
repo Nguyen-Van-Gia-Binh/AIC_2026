@@ -1,16 +1,17 @@
 # So sánh baseline embedding — Phase 6
 
-Bộ eval: 19 query (KIS=18, QA=1, TRAKE=0). Điểm = R@k đúng công thức thi (docs/Thong tin vong So tuyen AIC2026.md §2.1), CHỈ đo chất lượng retrieval — QA không chấm answer text, TRAKE chấm từng event độc lập rồi lấy trung bình (xem PLAN.md Phase 6 và docstring scripts/eval/run_eval.py để biết đầy đủ phạm vi/lý do).
+Bộ eval: 33 query (KIS=18, QA=5, TRAKE=10). Điểm = R@k đúng công thức thi (docs/Thong tin vong So tuyen AIC2026.md §2.1), CHỈ đo chất lượng retrieval — QA không chấm answer text, TRAKE chấm từng event độc lập rồi lấy trung bình (xem PLAN.md Phase 6 và docstring scripts/eval/run_eval.py để biết đầy đủ phạm vi/lý do).
 
 
-## ALL (n=19)
+## ALL (n=33)
 
 | model | R@1 | R@5 | R@20 | R@50 | R@100 |
 |---|---|---|---|---|---|
-| clip_vitb32 | 0.158 | 0.263 | 0.421 | 0.579 | 0.632 |
-| vitl14 | 0.158 | 0.263 | 0.368 | 0.579 | 0.737 |
-| siglip | 0.421 | 0.579 | 0.737 | 0.789 | 0.895 |
-| dfn | 0.263 | 0.632 | 0.684 | 0.789 | 1.000 |
+| clip_vitb32 | 0.121 | 0.199 | 0.306 | 0.412 | 0.457 |
+| vitl14 | 0.116 | 0.245 | 0.323 | 0.475 | 0.583 |
+| siglip | 0.265 | 0.386 | 0.578 | 0.624 | 0.705 |
+| dfn | 0.205 | 0.442 | 0.505 | 0.609 | 0.753 |
+| jina | 0.182 | 0.326 | 0.396 | 0.540 | 0.601 |
 
 ## KIS (n=18)
 
@@ -20,12 +21,24 @@ Bộ eval: 19 query (KIS=18, QA=1, TRAKE=0). Điểm = R@k đúng công thức t
 | vitl14 | 0.167 | 0.278 | 0.389 | 0.611 | 0.722 |
 | siglip | 0.444 | 0.611 | 0.778 | 0.833 | 0.944 |
 | dfn | 0.278 | 0.667 | 0.722 | 0.833 | 1.000 |
+| jina | 0.278 | 0.500 | 0.556 | 0.778 | 0.833 |
 
-## QA (n=1)
+## QA (n=5)
 
 | model | R@1 | R@5 | R@20 | R@50 | R@100 |
 |---|---|---|---|---|---|
 | clip_vitb32 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 |
-| vitl14 | 0.000 | 0.000 | 0.000 | 0.000 | 1.000 |
-| siglip | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 |
-| dfn | 0.000 | 0.000 | 0.000 | 0.000 | 1.000 |
+| vitl14 | 0.000 | 0.200 | 0.200 | 0.200 | 0.400 |
+| siglip | 0.000 | 0.000 | 0.200 | 0.200 | 0.200 |
+| dfn | 0.200 | 0.200 | 0.200 | 0.200 | 0.400 |
+| jina | 0.200 | 0.200 | 0.200 | 0.200 | 0.200 |
+
+## TRAKE (n=10)
+
+| model | R@1 | R@5 | R@20 | R@50 | R@100 |
+|---|---|---|---|---|---|
+| clip_vitb32 | 0.100 | 0.158 | 0.208 | 0.258 | 0.308 |
+| vitl14 | 0.083 | 0.208 | 0.267 | 0.367 | 0.425 |
+| siglip | 0.075 | 0.175 | 0.408 | 0.458 | 0.525 |
+| dfn | 0.075 | 0.158 | 0.267 | 0.408 | 0.483 |
+| jina | 0.000 | 0.075 | 0.208 | 0.283 | 0.383 |

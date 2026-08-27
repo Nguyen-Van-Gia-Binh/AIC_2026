@@ -31,8 +31,11 @@ if str(_SCRIPTS) not in sys.path:
 import gradio as gr
 import pandas as pd
 
+from agent.tools.retrieve import fast_retrieve, fast_retrieve_for_video, preload
+from agent.tools.rerank import apply_risk_aware_ranking, RETRIEVAL_POOL_SIZE
+
 print("[app] Loading index + CLIP model (one-time)...")
-from agent.tools.retrieve import fast_retrieve, fast_retrieve_for_video
+preload()  # nap ngay luc khoi dong — khong doi lan search dau tien cua nguoi dung (lazy loading cu)
 print("[app] Ready.")
 
 # ─── Hàm hỗ trợ ──────────────────────────────────────────────────────────────────
@@ -86,31 +89,39 @@ def _df_to_submission_rows(df: pd.DataFrame, query_type: str, answer: str = "") 
     return rows
 
 
+def _rewrite_candidates(query: str, **kwargs) -> tuple:
+    """Hàm dùng chung cho cả 3 tab: sinh tối đa 3 phương án rewrite (LLM tự quyết định cần bao
+    nhiêu — query rõ ràng có thể chỉ ra 1), trả về (Radio update, status). Không tự search — chỉ
+    hiển thị để người dùng chọn/sửa trước khi bấm nút Search/Run riêng."""
+    if not query.strip():
+        return gr.update(choices=[], value=None), "⚠️ Nhập query trước khi Rewrite."
+    try:
+        from agent.tools.rewrite import rewrite_query_candidates
+        candidates = rewrite_query_candidates(query, max_n=3, **kwargs)
+    except Exception as e:
+        return gr.update(choices=[], value=None), f"⚠️ Rewrite thất bại: {e}"
+    return gr.update(choices=candidates, value=candidates[0]), f"✨ Đã sinh {len(candidates)} phương án — chọn 1 hoặc tự sửa ở ô bên dưới."
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # TAB 1 — KIS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def kis_search(query: str, top_k: int, auto_translate: bool) -> tuple:
-    """Chạy tìm kiếm KIS, trả về gallery + dataframe."""
-    if not query.strip():
-        return [], pd.DataFrame(), "⚠️ Nhập query trước."
+def kis_rewrite(query: str) -> tuple:
+    return _rewrite_candidates(query)
 
-    query_used = query
-    status_parts = []
 
-    if auto_translate:
-        try:
-            from agent.tools.rewrite import rewrite_query
-            query_used = rewrite_query(query)
-            status_parts.append(f"🌐 Đã dịch: **{query_used}**")
-        except Exception as e:
-            status_parts.append(f"⚠️ Dịch thất bại: {e}. Dùng câu gốc.")
+def kis_search(query_final: str, top_k: int) -> tuple:
+    """Chạy tìm kiếm KIS bằng câu query cuối cùng (đã rewrite/sửa tay ở ô riêng)."""
+    if not query_final.strip():
+        return [], pd.DataFrame(), "⚠️ Chưa có câu query để search — bấm Rewrite rồi chọn/sửa, hoặc gõ thẳng vào ô câu cuối cùng."
 
-    hits = fast_retrieve(query_used, top_k=int(top_k))
+    hits = fast_retrieve(query_final, top_k=max(int(top_k), RETRIEVAL_POOL_SIZE))
+    hits = apply_risk_aware_ranking(hits, top_k=int(top_k), query_text=query_final)
     gallery = _hits_to_gallery(hits)
     df = _hits_to_df(hits)
-    status_parts.append(f"✅ Tìm thấy **{len(hits)}** kết quả | điểm cao nhất = {hits[0]['score']:.4f}")
-    return gallery, df, "\n\n".join(status_parts)
+    status = f"✅ Tìm thấy **{len(hits)}** kết quả | điểm cao nhất = {hits[0]['score']:.4f}"
+    return gallery, df, status
 
 
 def kis_add_to_queue(df: pd.DataFrame, query_id: str, queue: list) -> tuple:
@@ -131,13 +142,18 @@ def kis_add_to_queue(df: pd.DataFrame, query_id: str, queue: list) -> tuple:
 # TAB 2 — Q&A
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def qa_run(query: str, question: str, top_k: int) -> tuple:
-    """Chạy pipeline Q&A, trả về kết quả."""
+def qa_rewrite(query: str, question: str) -> tuple:
+    return _rewrite_candidates(query, question=question or None)
+
+
+def qa_run(query: str, question: str, top_k: int, query_final: str) -> tuple:
+    """Chạy pipeline Q&A, trả về kết quả. query_final (nếu có, từ bước Rewrite đã sửa tay) được
+    dùng làm câu tìm kiếm thay vì để pipeline tự rewrite lại vòng 1."""
     if not query.strip():
         return [], pd.DataFrame(), "", 0.0, "⚠️ Nhập query trước."
     try:
         from agent.pipeline_qa import run_qa
-        out = run_qa(query, question=question or None, top_k=int(top_k))
+        out = run_qa(query, question=question or None, top_k=int(top_k), query_en=query_final or None)
         hits = out["results"]
         gallery = _hits_to_gallery(hits[:10])
         df = _hits_to_df(hits[:100])
@@ -176,8 +192,14 @@ def _parse_events(events_text: str) -> list[str]:
     return [e.strip() for e in events_text.strip().splitlines() if e.strip()]
 
 
-def trake_run(global_query: str, events_text: str, top_k_video: int) -> tuple:
-    """Chạy pipeline TRAKE. events_text: mỗi dòng 1 khoảnh khắc."""
+def trake_rewrite(global_query: str) -> tuple:
+    return _rewrite_candidates(global_query)
+
+
+def trake_run(global_query: str, events_text: str, top_k_video: int, global_query_final: str) -> tuple:
+    """Chạy pipeline TRAKE. events_text: mỗi dòng 1 khoảnh khắc. global_query_final (nếu có, từ bước
+    Rewrite đã sửa tay) được dùng làm global query thay vì để pipeline tự rewrite lại — chỉ áp cho
+    global query, từng event vẫn để pipeline tự rewrite như cũ (xem pipeline_trake.py docstring)."""
     if not global_query.strip():
         return pd.DataFrame(), "⚠️ Nhập global query trước."
     events = _parse_events(events_text)
@@ -185,7 +207,10 @@ def trake_run(global_query: str, events_text: str, top_k_video: int) -> tuple:
         return pd.DataFrame(), "⚠️ Nhập ít nhất 1 event."
     try:
         from agent.pipeline_trake import run_trake
-        out = run_trake(global_query, events, top_k_video=int(top_k_video), top_k_frame=10)
+        out = run_trake(
+            global_query, events, top_k_video=int(top_k_video), top_k_frame=10,
+            query_en=global_query_final or None,
+        )
         results = out["results"]
 
         # Dựng DF hiển thị: 1 dòng / video candidate
@@ -521,8 +546,18 @@ with gr.Blocks(title="AIC2026 Search & Submit") as demo:
                         lines=2,
                     )
                 with gr.Column(scale=1):
-                    kis_topk    = gr.Slider(5, 100, value=20, step=5, label="Top-k")
-                    kis_auto_tr = gr.Checkbox(value=True, label="🌐 Tự động dịch VN→EN")
+                    kis_topk = gr.Slider(5, 100, value=20, step=5, label="Top-k")
+
+            kis_rewrite_btn = gr.Button("✨ Rewrite", variant="secondary")
+            kis_rewrite_status = gr.Markdown()
+            kis_rewrite_choices = gr.Radio(
+                label="Phương án rewrite (chọn 1, hoặc bỏ qua và tự viết ở ô bên dưới)",
+                choices=[],
+            )
+            kis_final_query = gr.Textbox(
+                label="✏️ Câu query cuối cùng dùng để Search (sửa tay tự do tại đây)",
+                lines=2,
+            )
 
             kis_search_btn = gr.Button("🔍 Search", variant="primary", size="lg")
 
@@ -532,7 +567,7 @@ with gr.Blocks(title="AIC2026 Search & Submit") as demo:
                 height=380,
                 show_label=True,
             )
-            kis_status = gr.Markdown("_Nhấn Search để bắt đầu._")
+            kis_status = gr.Markdown("_Nhấn Rewrite rồi Search để bắt đầu._")
             kis_df = gr.Dataframe(
                 label="📋 Kết quả (chỉnh sửa được — xóa/sắp xếp lại trước khi Thêm)",
                 interactive=True,
@@ -548,14 +583,29 @@ with gr.Blocks(title="AIC2026 Search & Submit") as demo:
             kis_queue_status = gr.Markdown()
 
             # Gắn sự kiện (callback)
-            kis_search_btn.click(
-                kis_search,
-                inputs=[kis_query, kis_topk, kis_auto_tr],
-                outputs=[kis_gallery, kis_df, kis_status],
+            kis_rewrite_btn.click(
+                kis_rewrite,
+                inputs=[kis_query],
+                outputs=[kis_rewrite_choices, kis_rewrite_status],
             )
             kis_query.submit(
+                kis_rewrite,
+                inputs=[kis_query],
+                outputs=[kis_rewrite_choices, kis_rewrite_status],
+            )
+            kis_rewrite_choices.change(
+                lambda choice: choice,
+                inputs=[kis_rewrite_choices],
+                outputs=[kis_final_query],
+            )
+            kis_search_btn.click(
                 kis_search,
-                inputs=[kis_query, kis_topk, kis_auto_tr],
+                inputs=[kis_final_query, kis_topk],
+                outputs=[kis_gallery, kis_df, kis_status],
+            )
+            kis_final_query.submit(
+                kis_search,
+                inputs=[kis_final_query, kis_topk],
                 outputs=[kis_gallery, kis_df, kis_status],
             )
             kis_add_btn.click(
@@ -583,6 +633,17 @@ with gr.Blocks(title="AIC2026 Search & Submit") as demo:
                     )
                 with gr.Column(scale=1):
                     qa_topk = gr.Slider(5, 50, value=20, step=5, label="Top-k truy xuất")
+
+            qa_rewrite_btn = gr.Button("✨ Rewrite", variant="secondary")
+            qa_rewrite_status = gr.Markdown()
+            qa_rewrite_choices = gr.Radio(
+                label="Phương án rewrite (chọn 1, hoặc bỏ qua và tự viết ở ô bên dưới)",
+                choices=[],
+            )
+            qa_final_query = gr.Textbox(
+                label="✏️ Câu query cuối cùng dùng để Run (sửa tay tự do tại đây — để trống = để pipeline tự rewrite)",
+                lines=2,
+            )
 
             qa_run_btn = gr.Button("🤖 Run Q&A Pipeline", variant="primary", size="lg")
 
@@ -617,9 +678,19 @@ with gr.Blocks(title="AIC2026 Search & Submit") as demo:
             qa_queue_status = gr.Markdown()
 
             # Gắn sự kiện (callback)
+            qa_rewrite_btn.click(
+                qa_rewrite,
+                inputs=[qa_query, qa_question],
+                outputs=[qa_rewrite_choices, qa_rewrite_status],
+            )
+            qa_rewrite_choices.change(
+                lambda choice: choice,
+                inputs=[qa_rewrite_choices],
+                outputs=[qa_final_query],
+            )
             qa_run_btn.click(
                 qa_run,
-                inputs=[qa_query, qa_question, qa_topk],
+                inputs=[qa_query, qa_question, qa_topk, qa_final_query],
                 outputs=[qa_gallery, qa_df, qa_answer_box, qa_conf, qa_status],
             )
             qa_add_btn.click(
@@ -655,6 +726,18 @@ with gr.Blocks(title="AIC2026 Search & Submit") as demo:
                 with gr.Column(scale=1):
                     trake_topk_video = gr.Slider(3, 10, value=5, step=1, label="Top-k video")
 
+            gr.Markdown("_💡 Rewrite ở đây chỉ áp dụng cho **mô tả tổng quát** (dùng chọn video) — từng khoảnh khắc trong ô Events vẫn được pipeline tự rewrite như trước._")
+            trake_rewrite_btn = gr.Button("✨ Rewrite (mô tả tổng quát)", variant="secondary")
+            trake_rewrite_status = gr.Markdown()
+            trake_rewrite_choices = gr.Radio(
+                label="Phương án rewrite (chọn 1, hoặc bỏ qua và tự viết ở ô bên dưới)",
+                choices=[],
+            )
+            trake_final_query = gr.Textbox(
+                label="✏️ Mô tả tổng quát cuối cùng dùng để Run (sửa tay tự do tại đây — để trống = để pipeline tự rewrite)",
+                lines=2,
+            )
+
             trake_run_btn = gr.Button("🎬 Run TRAKE Pipeline", variant="primary", size="lg")
             trake_status  = gr.Markdown("_Nhấn Run để bắt đầu._")
             trake_df = gr.Dataframe(
@@ -676,9 +759,19 @@ with gr.Blocks(title="AIC2026 Search & Submit") as demo:
             trake_queue_status = gr.Markdown()
 
             # Gắn sự kiện (callback)
+            trake_rewrite_btn.click(
+                trake_rewrite,
+                inputs=[trake_global],
+                outputs=[trake_rewrite_choices, trake_rewrite_status],
+            )
+            trake_rewrite_choices.change(
+                lambda choice: choice,
+                inputs=[trake_rewrite_choices],
+                outputs=[trake_final_query],
+            )
             trake_run_btn.click(
                 trake_run,
-                inputs=[trake_global, trake_events, trake_topk_video],
+                inputs=[trake_global, trake_events, trake_topk_video, trake_final_query],
                 outputs=[trake_df, trake_status],
             )
             trake_add_btn.click(

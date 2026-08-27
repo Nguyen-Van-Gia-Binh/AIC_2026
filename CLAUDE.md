@@ -3,11 +3,11 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 > Other docs: [ARCHITECTURE.md](ARCHITECTURE.md) (system design, module responsibilities, locked
-> decisions) · [PLAN.md](PLAN.md) (what's left to do, by phase) ·
-> [SESSION_LOG.md](docs/_archive/SESSION_LOG.md) (what happened in each past session; moved under
-> `docs/_archive/` — root `SESSION_LOG.md` no longer exists). This file only covers stable,
-> day-to-day facts — how to run things, where files go, what conventions to follow. It does not
-> track progress or history.
+> decisions) · [PLAN.md](PLAN.md) (what's left to do, by phase) · [DECISION.md](DECISION.md) (why past
+> architectural/process decisions were made) · [EXPERIMENT.md](EXPERIMENT.md) (past mistakes and how
+> they were fixed — read before repeating a debugging path). This file only covers stable, day-to-day
+> facts — how to run things, where files go, what conventions to follow. It does not track progress or
+> history.
 
 ## What this is
 
@@ -69,6 +69,8 @@ framework. There is no linter/formatter configured either.
   Must already be unzipped locally before any script will run.
 - `docs/` — competition rules, `docs/Training/` transcripts, and generated reports. Reference material,
   not code — don't treat anything under `docs/` as something to keep in sync with the codebase.
+  `docs/_archive/` holds superseded versions of root docs (e.g. `PLAN_Lan1.md`, `ARCHITECTURE_Lan1.md`,
+  `CLAUDE_Lan1.md` from the round-1 submission cycle) — historical reference only, never auto-loaded.
 - `kaggle_jobs/` — 4 standalone Kaggle-GPU jobs (`01_vit_l14/`, `02_siglip/`, `03_jina/`, `04_dfn/`)
   that encode all 177K keyframes with stronger embedding models (ViT-L/14, SigLIP SO400M, Jina CLIP
   v2, DFN-5B ViT-H/14) than the `clip-ViT-B-32` baseline. Exploratory/ensemble track — pushed and run
@@ -146,5 +148,6 @@ large-file category rather than duplicating rules. `.gitignore` covers `.venv`, 
 
 Update when: a new dependency is added, a command changes, a new top-level folder is introduced, or a
 convention above stops being true. Don't record task history, per-feature decisions, or session
-summaries here — those belong in [PLAN.md](PLAN.md) / [SESSION_LOG.md](docs/_archive/SESSION_LOG.md).
-This file should stay stable across sessions, not get an edit every time.
+summaries here — those belong in [PLAN.md](PLAN.md) (progress) / [DECISION.md](DECISION.md) (why) /
+[EXPERIMENT.md](EXPERIMENT.md) (lessons from past mistakes). This file should stay stable across
+sessions, not get an edit every time.

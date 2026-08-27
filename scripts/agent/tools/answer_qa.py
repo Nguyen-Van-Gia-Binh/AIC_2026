@@ -25,6 +25,8 @@ if str(_ROOT) not in sys.path:
 
 from agent.config import call_llm
 from agent.tools.ocr_lookup import get_objects, objects_contain_keywords
+from agent.tools.ocr_read import read_text_from_hits, format_ocr_hint
+from agent.tools.asr_lookup import get_transcript
 
 # ─── Prompts ───────────────────────────────────────────────────────────────────
 
@@ -33,6 +35,11 @@ You are answering a question about a video frame. You have:
 - The original question (may be in Vietnamese or English)
 - A list of objects detected in the top candidate frames (from object detection AI)
 
+Note: this object list only contains generic OBJECT NAMES (person, car, fish, ...) detected by an
+object detector — it does NOT contain any text, digits, prices, or signage content read from the image.
+If the question asks for a specific NUMBER, PRICE, or TEXT shown on screen, reply with exactly:
+CANNOT_ANSWER_FROM_OBJECTS — do not guess a number from the object list.
+
 Based on the detected objects, answer the question concisely.
 If you cannot answer from objects alone, reply with exactly: CANNOT_ANSWER_FROM_OBJECTS
 
@@ -40,30 +47,49 @@ Question: {question}
 
 Detected objects in candidate frames:
 {objects_text}
-
+{transcript_hint}
 Answer (concise, in the same language as the question):"""
 
-ANSWER_FROM_IMAGE_PROMPT = """\
-You are analyzing a video keyframe to answer a question.
+ANSWER_FROM_IMAGES_PROMPT = """\
+You are analyzing up to 3 candidate video keyframes retrieved for the same scene to answer a question.
+They may show the same moment at slightly different times — one may be clearer than the others.
 
 Question: {question}
+{ocr_hint}
+{transcript_hint}
 
-Look at the image carefully and answer concisely.
-- If the question is in Vietnamese, answer in Vietnamese
-- If in English, answer in English
-- Keep the answer SHORT (1-5 words if possible)
-- Be factual, based only on what you can see
+Look at the image(s) carefully and answer concisely:
+- If the question asks for a NUMBER, COUNT, or TEXT visible on a display/gauge/sign/banner/scoreboard/
+    price tag, read the digits/characters literally, one by one, and report EXACTLY what is shown across
+    the clearest frame — do not round, estimate, or invent a "plausible" number.
+- If the question asks to COUNT people/objects, count carefully what is visible in the frame(s).
+- If the target detail is not visible/legible in ANY of the frames, say so briefly instead of guessing.
+- If the question is in Vietnamese, answer in Vietnamese; if in English, answer in English.
+- Keep the answer SHORT (1-5 words if possible) and factual, based only on what you can see.
 
 Answer:"""
 
+OCR_HINT_TEMPLATE = """\
+Automated OCR hint (from a text-reading model on the candidate frame(s) — may contain errors; treat \
+as a hint, verify every digit/word against what you actually see in the image before trusting it):
+{ocr_lines}
+"""
+
+TRANSCRIPT_HINT_TEMPLATE = """\
+Spoken transcript near this moment (automatic speech-to-text, may contain errors/no punctuation — \
+treat as a hint, not a certain fact):
+{transcript}
+"""
+
 CROSSCHECK_PROMPT = """\
-You are verifying if an answer is consistent with detected objects in an image.
+You are verifying if an answer is consistent with the evidence found in a video frame.
 
 Question: {question}
 Proposed answer: {answer}
 Detected objects: {objects}
+Spoken transcript near this moment: {transcript}
 
-Is this answer plausible given the detected objects? Reply with:
+Is this answer plausible given this evidence? Reply with:
 - "YES" if consistent
 - "NO: <brief reason>" if inconsistent
 
@@ -80,6 +106,21 @@ Question: {question}
 Answer:"""
 
 MAX_ANSWER_CHARS = 100
+
+# Cau hoi doi hoi doc so/chu/dem tren man hinh (bien bao, dong ho, chu giai ban do, ten dia danh...).
+# Objects JSON (Faster R-CNN/OpenImages) chi tra ve TEN OBJECT chung chung, khong doc duoc text/so, nen
+# voi nhom cau hoi nay bo qua thang Tang 1 va di thang vao Tang 2 (vision doc anh truc tiep) de tranh
+# doan bay tu danh sach object khong lien quan.
+_TEXT_READING_HINTS = re.compile(
+    r"(bao nhiêu|con số|số (?:mấy|hiển thị|ghi)|biển báo|biển số|giá(?:\s*tiền)?|"
+    r"dòng chữ|chữ gì|tên (?:là gì|của|gọi)|ghi (?:là )?gì|cấp độ|number|how many|what number)",
+    re.IGNORECASE,
+)
+
+
+def _needs_text_reading(question: str) -> bool:
+    """True neu cau hoi can doc so/chu/dem tren man hinh — nen bo qua Tang 1 (objects JSON)."""
+    return bool(_TEXT_READING_HINTS.search(question))
 
 
 def _normalize_answer(raw_answer: str) -> str:
@@ -122,65 +163,92 @@ def answer_from_hits(
         return {"answer": "", "best_hit": {}, "confidence": 0.0, "method": "fallback"}
 
     candidates = hits[:top_n]
+    skip_objects_tier = _needs_text_reading(question)
 
-    # --- Tang 1: Objects JSON ---
-    all_objects = []
-    objects_by_hit = {}
-    for i, hit in enumerate(candidates):
-        vid = hit.get("video_id", "")
-        n   = hit.get("n")
-        if vid and n is not None:
-            objs = get_objects(vid, int(n))
-            objects_by_hit[i] = objs
-            all_objects.extend(objs)
-        else:
-            objects_by_hit[i] = []
+    # --- Tang 1: Objects JSON (bo qua neu cau hoi can doc so/chu — xem _needs_text_reading) ---
+    if not skip_objects_tier:
+        all_objects = []
+        objects_by_hit = {}
+        for i, hit in enumerate(candidates):
+            vid = hit.get("video_id", "")
+            n   = hit.get("n")
+            if vid and n is not None:
+                objs = get_objects(vid, int(n))
+                objects_by_hit[i] = objs
+                all_objects.extend(objs)
+            else:
+                objects_by_hit[i] = []
 
-    unique_objects = list(dict.fromkeys(all_objects))  # preserve order, deduplicate
+        unique_objects = list(dict.fromkeys(all_objects))  # preserve order, deduplicate
 
-    if unique_objects:
-        obj_text = ", ".join(unique_objects[:30])  # cap 30 objects
-        prompt1  = ANSWER_FROM_OBJECTS_PROMPT.format(
-            question=question,
-            objects_text=obj_text,
-        )
-        ans1 = call_llm(prompt1, model="text", temperature=0.1, max_tokens=80)
+        if unique_objects:
+            top_vid, top_pts = candidates[0].get("video_id", ""), candidates[0].get("pts_time")
+            transcript1 = get_transcript(top_vid, top_pts) if top_vid and top_pts is not None else ""
+            transcript_hint1 = TRANSCRIPT_HINT_TEMPLATE.format(transcript=transcript1) if transcript1 else ""
 
-        if "CANNOT_ANSWER_FROM_OBJECTS" not in ans1:
-            # Cross-check
-            crosscheck = _crosscheck_answer(question, ans1, unique_objects[:15])
-            conf = 0.75 if crosscheck else 0.45
-            return {
-                "answer":     _normalize_answer(ans1),
-                "best_hit":   candidates[0],
-                "confidence": conf,
-                "method":     "objects",
-            }
-
-    # --- Tang 2: Gemini Vision (chi khi co anh) ---
-    for hit in candidates:
-        jpg = hit.get("jpg_path")
-        if jpg and Path(jpg).exists():
-            prompt2 = ANSWER_FROM_IMAGE_PROMPT.format(question=question)
-            ans2 = call_llm(
-                prompt2,
-                image_paths=[jpg],
-                model="vision",
-                temperature=0.1,
-                max_tokens=80,
+            obj_text = ", ".join(unique_objects[:30])  # cap 30 objects
+            prompt1  = ANSWER_FROM_OBJECTS_PROMPT.format(
+                question=question,
+                objects_text=obj_text,
+                transcript_hint=transcript_hint1,
             )
-            # Cross-check voi objects
-            hit_n = hit.get("n")
-            hit_vid = hit.get("video_id", "")
-            hit_objs = get_objects(hit_vid, int(hit_n)) if hit_n else []
-            crosscheck = _crosscheck_answer(question, ans2, hit_objs)
-            conf = 0.85 if crosscheck else 0.6
-            return {
-                "answer":     _normalize_answer(ans2),
-                "best_hit":   hit,
-                "confidence": conf,
-                "method":     "vision",
-            }
+            ans1 = call_llm(prompt1, model="text", temperature=0.1, max_tokens=80)
+
+            if "CANNOT_ANSWER_FROM_OBJECTS" not in ans1:
+                # Cross-check
+                crosscheck = _crosscheck_answer(question, ans1, unique_objects[:15], transcript1)
+                conf = 0.75 if crosscheck else 0.45
+                return {
+                    "answer":     _normalize_answer(ans1),
+                    "best_hit":   candidates[0],
+                    "confidence": conf,
+                    "method":     "objects",
+                }
+
+    # --- Tang 2: Vision (chi khi co anh) ---
+    # Gom toi da 3 anh candidate dau tien (thay vi chi anh top-1) de model doi chieu giua cac frame —
+    # frame chua so/chu can doc co the khong phai frame co score CLIP cao nhat.
+    vision_hits = [h for h in candidates if h.get("jpg_path") and Path(h["jpg_path"]).exists()][:3]
+    if vision_hits:
+        image_paths = [h["jpg_path"] for h in vision_hits]
+
+        # OCR that (Phase 5) — chi chay khi cau hoi thuc su can doc chu/so (dieu kien tai su dung tu
+        # skip_objects_tier o tren), chi lam goi y phu cho Vision, khong thay the no.
+        ocr_hint = ""
+        if skip_objects_tier:
+            ocr_results = read_text_from_hits(vision_hits, top_n=3)
+            formatted = format_ocr_hint(ocr_results)
+            if formatted:
+                ocr_hint = OCR_HINT_TEMPLATE.format(ocr_lines=formatted)
+
+        top_vid2, top_pts2 = vision_hits[0].get("video_id", ""), vision_hits[0].get("pts_time")
+        transcript2 = get_transcript(top_vid2, top_pts2) if top_vid2 and top_pts2 is not None else ""
+        transcript_hint2 = TRANSCRIPT_HINT_TEMPLATE.format(transcript=transcript2) if transcript2 else ""
+
+        prompt2 = ANSWER_FROM_IMAGES_PROMPT.format(
+            question=question, ocr_hint=ocr_hint, transcript_hint=transcript_hint2,
+        )
+        ans2 = call_llm(
+            prompt2,
+            image_paths=image_paths,
+            model="vision",
+            temperature=0.1,
+            max_tokens=80,
+        )
+        # Cross-check voi objects gom tu tat ca anh da gui cho vision
+        combined_objs = []
+        for h in vision_hits:
+            hit_n, hit_vid = h.get("n"), h.get("video_id", "")
+            if hit_n:
+                combined_objs.extend(get_objects(hit_vid, int(hit_n)))
+        crosscheck = _crosscheck_answer(question, ans2, list(dict.fromkeys(combined_objs)), transcript2)
+        conf = 0.85 if crosscheck else 0.6
+        return {
+            "answer":     _normalize_answer(ans2),
+            "best_hit":   vision_hits[0],
+            "confidence": conf,
+            "method":     "vision",
+        }
 
     # --- Fallback: chi dung kien thuc nen khi khong con bang chung tu video ---
     knowledge_prompt = KNOWLEDGE_FALLBACK_PROMPT.format(question=question)
@@ -197,21 +265,74 @@ def answer_from_hits(
     }
 
 
-def _crosscheck_answer(question: str, answer: str, objects: list[str]) -> bool:
-    """Kiem tra answer nhat quan voi objects. Tra True neu qua duoc cross-check."""
-    if not objects or not answer or answer == "N/A":
+def _crosscheck_answer(question: str, answer: str, objects: list[str], transcript: str = "") -> bool:
+    """Kiem tra answer nhat quan voi objects + transcript. Tra True neu qua duoc cross-check."""
+    if (not objects and not transcript) or not answer or answer == "N/A":
         return False
     prompt = CROSSCHECK_PROMPT.format(
         question=question,
         answer=answer,
-        objects=", ".join(objects[:15]),
+        objects=", ".join(objects[:15]) or "none",
+        transcript=transcript or "none",
     )
     result = call_llm(prompt, model="text", temperature=0.0, max_tokens=20)
     return result.strip().upper().startswith("YES")
 
 
-# ─── CLI test ──────────────────────────────────────────────────────────────────
+# ─── CLI self-test (repo khong dung pytest — xem CLAUDE.md) ────────────────────
+def _run_self_tests() -> None:
+    """Monkeypatch call_llm/get_objects/get_transcript de test transcript duoc bom vao Tier 1
+    va crosscheck ma khong can goi API that."""
+    global call_llm, get_objects, get_transcript
+    _orig_call_llm, _orig_get_objects, _orig_get_transcript = call_llm, get_objects, get_transcript
+    captured_prompts: list[str] = []
+
+    def _fake_call_llm(prompt, **kwargs):
+        captured_prompts.append(prompt)
+        if "Detected objects in candidate frames" in prompt:
+            return "a red car"
+        if "Is this answer plausible" in prompt:
+            return "YES"
+        return "unexpected prompt"
+
+    hit = {"video_id": "V", "n": 1, "frame_idx": 0, "frame_id": 1, "pts_time": 10.0,
+           "score": 0.9, "jpg_path": None}
+
+    try:
+        # Test A: transcript co noi dung -> phai xuat hien trong ca prompt Tier 1 va crosscheck
+        call_llm = _fake_call_llm
+        get_objects = lambda vid, n: ["car", "person"]
+        get_transcript = lambda vid, pts, window=7.5: "a red car passes by quickly"
+        captured_prompts.clear()
+
+        result = answer_from_hits("What color is the car?", [hit], top_n=1)
+        assert result["method"] == "objects", f"Phai dung Tier 1 (objects), duoc {result['method']}"
+        assert result["answer"] == "a red car", f"Answer sai: {result['answer']!r}"
+
+        tier1_prompt = next(p for p in captured_prompts if "Detected objects in candidate frames" in p)
+        assert "a red car passes by quickly" in tier1_prompt, "Tier 1 prompt phai chua transcript hint"
+
+        crosscheck_prompt = next(p for p in captured_prompts if "Is this answer plausible" in p)
+        assert "a red car passes by quickly" in crosscheck_prompt, "Crosscheck prompt phai chua transcript"
+        print("[answer_qa] Test Tier 1 + crosscheck co transcript: OK")
+
+        # Test B: transcript rong -> khong crash, template van render binh thuong
+        get_transcript = lambda vid, pts, window=7.5: ""
+        captured_prompts.clear()
+        result_b = answer_from_hits("What color is the car?", [hit], top_n=1)
+        assert result_b["method"] == "objects", f"Phai dung Tier 1 (objects), duoc {result_b['method']}"
+        print("[answer_qa] Test transcript rong khong crash: OK")
+
+        print("[answer_qa] Tat ca self-test PASS")
+    finally:
+        call_llm, get_objects, get_transcript = _orig_call_llm, _orig_get_objects, _orig_get_transcript
+
+
+# ─── CLI demo ──────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
+    _run_self_tests()
+    print()
+
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
     from agent.tools.retrieve import fast_retrieve
 

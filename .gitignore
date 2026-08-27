@@ -13,3 +13,6 @@ submissions/*.zip
 
 # Output tải về từ Kaggle GPU job (embedding .npy/.zip nặng, không phải code)
 kaggle_jobs/*/output/
+
+providers_import.csv
+providers_import.json

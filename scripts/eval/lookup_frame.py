@@ -19,7 +19,13 @@ Cách dùng:
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
+
+try:
+    sys.stdout.reconfigure(encoding="utf-8")
+except Exception:
+    pass
 
 import pandas as pd
 
