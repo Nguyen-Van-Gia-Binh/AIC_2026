@@ -13,6 +13,26 @@
 
 ## Round 2 (22/8 → 04/09/2026)
 
+### Model production — đổi sang siglip (KIS/TRAKE) + siglip2 (Q&A) (2026-08-28)
+
+Benchmark 33 query (18 KIS, 5 QA, 10 TRAKE) trải rộng 27 video, công thức BTC
+Final = (1/5)·Σ R@{1,5,20,50,100}:
+
+| Model       | ALL   | KIS       | QA-retrieval  | TRAKE     |
+|-------------|-------|-----------|---------------|-----------|
+| siglip2     | 0.551 | 0.689     | **0.440** 🥇  | 0.358     |
+| siglip      | 0.549 | **0.744** 🥇 | 0.120      | **0.412** 🥇 |
+| dfn         | 0.536 | 0.722     | 0.320         | 0.310     |
+| clip_vitb32 | 0.290 | 0.433     | 0.000         | 0.177     |
+
+Quyết định:
+- **KIS/TRAKE → siglip**: tối ưu visual spotting (R@100 KIS=1.000, TRAKE +357% vs baseline).
+- **Q&A → siglip2**: tối ưu VLM reasoning/OCR context (gấp 3.7× siglip v1 ở QA-retrieval).
+- **clip-features-32 đã xoá vĩnh viễn** — không có đường rollback về clip_vitb32.
+- Quyết định này thay thế mục "Model production — chưa đổi khỏi `clip_vitb32`" bên dưới.
+
+_Nguồn: benchmark 33 query từ `test_eval/Eval/run_eval.py`, kết quả ghi ở đầu phiên 2026-08-28._
+
 ### OCR on-demand (Phase 5) — chọn PaddleOCR, không phải EasyOCR
 
 Chốt ngày 2026-08-24 (commit `6838fd1`). Ban đầu có 1 lần lỡ commit nhầm hướng EasyOCR lẫn vào commit
