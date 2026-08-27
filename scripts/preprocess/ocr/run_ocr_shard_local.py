@@ -1,5 +1,5 @@
 """
-scripts/run_ocr_shard_local.py — BIỆN PHÁP BACKUP: chạy tiếp (hoặc chạy mới) 1 shard OCR NGAY TRÊN
+scripts/preprocess/ocr/run_ocr_shard_local.py — BIỆN PHÁP BACKUP: chạy tiếp (hoặc chạy mới) 1 shard OCR NGAY TRÊN
 MÁY LOCAL (GPU riêng), dùng khi 1 trong 3 tài khoản Colab (colab_jobs/06_paddleocr_vietocr_shard{N}/)
 không chạy xong kịp trong giới hạn phiên/quota GPU miễn phí.
 
@@ -41,8 +41,8 @@ CÁCH DÙNG BACKUP (khi 1 shard Colab bị kẹt vì hết giờ):
      không cần thao tác gì thêm để gộp.
 
 Usage:
-  .venv\\Scripts\\python.exe scripts\\run_ocr_shard_local.py --shard 0               # chạy full shard 0
-  .venv\\Scripts\\python.exe scripts\\run_ocr_shard_local.py --shard 0 --smoke-test   # 2 video x 10 ảnh để đo giây/frame thật trước
+  .venv\\Scripts\\python.exe scripts\\preprocess\\ocr\\run_ocr_shard_local.py --shard 0               # chạy full shard 0
+  .venv\\Scripts\\python.exe scripts\\preprocess\\ocr\\run_ocr_shard_local.py --shard 0 --smoke-test   # 2 video x 10 ảnh để đo giây/frame thật trước
 """
 
 import sys
@@ -67,7 +67,7 @@ TAG = "ocr_local"
 TOTAL_SHARDS = 3
 SCORE_THRESH = 0.5  # lọc box điểm tin cậy thấp — CHƯA kiểm chứng ngưỡng tối ưu, giá trị khởi điểm hợp lý (xem colab_jobs)
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent.parent.parent.parent
 KEYFRAMES_ROOT = ROOT / "data" / "extracted" / "keyframes"
 
 _DEVICE = None  # set trong main() sau khi torch import được (torch chỉ cần cho VietOCR, không cho paddleocr)

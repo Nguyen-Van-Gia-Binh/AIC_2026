@@ -1,8 +1,9 @@
 """
 test_phase3_rerank.py — So sanh R@k truoc/sau khi ap dung apply_risk_aware_ranking (Phase 3) tren
 cac cau KIS/QA that trong test_eval/Eval/eval_ground_truth.json, dung DUNG duong dan production
-(scripts/agent/tools/retrieve.py, model clip_vitb32) — khac voi test_eval/Eval/run_eval.py (chi so
-sanh embedding baseline qua multi_index.py, khong dung retrieve.py).
+(scripts/agent/tools/retrieve.py — KIS/QA dung siglip/siglip2 sau khi retire clip_vitb32 2026-08-28)
+— khac voi test_eval/Eval/run_eval.py (chi so sanh embedding baseline qua multi_index.py,
+khong dung retrieve.py).
 
 Usage:
     .venv\\Scripts\\python.exe test_eval\\Test\\test_phase3_rerank.py

@@ -1,5 +1,5 @@
 """
-scripts/run_caption_shard_local.py — Chạy 1 shard caption Vintern-1B-v3.5 NGAY TRÊN MÁY LOCAL (GPU
+scripts/preprocess/captions/run_caption_shard_local.py — Chạy 1 shard caption Vintern-1B-v3.5 NGAY TRÊN MÁY LOCAL (GPU
 riêng), thay vì đẩy lên Kaggle qua kaggle_jobs/07_vintern_caption_shard{N}/.
 
 Lý do có file này: logic xử lý (dynamic_preprocess/load_image/caption_frame/...) giống HỆT
@@ -23,8 +23,8 @@ sentencepiece, accelerate. Cài 1 lần:
   .venv\\Scripts\\python.exe -m pip install transformers==4.57.3 timm einops sentencepiece accelerate
 
 Usage:
-  .venv\\Scripts\\python.exe scripts\\run_caption_shard_local.py --shard 1                # chạy full shard 1
-  .venv\\Scripts\\python.exe scripts\\run_caption_shard_local.py --shard 1 --smoke-test    # 2 video x 5 ảnh để đo giây/frame thật trước
+  .venv\\Scripts\\python.exe scripts\\preprocess\\captions\\run_caption_shard_local.py --shard 1                # chạy full shard 1
+  .venv\\Scripts\\python.exe scripts\\preprocess\\captions\\run_caption_shard_local.py --shard 1 --smoke-test    # 2 video x 5 ảnh để đo giây/frame thật trước
 """
 
 import sys
@@ -54,7 +54,7 @@ DYNAMIC_TILE_MAX_NUM = 6
 QUESTION = ("<image>\nMô tả ngắn gọn trong 1 câu tiếng Việt nội dung khung hình này (người, vật, "
             "hành động, bối cảnh).")
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent.parent.parent.parent
 KEYFRAMES_ROOT = ROOT / "data" / "extracted" / "keyframes"
 MANIFEST_DIR = ROOT / "data" / "manifests"
 

@@ -1,5 +1,5 @@
 """
-scripts/build_caption_manifest.py — Lọc keyframe theo Semantic Similarity & Chia đều 3 Shard cho 3 tài khoản Kaggle.
+scripts/preprocess/captions/build_caption_manifest.py — Lọc keyframe theo Semantic Similarity & Chia đều 3 Shard cho 3 tài khoản Kaggle.
 
 Thuật toán lọc:
   1. Luôn giữ frame đầu tiên (n=1, index 0).
@@ -13,7 +13,7 @@ Phân bổ Shard:
     thời gian GPU ước tính giữa 3 tài khoản đạt mức cân bằng tối đa (~10h GPU/tài khoản).
 
 Usage:
-  .venv\\Scripts\\python.exe scripts\\build_caption_manifest.py
+  .venv\\Scripts\\python.exe scripts\\preprocess\\captions\\build_caption_manifest.py
 """
 
 from pathlib import Path
@@ -30,7 +30,7 @@ if sys.platform == "win32":
     except Exception:
         pass
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent.parent.parent.parent
 DATA_DIR = ROOT / "data"
 
 # Tự động tìm đường dẫn features_siglip2 và map-keyframes

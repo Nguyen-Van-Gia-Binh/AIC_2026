@@ -1,5 +1,5 @@
 """
-scripts/merge_captions.py — Hợp nhất & Kiểm định kết quả Caption từ 3 Shard Kaggle.
+scripts/preprocess/captions/merge_captions.py — Hợp nhất & Kiểm định kết quả Caption từ 3 Shard Kaggle.
 
 Quy trình:
   1. Quét các thư mục / zip output tải về từ 3 tài khoản Kaggle:
@@ -15,7 +15,7 @@ Quy trình:
   4. Đóng gói toàn bộ thành data/extracted/caption_vintern1b.zip để lưu trữ & sẵn sàng nạp vào Elasticsearch.
 
 Usage:
-  .venv\\Scripts\\python.exe scripts\\merge_captions.py
+  .venv\\Scripts\\python.exe scripts\\preprocess\\captions\\merge_captions.py
 """
 
 import sys
@@ -33,7 +33,7 @@ if sys.platform == "win32":
     except Exception:
         pass
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent.parent.parent.parent
 DATA_DIR = ROOT / "data"
 EXTRACTED_DIR = DATA_DIR / "extracted"
 DEST_DIR = EXTRACTED_DIR / "caption_vintern1b"
