@@ -195,46 +195,6 @@ def fast_retrieve_for_video(query_text: str, video_id: str, top_k: int = 20) -> 
     return results
 
 
-def get_neighbor_frames(video_id: str, frame_idx: int, window: int = 5) -> list[dict]:
-    """Tra ve toi da 2*window+1 keyframe LIEN TIEP (theo frame_idx) trong CUNG 1 video, xung quanh
-    frame_idx duoc chi dinh — dung cho man chi tiet keyframe (dai frame lan can, mockup man 1c).
-    Khong tinh score (khong phai ket qua truy van) — chi tra ve video_id/frame_id/frame_idx/pts_time.
-    """
-    _ensure_loaded()
-    mask = _META["video_id"] == video_id
-    if not mask.any():
-        return []
-    local_meta = _META[mask].sort_values("frame_idx").reset_index(drop=True)
-    pos = local_meta.index[local_meta["frame_idx"] == frame_idx]
-    if len(pos) == 0:
-        return []
-    center = pos[0]
-    lo = max(0, center - window)
-    hi = min(len(local_meta), center + window + 1)
-    results = []
-    for _, row in local_meta.iloc[lo:hi].iterrows():
-        fidx = int(row["frame_idx"])
-        results.append({
-            "video_id": row["video_id"],
-            "frame_idx": fidx,
-            "frame_id": fidx + 1,
-            "pts_time": float(row["pts_time"]),
-        })
-    return results
-
-
-def get_keyframe_path(video_id: str, frame_idx: int) -> Optional[str]:
-    """Tra ve duong dan file .jpg tuyet doi cua 1 keyframe (video_id + frame_idx), hoac None neu
-    khong tim thay dong hoac anh chua giai nen. Dung cho endpoint serve anh cua backend (scripts/api).
-    """
-    _ensure_loaded()
-    mask = (_META["video_id"] == video_id) & (_META["frame_idx"] == frame_idx)
-    if not mask.any():
-        return None
-    jpg = _META.loc[mask, "jpg_path"].iloc[0]
-    return jpg if isinstance(jpg, str) else None
-
-
 if __name__ == "__main__":
     query = " ".join(sys.argv[1:]) or "a person walking on the street"
     print(f"\nQuery: {query!r}")

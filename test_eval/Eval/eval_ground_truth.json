@@ -8,8 +8,8 @@
       "easy_sanity_check"
     ],
     "gt_video_id": "L21_V001",
-    "gt_frame_start": 5551,
-    "gt_frame_end": 5890
+    "gt_frame_start": 5761,
+    "gt_frame_end": 5761
   },
   {
     "query_id": "e-kis-ai-002",
@@ -20,8 +20,8 @@
       "multi_similar_object"
     ],
     "gt_video_id": "L21_V001",
-    "gt_frame_start": 17791,
-    "gt_frame_end": 18075
+    "gt_frame_start": 17881,
+    "gt_frame_end": 17881
   },
   {
     "query_id": "e-kis-ai-003",
@@ -32,8 +32,8 @@
       "small_object"
     ],
     "gt_video_id": "L23_V001",
-    "gt_frame_start": 501,
-    "gt_frame_end": 702
+    "gt_frame_start": 626,
+    "gt_frame_end": 626
   },
   {
     "query_id": "e-kis-ai-004",
@@ -44,8 +44,8 @@
       "easy_sanity_check"
     ],
     "gt_video_id": "L23_V001",
-    "gt_frame_start": 1876,
-    "gt_frame_end": 2001
+    "gt_frame_start": 1906,
+    "gt_frame_end": 1906
   },
   {
     "query_id": "e-kis-ai-005",
@@ -56,8 +56,8 @@
       "small_object"
     ],
     "gt_video_id": "L25_V001",
-    "gt_frame_start": 2127,
-    "gt_frame_end": 2229
+    "gt_frame_start": 2195,
+    "gt_frame_end": 2195
   },
   {
     "query_id": "e-kis-ai-006",
@@ -68,8 +68,8 @@
       "multi_similar_object"
     ],
     "gt_video_id": "L25_V001",
-    "gt_frame_start": 19448,
-    "gt_frame_end": 19501
+    "gt_frame_start": 19479,
+    "gt_frame_end": 19479
   },
   {
     "query_id": "e-qa-ai-001",
@@ -81,13 +81,9 @@
       "counting"
     ],
     "gt_video_id": "L25_V001",
-    "gt_frame_start": 19448,
-    "gt_frame_end": 19501,
-    "gt_answers": [
-      "2",
-      "hai",
-      "two"
-    ]
+    "gt_frame_start": 19479,
+    "gt_frame_end": 19479,
+    "gt_answer": "2"
   },
   {
     "query_id": "e-kis-ai-007",
@@ -98,8 +94,8 @@
       "fine_detail"
     ],
     "gt_video_id": "L22_V001",
-    "gt_frame_start": 13170,
-    "gt_frame_end": 13396
+    "gt_frame_start": 13198,
+    "gt_frame_end": 13198
   },
   {
     "query_id": "e-kis-ai-008",
@@ -110,20 +106,20 @@
       "small_object"
     ],
     "gt_video_id": "L22_V003",
-    "gt_frame_start": 11911,
-    "gt_frame_end": 12121
+    "gt_frame_start": 12031,
+    "gt_frame_end": 12031
   },
   {
     "query_id": "e-kis-ai-009",
     "type": "KIS",
-    "text_vi": "Một nhóm thanh niên mặc đồ rằn ri xanh lá biểu diễn múa rồng vàng trên sân khấu trong nhà, phía sau có màn hình lớn chiếu hình đàn cừu, hai người mặc đồ đỏ đứng 2 bên làm nền.",
-    "text_en": "A group of young performers in green camouflage outfits perform a golden dragon dance on an indoor stage, with a large screen behind them showing a herd of sheep, and two people in red costumes standing on either side.",
+    "text_vi": "Một nhóm thanh niên mặc đồ đồng phục xanh lá biểu diễn múa rồng vàng trên sân khấu trong nhà, phía sau có màn hình lớn chiếu hình ảnh những người lính, hai người mặc đồ đỏ đứng 2 bên làm nền.",
+    "text_en": "A group of young performers in green uniforms perform a golden dragon dance on an indoor stage, with a large screen behind them showing images of soldiers, and two people in red costumes standing on either side.",
     "difficulty_tags": [
       "multi_similar_object"
     ],
     "gt_video_id": "L24_V002",
-    "gt_frame_start": 8065,
-    "gt_frame_end": 8245
+    "gt_frame_start": 8193,
+    "gt_frame_end": 8193
   },
   {
     "query_id": "e-kis-ai-010",
@@ -134,20 +130,20 @@
       "multi_similar_object"
     ],
     "gt_video_id": "L24_V004",
-    "gt_frame_start": 9027,
-    "gt_frame_end": 9089
+    "gt_frame_start": 9046,
+    "gt_frame_end": 9046
   },
   {
     "query_id": "e-kis-ai-011",
     "type": "KIS",
-    "text_vi": "Một bát thủy tinh trong suốt đặt trên bàn gỗ, bên trong chỉ có một ít hạt gạo trắng nằm gọn ở đáy bát.",
-    "text_en": "A clear glass bowl sits on a wooden table, containing only a small amount of white rice grains resting at the bottom.",
+    "text_vi": "Một bát thủy tinh trong suốt đặt trên bàn gỗ, bên trong chỉ có một ít hạt nêm trắng nằm gọn ở đáy bát.",
+    "text_en": "A clear glass bowl sits on a wooden table, containing only a small amount of white seasoning powder resting at the bottom.",
     "difficulty_tags": [
       "small_object"
     ],
     "gt_video_id": "L26_V001",
-    "gt_frame_start": 2566,
-    "gt_frame_end": 2632
+    "gt_frame_start": 2589,
+    "gt_frame_end": 2589
   },
   {
     "query_id": "e-kis-ai-012",
@@ -158,8 +154,8 @@
       "small_object"
     ],
     "gt_video_id": "L26_V003",
-    "gt_frame_start": 2566,
-    "gt_frame_end": 2681
+    "gt_frame_start": 2441,
+    "gt_frame_end": 2628
   },
   {
     "query_id": "e-kis-ai-013",
@@ -170,32 +166,32 @@
       "fine_detail"
     ],
     "gt_video_id": "L27_V001",
-    "gt_frame_start": 3916,
-    "gt_frame_end": 4026
+    "gt_frame_start": 3985,
+    "gt_frame_end": 3985
   },
   {
     "query_id": "e-kis-ai-014",
     "type": "KIS",
-    "text_vi": "Một người đàn ông trẻ và một phụ nữ đang xem xét các bó hoa/vòng lá xanh tại một sạp hoa ngoài trời có mái tôn, xung quanh bày nhiều chậu hoa màu sắc.",
-    "text_en": "A young man and a woman examine green leaf wreaths/bouquets at an outdoor flower stall with a tin roof, surrounded by many colorful potted flower arrangements.",
+    "text_vi": "Một người đàn ông trẻ và một phụ nữ đang xem xét các bó lá rau xanh tại một sạp rau lá ngoài trời có mái tôn, xung quanh bày nhiều chậu thau lá màu xanh và đỏ.",
+    "text_en": "A young man and a woman examine green leaf wreaths/bouquets at an outdoor flower stall with a tin roof, surrounded by many green and red potted leaf arrangements.",
     "difficulty_tags": [
       "multi_similar_object"
     ],
     "gt_video_id": "L27_V003",
-    "gt_frame_start": 3157,
-    "gt_frame_end": 3323
+    "gt_frame_start": 3241,
+    "gt_frame_end": 3241
   },
   {
     "query_id": "e-kis-ai-015",
     "type": "KIS",
-    "text_vi": "Đoạn tư liệu cũ tông màu ngả vàng có ghi chú 'Tư liệu MÊ KÔNG KÝ SỰ', quay cảnh 2 người đàn ông lớn tuổi đi bộ dọc bờ nước trên con đường đất.",
-    "text_en": "An old, sepia-toned archival clip labeled 'Tư liệu MÊ KÔNG KÝ SỰ' showing two elderly men walking along a dirt path beside the water.",
+    "text_vi": "Đoạn tư liệu cũ tông màu ngả vàng có ghi chú 'Tư liệu MÊ KÔNG KÝ SỰ', quay cảnh 3 người đàn ông lớn tuổi đi bộ dọc bờ nước trên con đường đất.",
+    "text_en": "An old, sepia-toned archival clip labeled 'Tư liệu MÊ KÔNG KÝ SỰ' showing three elderly men walking along a dirt path beside the water.",
     "difficulty_tags": [
       "fine_detail"
     ],
     "gt_video_id": "L28_V002",
-    "gt_frame_start": 7966,
-    "gt_frame_end": 8236
+    "gt_frame_start": 8101,
+    "gt_frame_end": 8101
   },
   {
     "query_id": "e-kis-ai-016",
@@ -206,8 +202,8 @@
       "fine_detail"
     ],
     "gt_video_id": "L28_V003",
-    "gt_frame_start": 10801,
-    "gt_frame_end": 10936
+    "gt_frame_start": 10821,
+    "gt_frame_end": 10940
   },
   {
     "query_id": "e-kis-ai-017",
@@ -218,8 +214,8 @@
       "multi_similar_object"
     ],
     "gt_video_id": "L29_V001",
-    "gt_frame_start": 7324,
-    "gt_frame_end": 7402
+    "gt_frame_start": 7351,
+    "gt_frame_end": 7351
   },
   {
     "query_id": "e-kis-ai-018",
@@ -230,8 +226,8 @@
       "image_in_image"
     ],
     "gt_video_id": "L30_V001",
-    "gt_frame_start": 1546,
-    "gt_frame_end": 1651
+    "gt_frame_start": 1604,
+    "gt_frame_end": 1604
   },
   {
     "query_id": "e-trake-001",
@@ -246,13 +242,13 @@
     "events": [
       {
         "text_en": "the first moment the ribbon is being cut",
-        "gt_frame_start": 25510,
-        "gt_frame_end": 25714
+        "gt_frame_start": 25654,
+        "gt_frame_end": 25654
       },
       {
         "text_en": "the moment the ribbon is cut",
-        "gt_frame_start": 25654,
-        "gt_frame_end": 25816
+        "gt_frame_start": 25714,
+        "gt_frame_end": 25714
       }
     ]
   },
@@ -268,18 +264,18 @@
     "events": [
       {
         "text_en": "man starts crossing the street",
-        "gt_frame_start": 13641,
-        "gt_frame_end": 13923
+        "gt_frame_start": 13707,
+        "gt_frame_end": 13707
       },
       {
         "text_en": "man is halfway across the street",
-        "gt_frame_start": 13770,
-        "gt_frame_end": 13945
+        "gt_frame_start": 13782,
+        "gt_frame_end": 13782
       },
       {
         "text_en": "man reaches the other side",
-        "gt_frame_start": 13770,
-        "gt_frame_end": 13945
+        "gt_frame_start": 13895,
+        "gt_frame_end": 13895
       }
     ]
   },
@@ -295,17 +291,17 @@
     "events": [
       {
         "text_en": "man starts walking while being carried by two other people",
-        "gt_frame_start": 12778,
+        "gt_frame_start": 12847,
         "gt_frame_end": 12900
       },
       {
         "text_en": "man arriving at the ambulance",
-        "gt_frame_start": 13020,
+        "gt_frame_start": 13149,
         "gt_frame_end": 13170
       },
       {
         "text_en": "man lays in the ambulance",
-        "gt_frame_start": 13170,
+        "gt_frame_start": 13199,
         "gt_frame_end": 13278
       }
     ]
@@ -322,13 +318,13 @@
     "events": [
       {
         "text_en": "criminal starts being escorted",
-        "gt_frame_start": 28411,
-        "gt_frame_end": 28681
+        "gt_frame_start": 28531,
+        "gt_frame_end": 28531
       },
       {
         "text_en": "criminal is escorted",
-        "gt_frame_start": 28411,
-        "gt_frame_end": 28681
+        "gt_frame_start": 28531,
+        "gt_frame_end": 28531
       },
       {
         "text_en": "criminal is being interrogated",
@@ -346,38 +342,30 @@
     "difficulty_tags": [
       "counting"
     ],
-    "gt_video_id": "L30_V096",
+    "gt_video_id": "L30_V090",
     "gt_frame_start": 820,
     "gt_frame_end": 1100,
-    "gt_answers": [
-      "15",
-      "mười lăm",
-      "fifteen"
-    ]
+    "gt_answer": "15"
   },
   {
     "query_id": "e-qa-ai-003",
     "type": "QA",
-    "text_vi": "Trong video nói về thiên nga, nhóm nhà nghiên cứu đứng ở trên bãi cỏ có bao nhiu người?",
-    "text_en": "In the video about swans, how many researchers are standing on the grass?",
-    "question": "Có bao nhiêu nhà nghiên cứu đang đứng trên bãi cỏ?",
+    "text_vi": "Trong video nói về việc tác giả thử sức viết một cuốn sách tranh, cuốn sách có chủ đề là gì?",
+    "text_en": "In the video where the author tries their hand at writing a picture book, what is the book's theme?",
+    "question": "Cuốn sách có chủ đề là gì?",
     "difficulty_tags": [
-      "counting"
+      "naming"
     ],
     "gt_video_id": "L30_V096",
-    "gt_frame_start": 25828,
-    "gt_frame_end": 25993,
-    "gt_answers": [
-      "8",
-      "tám",
-      "eight"
-    ]
+    "gt_frame_start": 1445,
+    "gt_frame_end": 1515,
+    "gt_answer": "Em yêu biển đảo biên cương"
   },
   {
     "query_id": "e-qa-ai-004",
     "type": "QA",
-    "text_vi": "Trong video nói về chương trình món ngon mỗi ngày, chai nước tương trên bàn có nhãn hiệu gì?",
-    "text_en": "In the video about the daily delicious meal program, what brand is the soy sauce bottle on the table?",
+    "text_vi": "Trong video nói về chương trình món ngon mỗi ngày, trên bàn có nhiều nguyên liệu nấu ăn, chai nước tương trên bàn có nhãn hiệu gì?",
+    "text_en": "In the video about the daily delicious meal program, there are many cooking ingredients on the table, what brand is the soy sauce bottle on the table?",
     "question": "Chai nước tương trên bàn có nhãn hiệu gì?",
     "difficulty_tags": [
       "naming"
@@ -385,10 +373,7 @@
     "gt_video_id": "L26_V296",
     "gt_frame_start": 1537,
     "gt_frame_end": 1665,
-    "gt_answers": [
-      "Phú Sĩ",
-      "Phu Si"
-    ]
+    "gt_answer": "Phú Sĩ"
   },
   {
     "query_id": "e-qa-ai-005",
@@ -402,12 +387,7 @@
     "gt_video_id": "L27_V003",
     "gt_frame_start": 7021,
     "gt_frame_end": 7156,
-    "gt_answers": [
-      "Rau sống",
-      "rau sống ăn kèm",
-      "fresh herbs",
-      "herbs"
-    ]
+    "gt_answer": "Rau sống"
   },
   {
     "query_id": "e-trake-005",
@@ -432,8 +412,8 @@
       },
       {
         "text_en": "yellow lion jumping and standing up on hind legs",
-        "gt_frame_start": 1489,
-        "gt_frame_end": 1737
+        "gt_frame_start": 1680,
+        "gt_frame_end": 1680
       },
       {
         "text_en": "yellow lion leaping from one pole to another on high stilts",
