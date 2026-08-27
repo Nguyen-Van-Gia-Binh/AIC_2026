@@ -4,11 +4,11 @@ pipeline_qa.py — Pipeline Q&A: Orchestrator + Tool-use, max 2 vong verify-rewr
 Workflow:
   query_vi
     -> rewrite_query()      -> query_en
-    -> fast_retrieve(100)   -> top-100 hits
-    -> answer_from_hits(5)  -> answer + best_hit + confidence
+    -> fast_retrieve_qa(100)-> top-100 hits  # Model embedding: siglip2 (google/siglip2-so400m-patch14-384)
+    -> answer_from_hits(5)  -> answer + best_hit + confidence  # Chon vi QA-retrieval Final=0.440 (x3.7 so siglip)
     -> neu confidence < 0.5:
          -> rewrite_query(feedback) -> query_en_v2
-         -> fast_retrieve(100)      -> hits_v2
+         -> fast_retrieve_qa(100)   -> hits_v2
          -> answer_from_hits(5)     -> answer_v2
     -> build_qa_results(hits + answer)
 
@@ -24,7 +24,7 @@ if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
 from scripts.agent.config import MAX_AGENT_LOOPS
-from scripts.agent.tools.retrieve import fast_retrieve
+from scripts.agent.tools.retrieve import fast_retrieve_qa as fast_retrieve
 from scripts.agent.tools.rewrite import rewrite_query
 from scripts.agent.tools.answer_qa import answer_from_hits
 from scripts.agent.tools.rerank import apply_risk_aware_ranking, RETRIEVAL_POOL_SIZE
