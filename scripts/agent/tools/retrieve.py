@@ -237,8 +237,6 @@ def fast_retrieve_qa(query_text: str, top_k: int = 100) -> list[dict]:
             "jpg_path":  row["jpg_path"] if isinstance(row["jpg_path"], str) else None,
         })
     return results
-
-
 def get_neighbor_frames(video_id: str, frame_idx: int, window: int = 5) -> list[dict]:
     """Tra ve toi da 2*window+1 keyframe LIEN TIEP (theo frame_idx) trong CUNG 1 video, xung quanh
     frame_idx duoc chi dinh — dung cho man chi tiet keyframe (dai frame lan can, mockup man 1c).
