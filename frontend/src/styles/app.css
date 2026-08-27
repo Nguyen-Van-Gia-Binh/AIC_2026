@@ -361,3 +361,176 @@
   font-size: 12.5px; line-height: 1.5;
   color: color-mix(in srgb, var(--color-text) 65%, transparent);
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Phase 1.9 — man Chat (Mock-First): full-height chat timeline + o nhap tu co
+   gian + Drawer truot phai dung chung VideoVerifier cho KIS/Q&A/TRAKE. Du lieu
+   ket qua tu fixture tinh (src/mock/chatScenarios.ts); video/thumbnail/hang doi
+   la that. Tai dung .kf-strip / .kf-strip-item / .frame-input / .video-verifier.
+   ══════════════════════════════════════════════════════════════════════ */
+
+.chat-screen {
+  max-width: 980px; height: calc(100vh - 48px);
+  display: flex; flex-direction: column; gap: 12px;
+}
+
+.chat-header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.chat-header-qid { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+.chat-header-qid .input { width: 180px; min-height: 34px; }
+.chat-header-model { font-size: 11px; }
+.chat-header .btn { min-height: 34px; margin-left: auto; }
+
+/* — vung cuon tin nhan — */
+.chat-timeline {
+  flex: 1; min-height: 0; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 14px;
+  padding: 4px 2px 12px;
+}
+
+.chat-bubble { max-width: 88%; display: flex; flex-direction: column; gap: 8px; }
+.chat-bubble.user {
+  align-self: flex-end; align-items: flex-end;
+  background: var(--color-accent-100); color: var(--color-accent-900);
+  border-radius: var(--radius-md); padding: 8px 14px;
+}
+.chat-bubble.user p { margin: 0; }
+.chat-bubble.assistant {
+  align-self: flex-start; width: 100%;
+  background: var(--color-surface); border: 1px solid var(--color-divider);
+  border-radius: var(--radius-md); padding: 12px 14px;
+}
+.chat-bubble.assistant > p { margin: 0 0 4px; }
+.chat-time { font-size: 10px; color: color-mix(in srgb, var(--color-text) 45%, transparent); }
+
+.chat-skeleton { display: flex; flex-direction: column; gap: 6px; }
+.chat-skeleton span {
+  height: 10px; border-radius: 999px; background: var(--color-neutral-200);
+  animation: chat-pulse 1.1s ease-in-out infinite;
+}
+.chat-skeleton span:nth-child(1) { width: 62%; }
+.chat-skeleton span:nth-child(2) { width: 90%; }
+.chat-skeleton span:nth-child(3) { width: 44%; }
+@keyframes chat-pulse { 0%, 100% { opacity: 0.45; } 50% { opacity: 1; } }
+.chat-error { margin: 0; color: var(--color-danger, #c0392b); font-size: 13px; }
+
+/* — accordion Agent Trace — */
+.chat-trace {
+  border: 1px solid var(--color-divider); border-radius: var(--radius-sm);
+  background: var(--color-neutral-100); font-size: 12px;
+}
+.chat-trace > summary {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 7px 10px; cursor: pointer; list-style: none;
+}
+.chat-trace > summary::-webkit-details-marker { display: none; }
+.chat-trace-conf { font-weight: 600; color: var(--color-accent-800, var(--color-accent)); }
+.chat-trace-toggle {
+  margin-left: auto; font-size: 11px;
+  color: color-mix(in srgb, var(--color-text) 50%, transparent);
+}
+.chat-trace-body { padding: 0 12px 10px; }
+.chat-trace-rw { margin: 0 0 6px; font-size: 11.5px; word-break: break-word; }
+.chat-trace-body ol {
+  margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 3px;
+  color: color-mix(in srgb, var(--color-text) 78%, transparent);
+}
+
+/* — dai keyframe KIS / frame chung cu Q&A — */
+.chat-kis-strip { display: flex; gap: 10px; overflow-x: auto; overflow-y: hidden; padding: 2px 2px 8px; }
+.chat-kis-card {
+  flex: 0 0 auto; width: 180px; display: flex; flex-direction: column; gap: 4px;
+  padding: 0; border: 1px solid var(--color-divider); background: none;
+  border-radius: var(--radius-sm); cursor: pointer; text-align: left;
+}
+.chat-kis-card:hover { border-color: var(--color-accent); }
+.chat-kis-card .thumb { aspect-ratio: 16 / 10; border-radius: var(--radius-sm) var(--radius-sm) 0 0; }
+.chat-card-meta {
+  font-size: 10.5px; padding: 2px 6px 5px;
+  color: color-mix(in srgb, var(--color-text) 65%, transparent);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.chat-edited-badge {
+  align-self: flex-start; margin: 0 6px 5px; font-size: 10px; font-weight: 600;
+  padding: 1px 7px; border-radius: 999px;
+  background: var(--color-accent-2-100); color: var(--color-accent-2-800);
+}
+
+/* — khung dap an Q&A — */
+.chat-qa-banner { display: flex; flex-direction: column; gap: 8px; }
+.chat-qa-answer { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+.chat-qa-answer .input { flex: 1; }
+
+/* — timeline N moc TRAKE — */
+.chat-trake-seq { display: flex; gap: 8px; overflow-x: auto; overflow-y: hidden; padding: 2px 2px 8px; }
+.chat-moment {
+  flex: 0 0 auto; width: 170px; display: flex; flex-direction: column; gap: 4px;
+  border: 1px solid var(--color-divider); border-radius: var(--radius-md); padding: 6px;
+}
+.chat-moment.invalid {
+  border-color: var(--color-danger, #c0392b);
+  background: color-mix(in srgb, var(--color-danger, #c0392b) 8%, transparent);
+}
+.chat-moment-title {
+  font-size: 11px; line-height: 1.3; font-weight: 600;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  color: color-mix(in srgb, var(--color-text) 78%, transparent);
+}
+.chat-moment-thumb {
+  width: 100%; aspect-ratio: 16 / 10; border-radius: var(--radius-sm); overflow: hidden;
+  padding: 0; border: 1px solid var(--color-divider); background: none; cursor: pointer;
+}
+.chat-moment-thumb:hover { border-color: var(--color-accent); }
+.chat-moment-foot { display: flex; align-items: center; gap: 6px; }
+.chat-moment-foot .frame-input { width: 84px; flex: 0 0 84px; }
+.chat-moment-foot > .mono { font-size: 11px; color: color-mix(in srgb, var(--color-text) 60%, transparent); }
+.chat-warn { font-size: 10.5px; font-weight: 600; color: var(--color-danger, #c0392b); }
+
+.chat-bubble-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.chat-bubble-actions .btn { min-height: 34px; }
+
+/* — o nhap chat — */
+.chat-input {
+  display: flex; flex-direction: column; gap: 8px;
+  border-top: 1px solid var(--color-divider); padding-top: 10px;
+}
+.chat-input-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chat-input-row { display: flex; gap: 10px; align-items: flex-end; }
+.chat-input-row .input { flex: 1; }
+.chat-input textarea.input {
+  min-height: 40px; max-height: 160px; resize: none; overflow-y: auto;
+}
+.chat-input-row .btn { min-height: 40px; white-space: nowrap; }
+
+/* — Drawer truot phai — */
+.chat-drawer-overlay {
+  position: fixed; inset: 0; z-index: 39; background: rgba(20, 12, 4, 0.28);
+  opacity: 0; pointer-events: none; transition: opacity 0.2s;
+}
+.chat-drawer-overlay.open { opacity: 1; pointer-events: auto; }
+.chat-drawer {
+  position: fixed; top: 0; right: 0; z-index: 40;
+  height: 100vh; width: min(480px, 94vw);
+  background: var(--color-bg); border-left: 1px solid var(--color-divider);
+  box-shadow: var(--shadow-lg, 0 12px 32px rgba(30, 20, 10, 0.22));
+  transform: translateX(100%); transition: transform 0.22s ease;
+  overflow-y: auto;
+}
+.chat-drawer.open { transform: none; }
+.chat-drawer-inner { display: flex; flex-direction: column; gap: 12px; padding: 16px; }
+.chat-drawer-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.chat-drawer-head .btn { min-height: 32px; }
+.chat-drawer-readout {
+  font-size: 12px; margin: 0;
+  color: color-mix(in srgb, var(--color-text) 70%, transparent);
+}
+.chat-drawer-actions { display: flex; flex-direction: column; gap: 8px; }
+.chat-drawer-actions .btn { margin-top: 0; }
+
+/* — toast — */
+.chat-toast {
+  position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 50;
+  max-width: 90vw; padding: 10px 18px; border-radius: 999px;
+  background: var(--color-surface); border: 1px solid var(--color-divider);
+  box-shadow: var(--shadow-lg, 0 12px 32px rgba(30, 20, 10, 0.22));
+  font-size: 13px;
+}

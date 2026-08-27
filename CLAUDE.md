@@ -112,7 +112,9 @@ directly with the venv Python, not via a test framework. There is no linter/form
 - `frontend/` — **new, being introduced** — the React + Vite frontend (Node/npm toolchain lives only
   here, isolated from the rest of the Python repo), replacing the Gradio UI. See
   `docs/superpowers/specs/2026-08-27-multiagent-chat-architecture-design.md` and the Phase 7 plan(s)
-  under `docs/superpowers/plans/` for the build-out.
+  under `docs/superpowers/plans/` for the build-out. The `Chat` tab is enabled but runs on **static
+  fixtures** (`src/mock/chatScenarios.ts`, components under `src/components/chat/`) — the real LLM
+  router / `scripts/api/routers/chat.py` is Phase con 2/3, not wired yet.
 
 New files go under `scripts/agent/tools/` if they're a single-purpose capability used by more than one
 pipeline, or under `scripts/agent/` directly if they're a new top-level pipeline. Don't add new

@@ -89,6 +89,14 @@ export const api = {
       body: JSON.stringify({ query, events, top_k_video, query_en }),
     }),
 
+  // Phase 2: man Chat se goi endpoint nay thay cho fixture tinh (src/mock/chatScenarios.ts).
+  // Contract: docs/superpowers/specs/2026-08-28-chat-screen-ui-design.md §4.1. Chua dung o Phase 1.
+  chatMessage: (sessionId: string, message: string, query_id: string) =>
+    request<Record<string, unknown>>(`/chat/${encodeURIComponent(sessionId)}/message`, {
+      method: "POST",
+      body: JSON.stringify({ message, query_id }),
+    }),
+
   getQueue: (sessionId: string) => request<QueueRow[]>(`/queue/${sessionId}`),
 
   addToQueue: (sessionId: string, row: QueueRow) =>

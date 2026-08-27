@@ -113,6 +113,15 @@ Claude Design (plan: `docs/superpowers/plans/2026-08-27-phase1-fastapi-react-fro
   frame cho Mốc này"); widget "🚀 Chốt & Nộp vào hàng đợi" nổi cố định góc dưới-phải (ghi nhận đúng
   thứ tự thẻ đã sắp), phím tắt Ctrl/Cmd+Enter. Không đổi backend (dùng lại `trake/run`,
   `keyframes/{id}/all`, `videos/{id}/meta`).
+- [ ] Phase con 1.9 — màn Chat Mock-First (GĐ1 của spec `2026-08-28-chat-screen-ui-design.md`): bật
+  tab Chat, dựng toàn bộ UI hội thoại đa tác vụ với **fixture tĩnh 3 kịch bản** (KIS `L21_V001` /
+  Q&A `L22_V001` / TRAKE `L25_V001`, dùng `video_id`+`frame_idx` thật) — `src/mock/chatScenarios.ts`
+  (`pickScenario` heuristic keyword + `buildAssistantMessage`, có nhận diện "lượt tiếp nối"). Rich
+  Card: `AgentTraceAccordion` + `KisResultCards` / `QaResultBanner` (sửa đáp án) / `TrakeSequenceView`
+  (sửa `frame_id` + ⚠️ lệch thứ tự). Bấm thumbnail → `ChatDrawer` trượt phải dùng chung
+  `VideoVerifier` (thêm phím `A`/`D` = ±1 frame) + dải keyframe; "📌 Cập nhật Frame … vào vị trí #k"
+  → card cập nhật + nhãn "Đã chỉnh sửa"; "📥 Chốt vào Hàng đợi nộp" → `api.addToQueue` + toast. KIS/
+  Q&A/TRAKE tab giữ nguyên. Không đổi backend. GĐ2 chỉ đổi `buildAssistantMessage` → `api.chatMessage`.
 - [ ] Phase con 2 — AI Graph (LangGraph)
 - [ ] Phase con 3 — nối Agent Backend hoàn chỉnh vào frontend
 - [ ] Phase con 4 — pytest suite + hoàn thiện end-to-end

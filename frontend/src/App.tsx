@@ -1,4 +1,5 @@
 import { useState } from "react";
+import ChatScreen from "./screens/ChatScreen";
 import KisScreen from "./screens/KisScreen";
 import QaScreen from "./screens/QaScreen";
 import TrakeScreen from "./screens/TrakeScreen";
@@ -7,7 +8,7 @@ import QueueScreen from "./screens/QueueScreen";
 type Mode = "chat" | "kis" | "qa" | "trake" | "queue";
 
 const MODES: { id: Mode; label: string; disabled?: boolean }[] = [
-  { id: "chat", label: "Chat", disabled: true },
+  { id: "chat", label: "Chat" },
   { id: "kis", label: "KIS" },
   { id: "qa", label: "Q&A" },
   { id: "trake", label: "TRAKE" },
@@ -36,6 +37,7 @@ export default function App() {
       <main className="main-panel">
         {/* Tat ca man hinh luon mounted, chi an/hien bang CSS -> query/ket qua/shortlist KHONG mat
             khi chuyen tab (truoc day dung `mode === x && <Screen/>` nen React unmount, xoa het state). */}
+        <div style={{ display: mode === "chat" ? "block" : "none" }}><ChatScreen active={mode === "chat"} /></div>
         <div style={{ display: mode === "kis" ? "block" : "none" }}><KisScreen /></div>
         <div style={{ display: mode === "qa" ? "block" : "none" }}><QaScreen active={mode === "qa"} /></div>
         <div style={{ display: mode === "trake" ? "block" : "none" }}><TrakeScreen active={mode === "trake"} /></div>
