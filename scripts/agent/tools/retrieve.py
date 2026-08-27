@@ -191,6 +191,84 @@ def fast_retrieve_for_video(query_text: str, video_id: str, top_k: int = 20) -> 
     return results
 
 
+def _fuse_rrf(clip_hits: list[dict], ocr_hits: list[dict], top_k: int = 100,
+              rrf_k: int = 60) -> list[dict]:
+    """Gộp 2 danh sách kết quả (mỗi cái đã sort theo score giảm dần) bằng Reciprocal Rank Fusion —
+    CHỈ dùng THỨ HẠNG trong từng danh sách, không dùng điểm số thô. Lý do: cosine similarity của
+    CLIP (0-1) và điểm BM25 của Elasticsearch (không giới hạn, phụ thuộc độ dài văn bản) không cùng
+    thang đo — cộng trực tiếp 2 điểm này sẽ cho kết quả sai lệch (1 nguồn lấn át nguồn kia tuỳ may
+    rủi). RRF là kỹ thuật chuẩn cho bài toán này (chính Elasticsearch cũng dùng RRF cho hybrid
+    search), công thức: score(doc) = tổng 1/(rrf_k + rank) qua mọi danh sách chứa doc đó.
+
+    Tách thành hàm THUẦN riêng (chỉ nhận list[dict] có sẵn, không tự gọi fast_retrieve()/search_ocr())
+    để test được độc lập bằng dữ liệu giả, không cần CLIP model hay Elasticsearch thật.
+
+    Khoá gộp: (video_id, n) — cả fast_retrieve() và search_ocr() đều trả 2 field này cho mỗi hit.
+    """
+    rrf_scores: dict[tuple, float] = {}
+    by_key: dict[tuple, dict] = {}
+
+    for rank, hit in enumerate(clip_hits):
+        key = (hit["video_id"], hit["n"])
+        rrf_scores[key] = rrf_scores.get(key, 0.0) + 1.0 / (rrf_k + rank + 1)
+        by_key.setdefault(key, hit)
+    for rank, hit in enumerate(ocr_hits):
+        key = (hit["video_id"], hit["n"])
+        rrf_scores[key] = rrf_scores.get(key, 0.0) + 1.0 / (rrf_k + rank + 1)
+        by_key.setdefault(key, hit)  # nếu chỉ ES tìm ra (CLIP không có), dùng dict của ES trước
+
+    ranked_keys = sorted(rrf_scores.keys(), key=lambda k: -rrf_scores[k])[:top_k]
+    results = []
+    for key in ranked_keys:
+        hit = dict(by_key[key])  # copy — không sửa dict gốc trong clip_hits/ocr_hits
+        hit["rrf_score"] = rrf_scores[key]
+        results.append(hit)
+    return results
+
+
+def hybrid_retrieve(query_text: str, top_k: int = 100, rrf_k: int = 60) -> list[dict]:
+    """
+    Hybrid retrieval: gộp fast_retrieve() (CLIP — ngữ nghĩa hình ảnh) + search_ocr() (Elasticsearch
+    — khớp chữ/số chính xác trên màn hình, dữ liệu từ OCR job 6 + caption job 7) bằng Reciprocal
+    Rank Fusion (xem _fuse_rrf()). Đúng tinh thần docstring gốc của search_ocr(): CROSS-CHECK/lọc
+    thêm cho CLIP, KHÔNG thay thế — CLIP giỏi ngữ nghĩa hình ảnh nhưng dễ bỏ sót chữ/số cụ thể
+    (biển số, tên người, mốc giờ...) mà OCR bắt chính xác hơn nhiều.
+
+    An toàn khi Elasticsearch chưa chạy/chưa cấu hình: bọc try/except quanh search_ocr(), lỗi thì
+    tự rơi về CLIP-only (fail-soft) — không làm gãy KIS/Q&A/TRAKE vốn đã chạy tốt chỉ với CLIP.
+
+    Returns: giống fast_retrieve() (video_id, n, frame_idx, frame_id, pts_time, jpg_path), cộng
+    thêm field "rrf_score" (dùng để sort final — KHÔNG phải cosine similarity thô nữa). Field
+    "score" giữ nguyên ý nghĩa gốc của nguồn đầu tiên tìm ra hit đó (CLIP nếu có, ES nếu chỉ ES
+    tìm ra — 2 nguồn có thang điểm khác nhau, đọc "score" phải biết hit đến từ nguồn nào).
+    """
+    _ensure_loaded()
+    clip_hits = fast_retrieve(query_text, top_k=100)
+    try:
+        from agent.tools.es_index import search_ocr
+        ocr_hits = search_ocr(query_text, top_k=100)
+    except Exception as e:
+        print(f"[retrieve] CẢNH BÁO: search_ocr() lỗi ({type(e).__name__}: {e}) — chỉ dùng CLIP "
+              f"(Elasticsearch có thể chưa chạy/chưa cấu hình, xem agent/tools/es_index.py).")
+        ocr_hits = []
+
+    fused = _fuse_rrf(clip_hits, ocr_hits, top_k=top_k, rrf_k=rrf_k)
+
+    # Backfill frame_id/jpg_path cho hit CHỈ ES tìm ra — search_ocr() không trả 2 field này (xem
+    # "QUY ƯỚC frame_id" trong es_index.py: chỉ tính frame_id = frame_idx + 1 ở retrieve.py, đúng
+    # nơi duy nhất được phép — đây chính là retrieve.py nên hợp lệ, không phải suy ra lại nơi khác).
+    for hit in fused:
+        if "frame_id" not in hit:
+            mask = (_META["video_id"] == hit["video_id"]) & (_META["n"] == hit["n"])
+            if mask.any():
+                row = _META[mask].iloc[0]
+                frame_idx = int(row["frame_idx"])
+                hit["frame_idx"] = frame_idx
+                hit["frame_id"] = frame_idx + 1
+                hit["jpg_path"] = row["jpg_path"] if isinstance(row["jpg_path"], str) else None
+    return fused
+
+
 if __name__ == "__main__":
     query = " ".join(sys.argv[1:]) or "a person walking on the street"
     print(f"\nQuery: {query!r}")
