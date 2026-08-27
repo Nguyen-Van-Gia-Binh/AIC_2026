@@ -184,8 +184,8 @@ def _build_siglip2_encoder() -> Callable[[list[str]], np.ndarray]:
     (patch16-256/224) rồi thử lại."""
     import torch
     from transformers import AutoModel, AutoProcessor
-    model_id = "google/siglip2-base-patch16-384"
-    print(f"[multi_index]   tải {model_id} (lần đầu sẽ tải checkpoint vài trăm MB)...")
+    model_id = "google/siglip2-so400m-patch14-384"
+    print(f"[multi_index]   tải {model_id} (lần đầu sẽ tải checkpoint vài GB)...")
     model = AutoModel.from_pretrained(model_id)
     model.eval()
     processor = AutoProcessor.from_pretrained(model_id)

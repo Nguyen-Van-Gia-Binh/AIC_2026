@@ -83,7 +83,14 @@
     "gt_video_id": "L25_V001",
     "gt_frame_start": 19479,
     "gt_frame_end": 19479,
-    "gt_answer": "2"
+    "gt_answer": "2",
+    "gt_answers": [
+      "2",
+      "hai",
+      "two",
+      "2 học sinh",
+      "hai học sinh"
+    ]
   },
   {
     "query_id": "e-kis-ai-007",
@@ -345,7 +352,14 @@
     "gt_video_id": "L30_V090",
     "gt_frame_start": 820,
     "gt_frame_end": 1100,
-    "gt_answer": "15"
+    "gt_answer": "15",
+    "gt_answers": [
+      "15",
+      "mười lăm",
+      "fifteen",
+      "15 giải",
+      "mười lăm giải"
+    ]
   },
   {
     "query_id": "e-qa-ai-003",
@@ -359,7 +373,11 @@
     "gt_video_id": "L30_V096",
     "gt_frame_start": 1445,
     "gt_frame_end": 1515,
-    "gt_answer": "Em yêu biển đảo biên cương"
+    "gt_answer": "Em yêu biển đảo biên cương",
+    "gt_answers": [
+      "Em yêu biển đảo biên cương",
+      "Em yeu bien dao bien cuong"
+    ]
   },
   {
     "query_id": "e-qa-ai-004",
@@ -373,7 +391,15 @@
     "gt_video_id": "L26_V296",
     "gt_frame_start": 1537,
     "gt_frame_end": 1665,
-    "gt_answer": "Phú Sĩ"
+    "gt_answer": "Phú Sĩ",
+    "gt_answers": [
+      "Phú Sĩ",
+      "Phu Si",
+      "Fuji",
+      "núi Phú Sĩ",
+      "Mount Fuji",
+      "nước tương Phú Sĩ"
+    ]
   },
   {
     "query_id": "e-qa-ai-005",
@@ -387,7 +413,14 @@
     "gt_video_id": "L27_V003",
     "gt_frame_start": 7021,
     "gt_frame_end": 7156,
-    "gt_answer": "Rau sống"
+    "gt_answer": "Rau sống",
+    "gt_answers": [
+      "Rau sống",
+      "Rau song",
+      "rau",
+      "đĩa rau sống",
+      "dĩa rau sống"
+    ]
   },
   {
     "query_id": "e-trake-005",

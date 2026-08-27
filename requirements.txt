@@ -27,6 +27,7 @@ sentencepiece==0.2.2
 einops
 timm
 accelerate
+protobuf
 
 # scripts/agent/tools/vlm_ocr_caption.py + scripts/index_ocr_es.py (OCR/caption qua Qwen2.5-VL-3B-
 # Instruct + index vào Elasticsearch — KHÔNG phải baseline production KIS/QA/TRAKE, xem CLAUDE.md):

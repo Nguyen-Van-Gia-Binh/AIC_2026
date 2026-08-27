@@ -93,7 +93,10 @@ def score_qa(run_qa, q: dict) -> tuple[dict[int, float], str, bool]:
     question = q.get("question") or q["text_en"]
     out = run_qa(q.get("text_vi") or q["text_en"], question=question, top_k=100)
     answer = out.get("answer", "")
-    ans_ok = answer_matches(answer, q.get("gt_answers", []))
+    gt_list = q.get("gt_answers")
+    if not gt_list and "gt_answer" in q:
+        gt_list = [q["gt_answer"]]
+    ans_ok = answer_matches(answer, gt_list or [])
     gt, s, e = q["gt_video_id"], int(q["gt_frame_start"]), int(q["gt_frame_end"])
     rscores = [
         1.0 if (ans_ok and r["video_id"] == gt and _in_window(int(r["frame_id"]), s, e)) else 0.0
