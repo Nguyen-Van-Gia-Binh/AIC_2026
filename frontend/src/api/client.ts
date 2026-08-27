@@ -73,6 +73,10 @@ export const api = {
       `/keyframes/${video_id}/neighbors?frame_idx=${frame_idx}&window=${window}`
     ),
 
+  // Toan bo keyframe cua 1 video — dai luot ngang o man chi tiet KIS.
+  keyframeAll: (video_id: string) =>
+    request<NeighborFrame[]>(`/keyframes/${encodeURIComponent(video_id)}/all`),
+
   qaRun: (query: string, question: string, top_k = 20, query_en?: string) =>
     request<{ hits: QaHit[]; answer: string; confidence: number; n_loops: number }>("/qa/run", {
       method: "POST",

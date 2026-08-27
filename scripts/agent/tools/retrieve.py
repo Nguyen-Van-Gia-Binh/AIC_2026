@@ -267,6 +267,29 @@ def get_neighbor_frames(video_id: str, frame_idx: int, window: int = 5) -> list[
     return results
 
 
+def get_all_frames(video_id: str) -> list[dict]:
+    """Tra ve TOAN BO keyframe cua 1 video (sap theo frame_idx tang dan) — dung cho dai luot
+    keyframe day du o man chi tiet KIS (cuon ngang tu frame dau den frame cuoi, thay cho
+    get_neighbor_frames chi lay +/- vai frame). Khong tinh score (khong phai ket qua truy van).
+    Moi phan tu: {video_id, frame_idx, frame_id, pts_time}.
+    """
+    _ensure_loaded()
+    mask = _META["video_id"] == video_id
+    if not mask.any():
+        return []
+    local_meta = _META[mask].sort_values("frame_idx")
+    results = []
+    for _, row in local_meta.iterrows():
+        fidx = int(row["frame_idx"])
+        results.append({
+            "video_id":  row["video_id"],
+            "frame_idx": fidx,
+            "frame_id":  fidx + 1,   # BTC dem frame tu 1 — quy doi CHI o day (xem CLAUDE.md)
+            "pts_time":  float(row["pts_time"]),
+        })
+    return results
+
+
 def get_keyframe_path(video_id: str, frame_idx: int) -> Optional[str]:
     """Tra ve duong dan file .jpg cua keyframe (video_id, frame_idx) — hoac None neu khong co dong
     tuong ung / anh chua giai nen. jpg_path da duoc tinh san luc build index (xem scripts/index.py),

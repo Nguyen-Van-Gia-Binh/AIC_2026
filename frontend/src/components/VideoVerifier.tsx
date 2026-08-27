@@ -143,7 +143,7 @@ const VideoVerifier = forwardRef<VideoVerifierHandle, Props>(function VideoVerif
     }
   }
 
-  const frameNo = Math.round(current * fps);
+  const frameNo = Math.round(current * fps) + 1; // hien theo frame_id (BTC dem tu 1)
 
   return (
     <div className="video-verifier">

@@ -16,6 +16,7 @@ chính không phải embedding yếu mà là **cạn quota Gemini free-tier** gi
 **Lần 2 (Phase 1–6 round 2, 22/8→04/09/2026)** — chi tiết đầy đủ ở
 [docs/_archive/PLAN_Lan2.md](docs/_archive/PLAN_Lan2.md). Team 4 người, 5 cải tiến chạy song song
 sau bài học đợt 1:
+
 - **Phase 1** `AIC_MODE=test|contest` — chọn model LLM theo chế độ, rẻ lúc dev/mạnh lúc nộp thật.
 - **Phase 2** Rewrite thêm rule xử lý phủ định ("không có X" → mô tả dương tính cho CLIP).
 - **Phase 3** Risk-aware ranking (`rerank.py`) — "đặt cược" khi 1 video nổi bật rõ, "trải rủi ro"
@@ -51,22 +52,22 @@ cho phần chưa dựng lại được. Link trong 2 file archive giờ trỏ đ
 
 Cơ chế chấm điểm so model/phương án chưa bám đúng công thức BTC (§2.1–2.2); test/eval nằm rải rác.
 
-- [x] **Nới khoảng ground truth** — `test_eval/Eval/widen_gt_windows.py` (mới): mọi entry
+- [X] **Nới khoảng ground truth** — `test_eval/Eval/widen_gt_windows.py` (mới): mọi entry
   `gt_frame_start == gt_frame_end` (KIS/QA/event TRAKE) nới ra keyframe lân cận từ `map-keyframes`.
   Đã chạy (27 khoảng). **Cần dò tay lại** — vài khoảng còn rộng do keyframe thưa.
-- [x] **Fix `score_trake` trong `run_eval.py`** — bỏ cách cũ (mean-trên-event, không cổng video,
+- [X] **Fix `score_trake` trong `run_eval.py`** — bỏ cách cũ (mean-trên-event, không cổng video,
   không thứ tự). Giờ: dựng ứng viên (video + N frame, chuỗi `frame_idx` không giảm bằng DP) có xếp
   hạng → cổng video (`v ≠ GT` → 0) → `R@k = max` trên k ứng viên đầu. Vẫn retrieval-only, không LLM.
   Thêm cột `Final` = (1/5)Σ R@k. Header report viết lại trung thực từng loại.
-- [x] **Harness end-to-end mới** — `test_eval/Test/score_pipelines.py`: chạy `run_kis/run_qa/run_trake`
+- [X] **Harness end-to-end mới** — `test_eval/Test/score_pipelines.py`: chạy `run_kis/run_qa/run_trake`
   production → Final Score BTC thật, **QA có chấm answer** (`answer_matches`, substring 2 chiều so với
   `gt_answers`). Cờ `--types/--limit/--no-rewrite/--self-test`. Ghi `docs/eval_e2e_scores.md`.
-- [x] **Schema** `gt_answer` (string) → `gt_answers` (list) — 5 câu QA + file draft + `EVAL_GUIDE.md`.
-- [x] **Gom `test_eval/`** (đổi từ `queries/`): `Test/` (harness đường production: `test_phase3–6`,
+- [X] **Schema** `gt_answer` (string) → `gt_answers` (list) — 5 câu QA + file draft + `EVAL_GUIDE.md`.
+- [X] **Gom `test_eval/`** (đổi từ `queries/`): `Test/` (harness đường production: `test_phase3–6`,
   `score_pipelines`, `test_smoke_tools`/`test_smoke_pipelines` gộp từ `test_day*`), `Eval/`
   (`run_eval`/`multi_index`/`lookup_frame`/`widen_gt_windows` + ground truth + `EVAL_GUIDE.md`),
   `README.md` ở gốc. `git mv` giữ lịch sử; `retrieve.py` repoint import `multi_index` sang vị trí mới.
-- [x] **Chạy lại `run_eval.py` đủ 5 model** + `score_pipelines.py` cho QA/TRAKE (cần API key) sau khi
+- [X] **Chạy lại `run_eval.py` đủ 5 model** + `score_pipelines.py` cho QA/TRAKE (cần API key) sau khi
   user dò tay xong ground truth — cập nhật `docs/eval_baseline_comparison.md` / `docs/eval_e2e_scores.md`.
 
 ## Phase 8: Tách Frontend/Backend — FastAPI + React (vòng sau)
@@ -76,12 +77,12 @@ Roadmap 4 phase con (thứ tự do user chốt 2026-08-27): 1) khung FastAPI + f
 Claude Design (plan: `docs/superpowers/plans/2026-08-27-phase1-fastapi-react-frontend-skeleton.md`)
 2) LangGraph AI graph 3) nối Agent Backend hoàn chỉnh vào frontend mới 4) pytest suite.
 
-- [ ] Phase con 1 — khung FastAPI (`scripts/api/`) + frontend React (`frontend/`) theo mockup
+- [X] Phase con 1 — khung FastAPI (`scripts/api/`) + frontend React (`frontend/`) theo mockup
   (xem plan link ở trên). Backend bridge sang `run_kis/run_qa/run_trake` + `build_submission.py`,
   giữ 2 luật single-call-site (LLM chỉ ở `config.py:call_llm()`, ghi CSV/ZIP chỉ ở
   `build_submission.py`). Frontend 4 màn KIS/Q&A/TRAKE/Hàng đợi chạy dữ liệu thật qua proxy Vite;
   màn Chat để nút disabled (Phase con 2). Gradio `scripts/app.py` giữ nguyên làm fallback.
-- [ ] Phase con 1.5 — parity với UI Gradio + luồng xem video kiểm chứng keyframe (KIS).
+- [X] Phase con 1.5 — parity với UI Gradio + luồng xem video kiểm chứng keyframe (KIS).
   Plan: `C:\Users\admin\.claude\plans\rustling-bouncing-eclipse.md`. Sửa lỗi thiếu
   `get_keyframe_path`/`get_neighbor_frames` trong `retrieve.py` (backend không khởi động được);
   thêm router `scripts/api/routers/videos.py` (`GET /api/videos/{id}` kèm Range + `/meta` fps);
@@ -89,6 +90,20 @@ Claude Design (plan: `docs/superpowers/plans/2026-08-27-phase1-fastapi-react-fro
   (offline, `@fontsource`), sửa padding/goc textarea (lỗi "chữ dính sát"), ô sửa tay frame_id
   (KIS shortlist + TRAKE mỗi mốc), `VideoVerifier` (tua theo frame + phím tắt) thay ảnh tĩnh ở
   màn chi tiết keyframe.
+- [ ] Phase con 1.6 — làm lại UI KIS theo góp ý: (1) bỏ panel "Danh sách nộp" bên trái — lưới kết
+  quả chính là danh sách nộp, kéo thả card trực tiếp trên lưới để đổi thứ hạng, nút × để loại;
+  (2) Query ID + "Thêm vào hàng đợi" gom thành thanh nổi `position: fixed` góc dưới-phải; (3) trong
+  màn video, nút đổi thành "Cập nhật vị trí #N với frame hiện tại" — ghi đè frame/thời gian đang tua
+  vào đúng card đó (không tạo dòng mới); (4) dải luớt TOÀN BỘ keyframe của video (cuộn ngang,
+  `GET /api/keyframes/{id}/all` + `get_all_frames` trong `retrieve.py`) thay dải ±5, và ô nhập
+  `pts_time`/`frame_id` trong bảng metadata để nhảy nhanh (Enter / nút ⏩).
+- [ ] Phase con 1.7 — làm lại UI Q&A theo cùng khuôn KIS: header 3 vùng compact (mô tả cảnh + chip
+  rewrite | câu hỏi + đáp án chung tự đồng bộ mọi card | slider top-k + Run + độ tin cậy/số vòng);
+  lưới kết quả full-width là danh sách nộp (card có nhãn đáp án); màn soi video riêng
+  `QaKeyframeDetail` (video + dải keyframe + nhảy nhanh + ô đáp án frame + nút ⭐ đặt Rank #1 / 🌐 áp
+  đáp án cho toàn bộ / ✓ cập nhật frame); widget "🚀 Chốt & Thêm vào hàng đợi" nổi cố định góc
+  dưới-phải, phím tắt Ctrl/Cmd+Enter. Không cần đổi backend (dùng lại `qa/run`, `keyframes/{id}/all`,
+  `videos/{id}/meta`).
 - [ ] Phase con 2 — AI Graph (LangGraph)
 - [ ] Phase con 3 — nối Agent Backend hoàn chỉnh vào frontend
 - [ ] Phase con 4 — pytest suite + hoàn thiện end-to-end

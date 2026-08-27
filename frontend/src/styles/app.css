@@ -54,7 +54,7 @@
 }
 .remove-btn:hover { color: var(--color-accent); }
 
-.kis-grid { flex: 1; display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.kis-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; }
 .kis-card { position: relative; border-radius: var(--radius-md); overflow: hidden; border: 1px solid var(--color-divider); aspect-ratio: 16/10; cursor: pointer; }
 .kis-card:hover { border-color: var(--color-accent); box-shadow: var(--shadow-md); }
 .card-rank, .card-score { position: absolute; top: 6px; font-size: 10px; padding: 2px 7px; border-radius: 999px; background: color-mix(in srgb, var(--color-bg) 90%, transparent); }
@@ -120,7 +120,7 @@
 
 /* Cac man KIS/QA/TRAKE: gioi han be ngang phan nhap lieu de o khong keo dai ca man,
    moi o chiem tron be ngang -> thang hang trai/phai deu nhau. */
-.qa-screen, .trake-screen { max-width: 760px; }
+.trake-screen { max-width: 760px; }
 .qa-screen .input, .trake-screen .input, .kis-screen .search-input { width: 100%; }
 
 /* Nut dung rieng 1 hang (Search / Run / Rewrite) -> canh trai, khong bi keo full. */
@@ -183,3 +183,110 @@
   padding: 1px 5px; border-radius: 4px; border: 1px solid var(--color-divider);
   background: var(--color-surface);
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Phase 1.6 — KIS: bo panel "Danh sach nop", luoi ket qua = danh sach nop
+   (keo tha trong luoi), thanh nop noi co dinh, dai luot toan bo keyframe +
+   nhay nhanh qua metadata o man chi tiet.
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* Luoi ket qua rong toan man (khong con cot ben trai) -> xem nhieu anh hon. */
+.kis-screen { max-width: none; padding-bottom: 104px; }
+.kis-hint { font-size: 12px; line-height: 1.5; }
+
+.kis-card { cursor: grab; }
+.kis-card:active { cursor: grabbing; }
+.kis-card.dragging { opacity: 0.45; border-color: var(--color-accent); }
+
+/* Nut loai card khoi danh sach nop — hien khi hover. */
+.card-remove {
+  position: absolute; top: 5px; right: 6px; z-index: 3;
+  width: 22px; height: 22px; border-radius: 999px; border: none; cursor: pointer;
+  font-size: 14px; line-height: 1; display: grid; place-items: center;
+  background: color-mix(in srgb, var(--color-bg) 82%, transparent);
+  color: color-mix(in srgb, var(--color-text) 55%, transparent);
+  opacity: 0; transition: opacity 0.12s;
+}
+.kis-card:hover .card-remove { opacity: 1; }
+.card-remove:hover { color: var(--color-accent); background: var(--color-bg); }
+
+/* Thanh Query ID + "Them vao hang doi" noi co dinh goc duoi-phai (KIS + Q&A). */
+.kis-submit-bar, .qa-submit-bar {
+  position: fixed; right: 24px; bottom: 22px; z-index: 30;
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  max-width: min(92vw, 460px);
+  padding: 10px 12px; border-radius: var(--radius-lg);
+  background: var(--color-surface); border: 1px solid var(--color-divider);
+  box-shadow: var(--shadow-lg, 0 10px 34px rgba(30, 20, 10, 0.22));
+}
+.qa-submit-bar { max-width: min(94vw, 520px); }
+.kis-submit-bar .input, .qa-submit-bar .input { width: 188px; min-height: 36px; }
+.kis-submit-bar .btn, .qa-submit-bar .btn { min-height: 36px; white-space: nowrap; }
+.kis-submit-msg, .qa-submit-msg {
+  flex-basis: 100%; font-size: 11.5px; line-height: 1.4;
+  color: color-mix(in srgb, var(--color-text) 68%, transparent);
+}
+
+/* Dai luot TOAN BO keyframe cua video (man chi tiet) — cuon ngang. */
+.kf-strip {
+  display: flex; gap: 6px; overflow-x: auto; overflow-y: hidden;
+  padding: 4px 2px 10px; scroll-padding-inline: 48px;
+}
+.kf-strip-item {
+  flex: 0 0 auto; width: 108px; aspect-ratio: 16 / 10;
+  border-radius: var(--radius-sm); overflow: hidden; padding: 0;
+  border: 1px solid var(--color-divider); background: none; cursor: pointer;
+}
+.kf-strip-item:hover { border-color: var(--color-accent); }
+.kf-strip-item.current { outline: 2px solid var(--color-accent); outline-offset: -2px; }
+
+/* Hang metadata co o "nhay nhanh" toi giay / frame. */
+.meta-jump { align-items: center; gap: 8px; }
+.meta-jump > span:first-child { flex: 1; }
+.meta-jump .frame-input { width: 100px; text-align: left; }
+.meta-jump .btn { min-height: 30px; padding: 2px 10px; font-size: 13px; }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Phase 1.7 — Q&A: header 3 vung compact + luoi ket qua full-width (card co
+   nhan dap an) + man soi video rieng (QaKeyframeDetail) + widget chot noi.
+   ══════════════════════════════════════════════════════════════════════ */
+
+.qa-screen { max-width: none; padding-bottom: 104px; }
+
+/* Header: [mo ta canh + chip] [cau hoi + dap an chung] [slider + Run + trang thai] */
+.qa-header {
+  display: grid; grid-template-columns: 1fr 1fr minmax(200px, 240px);
+  gap: 16px; align-items: start;
+}
+.qa-header .qa-col, .qa-header .qa-run-col {
+  display: flex; flex-direction: column; gap: 10px; min-width: 0;
+}
+.qa-header textarea.input { min-height: 74px; }
+.qa-run-col .topk { flex-wrap: wrap; }
+.qa-run-col .topk input[type="range"] { max-width: 100%; }
+@media (max-width: 960px) {
+  .qa-header { grid-template-columns: 1fr; }
+}
+
+/* Luoi ket qua Q&A = danh sach nop, rong toan man. */
+.qa-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; }
+.qa-card {
+  position: relative; border-radius: var(--radius-md); overflow: hidden;
+  border: 1px solid var(--color-divider); aspect-ratio: 16 / 10; cursor: pointer;
+}
+.qa-card:hover { border-color: var(--color-accent); box-shadow: var(--shadow-md); }
+.qa-card .card-caption { flex-direction: column; align-items: stretch; gap: 2px; }
+.qa-card .cc-row { display: flex; justify-content: space-between; gap: 6px; }
+.qa-card .cc-answer {
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  font-weight: 600; color: var(--color-accent-800, var(--color-accent));
+}
+
+/* O dap an rieng cho frame dang soi + nut lay lai dap an chung. */
+.qa-frame-answer { display: flex; gap: 8px; align-items: center; }
+.qa-frame-answer .input { flex: 1; }
+.qa-frame-answer .btn { min-height: 40px; white-space: nowrap; }
+
+/* Nhom 3 nut hanh dong Q&A trong man soi video chi tiet. */
+.qa-detail-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.qa-detail-actions .btn { min-height: 38px; }

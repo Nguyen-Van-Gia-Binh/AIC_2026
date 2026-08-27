@@ -37,7 +37,7 @@ export default function App() {
         {/* Tat ca man hinh luon mounted, chi an/hien bang CSS -> query/ket qua/shortlist KHONG mat
             khi chuyen tab (truoc day dung `mode === x && <Screen/>` nen React unmount, xoa het state). */}
         <div style={{ display: mode === "kis" ? "block" : "none" }}><KisScreen /></div>
-        <div style={{ display: mode === "qa" ? "block" : "none" }}><QaScreen /></div>
+        <div style={{ display: mode === "qa" ? "block" : "none" }}><QaScreen active={mode === "qa"} /></div>
         <div style={{ display: mode === "trake" ? "block" : "none" }}><TrakeScreen /></div>
         <div style={{ display: mode === "queue" ? "block" : "none" }}><QueueScreen active={mode === "queue"} /></div>
       </main>
