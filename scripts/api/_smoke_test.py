@@ -44,6 +44,20 @@ def main() -> None:
         assert r.status_code == 404
         print("[smoke] images 404 (keyframe khong ton tai) OK")
 
+        # Video goc: meta co fps > 0; GET kem header Range tra ve 206 + dung so byte yeu cau.
+        r = c.get(f"/api/videos/{h0['video_id']}/meta")
+        assert r.status_code == 200, r.text
+        vmeta = r.json()
+        assert vmeta["fps"] > 0, vmeta
+        print(f"[smoke] videos/meta OK (fps={vmeta['fps']}, duration={vmeta['duration']})")
+        r = c.get(f"/api/videos/{h0['video_id']}", headers={"Range": "bytes=0-1023"})
+        assert r.status_code == 206, f"mong doi 206 Partial Content, nhan {r.status_code}"
+        assert len(r.content) == 1024, f"mong doi 1024 byte, nhan {len(r.content)}"
+        print(f"[smoke] videos Range OK (206, {len(r.content)} bytes)")
+        r = c.get("/api/videos/L99_V999")
+        assert r.status_code == 404
+        print("[smoke] videos 404 (video khong ton tai) OK")
+
         r = c.post("/api/queue/" + SESSION + "/add", json={
             "query_id": "smoke-kis", "query_type": "kis",
             "rows": [{"video_id": h["video_id"], "frame_id": h["frame_id"]} for h in kis_hits[:3]],

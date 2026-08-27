@@ -47,6 +47,15 @@ export const api = {
   imageUrl: (videoId: string, frameIdx: number) =>
     `/api/images/${encodeURIComponent(videoId)}/${frameIdx}`,
 
+  // URL video goc .mp4 (backend serve kem Range -> <video> tua duoc). Gan thang vao <video src>.
+  videoUrl: (videoId: string) => `/api/videos/${encodeURIComponent(videoId)}`,
+
+  // fps + duration cua video — dung cho buoc tua theo frame trong VideoVerifier.
+  videoMeta: (videoId: string) =>
+    request<{ fps: number; duration: number | null }>(
+      `/videos/${encodeURIComponent(videoId)}/meta`
+    ),
+
   rewrite: (query: string, question?: string) =>
     request<{ candidates: string[] }>("/rewrite", {
       method: "POST",

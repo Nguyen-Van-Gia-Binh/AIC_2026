@@ -59,6 +59,10 @@ from scripts.api.routers import trake  # noqa: E402
 
 app.include_router(trake.router)
 
+from scripts.api.routers import videos  # noqa: E402
+
+app.include_router(videos.router)
+
 from scripts.api.routers import queue  # noqa: E402
 
 app.include_router(queue.router)

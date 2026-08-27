@@ -84,19 +84,19 @@
   background: repeating-linear-gradient(135deg, var(--color-neutral-200) 0 8px, var(--color-neutral-300) 8px 16px);
 }
 
-.detail-header { display: flex; align-items: center; gap: 10px; }
+.detail-header { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .detail-body { display: flex; flex-direction: column; gap: 14px; }
-.detail-player { height: 360px; border-radius: var(--radius-lg); overflow: hidden; }
 .detail-strip { display: flex; gap: 8px; }
-.strip-frame { position: relative; flex: 1; aspect-ratio: 16/10; border-radius: var(--radius-sm); overflow: hidden; }
+.strip-frame { position: relative; flex: 1; aspect-ratio: 16/10; border-radius: var(--radius-sm); overflow: hidden; padding: 0; border: 1px solid var(--color-divider); background: none; cursor: pointer; }
+.strip-frame:hover { border-color: var(--color-accent); }
 .strip-frame.current { outline: 2px solid var(--color-accent); outline-offset: -2px; }
 .detail-meta { display: flex; flex-direction: column; gap: 4px; font-size: 12px; }
 .detail-meta > div { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--color-divider); }
 
-.qa-body { display: flex; gap: 18px; }
+.qa-body { display: flex; gap: 18px; align-items: flex-start; }
 .qa-frame { flex: 1; height: 260px; border-radius: var(--radius-lg); overflow: hidden; }
 .qa-side { width: 280px; flex: none; display: flex; flex-direction: column; gap: 10px; }
-.answer-input { font: 400 20px var(--font-heading); }
+.answer-input { font-size: 18px; font-weight: 600; }
 .confidence-bar { height: 8px; border-radius: 999px; background: var(--color-neutral-300); overflow: hidden; }
 .confidence-bar div { height: 100%; background: var(--color-accent-2); }
 
@@ -108,3 +108,78 @@
 
 .queue-header { display: flex; align-items: center; justify-content: space-between; }
 .queue-header > div { display: flex; gap: 8px; }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Phase 1.5 — can chinh o/chu, thanh keo top-k, chip rewrite, o sua frame_id,
+   trinh phat video kiem chung keyframe (KIS).
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* — form: xep doc + khoang cach deu; nhan ro hon (organic.css dat 12px, hoi nho) — */
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field > label { font-size: 13px; margin-bottom: 0; }
+
+/* Cac man KIS/QA/TRAKE: gioi han be ngang phan nhap lieu de o khong keo dai ca man,
+   moi o chiem tron be ngang -> thang hang trai/phai deu nhau. */
+.qa-screen, .trake-screen { max-width: 760px; }
+.qa-screen .input, .trake-screen .input, .kis-screen .search-input { width: 100%; }
+
+/* Nut dung rieng 1 hang (Search / Run / Rewrite) -> canh trai, khong bi keo full. */
+.screen > .btn, .form-actions > .btn { align-self: flex-start; }
+.form-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+
+/* Chieu cao control dong bo tren 1 hang (input .input da 40px o organic.css). */
+.btn { min-height: 40px; }
+.status-line { margin-top: 4px; }
+
+/* — thanh keo top-k — */
+.topk {
+  display: flex; align-items: center; gap: 10px; font-size: 13px;
+  color: color-mix(in srgb, var(--color-text) 70%, transparent);
+}
+.topk input[type="range"] { flex: 1; max-width: 240px; accent-color: var(--color-accent); height: 22px; }
+.topk .topk-val { font-family: ui-monospace, Consolas, monospace; font-weight: 600; color: var(--color-text); min-width: 2.5ch; text-align: right; }
+
+/* — chip goi y rewrite — */
+.rewrite {
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 10px 12px; border-radius: var(--radius-md);
+  background: var(--color-neutral-100); border: 1px solid var(--color-divider);
+}
+.rewrite-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.rewrite-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  font: inherit; font-size: 12.5px; line-height: 1.35; cursor: pointer; text-align: left;
+  padding: 5px 11px; border-radius: 999px;
+  background: var(--color-surface); border: 1px solid var(--color-accent-400);
+  color: var(--color-accent-800);
+}
+.chip:hover { background: var(--color-accent-100); border-color: var(--color-accent); }
+.rewrite-note { font-size: 11.5px; color: color-mix(in srgb, var(--color-text) 55%, transparent); }
+
+/* — o sua frame_id (KIS shortlist, TRAKE per-event) — */
+.frame-input {
+  width: 74px; min-height: 30px; padding: 3px 8px; font-size: 12px;
+  border-radius: var(--radius-sm) !important; text-align: center;
+}
+.trake-fids { display: flex; flex-wrap: wrap; gap: 6px; }
+.trake-fid { display: flex; flex-direction: column; gap: 2px; align-items: center; font-size: 10px; }
+
+/* — trinh phat video kiem chung keyframe — */
+.video-verifier { display: flex; flex-direction: column; gap: 8px; }
+.vv-stage {
+  position: relative; width: 100%; aspect-ratio: 16 / 9; background: #000;
+  border-radius: var(--radius-lg); overflow: hidden; outline: none;
+}
+.vv-stage:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.vv-stage video { width: 100%; height: 100%; object-fit: contain; display: block; background: #000; }
+.vv-scrub { width: 100%; accent-color: var(--color-accent); }
+.vv-controls { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.vv-controls .btn { min-height: 32px; padding: 4px 10px; font-size: 12px; }
+.vv-controls select { min-height: 32px; border-radius: 999px; border: 1px solid var(--color-divider); background: var(--color-surface); padding: 0 8px; font: inherit; font-size: 12px; }
+.vv-readout { font-family: ui-monospace, Consolas, monospace; font-size: 12px; color: color-mix(in srgb, var(--color-text) 75%, transparent); }
+.vv-legend { font-size: 11px; color: color-mix(in srgb, var(--color-text) 50%, transparent); line-height: 1.5; }
+.vv-legend kbd {
+  font-family: ui-monospace, Consolas, monospace; font-size: 10.5px;
+  padding: 1px 5px; border-radius: 4px; border: 1px solid var(--color-divider);
+  background: var(--color-surface);
+}
