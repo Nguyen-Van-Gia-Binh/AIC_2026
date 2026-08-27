@@ -81,6 +81,14 @@ Claude Design (plan: `docs/superpowers/plans/2026-08-27-phase1-fastapi-react-fro
   giữ 2 luật single-call-site (LLM chỉ ở `config.py:call_llm()`, ghi CSV/ZIP chỉ ở
   `build_submission.py`). Frontend 4 màn KIS/Q&A/TRAKE/Hàng đợi chạy dữ liệu thật qua proxy Vite;
   màn Chat để nút disabled (Phase con 2). Gradio `scripts/app.py` giữ nguyên làm fallback.
+- [ ] Phase con 1.5 — parity với UI Gradio + luồng xem video kiểm chứng keyframe (KIS).
+  Plan: `C:\Users\admin\.claude\plans\rustling-bouncing-eclipse.md`. Sửa lỗi thiếu
+  `get_keyframe_path`/`get_neighbor_frames` trong `retrieve.py` (backend không khởi động được);
+  thêm router `scripts/api/routers/videos.py` (`GET /api/videos/{id}` kèm Range + `/meta` fps);
+  frontend: chip gợi ý rewrite (KIS/QA/TRAKE), thanh kéo top-k, đổi font sang Be Vietnam Pro
+  (offline, `@fontsource`), sửa padding/goc textarea (lỗi "chữ dính sát"), ô sửa tay frame_id
+  (KIS shortlist + TRAKE mỗi mốc), `VideoVerifier` (tua theo frame + phím tắt) thay ảnh tĩnh ở
+  màn chi tiết keyframe.
 - [ ] Phase con 2 — AI Graph (LangGraph)
 - [ ] Phase con 3 — nối Agent Backend hoàn chỉnh vào frontend
 - [ ] Phase con 4 — pytest suite + hoàn thiện end-to-end

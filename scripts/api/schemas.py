@@ -37,6 +37,11 @@ class NeighborFrame(BaseModel):
     pts_time: float
 
 
+class VideoMeta(BaseModel):
+    fps: float
+    duration: float | None = None  # giay — tu media-info/{video_id}.json "length" neu co
+
+
 class KisSearchRequest(BaseModel):
     query: str
     top_k: int = 20

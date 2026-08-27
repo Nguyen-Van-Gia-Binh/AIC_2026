@@ -8,10 +8,17 @@ sentence-transformers==5.7.0
 torch==2.13.0+cpu
 litellm==1.97.0
 python-dotenv==1.2.3
-paddlepaddle==2.6.2
-paddleocr==2.10.0
+# scripts/agent/tools/ocr_read.py (OCR realtime: PaddleOCR Detection CPU + VietOCR Recognition —
+# xem docstring đầu file ocr_read.py để biết lý do CPU/GPU tách riêng theo module trên Windows):
+paddlepaddle==3.3.1      # CPU thuần (KHÔNG phải -gpu) — bản 2.6.2 cũ thiếu API TextDetection
+paddleocr==3.7.0         # bản có TextDetection module API (chỉ detect, tách khỏi recognizer mặc định)
 opencv-python==5.0.0.93
 opencv-contrib-python==5.0.0.93
+# vietocr KHÔNG nằm trong list phía trên vì `pip install -r requirements.txt` cài package thường sẽ
+# kéo theo pillow==10.2.0 (ghim cứng trong vietocr, không có wheel cho Python 3.12+, vỡ build) — PHẢI
+# cài riêng, tách bước, bằng đúng lệnh sau (đã xác nhận hoạt động 2026-08-28):
+#   .venv\Scripts\python.exe -m pip install --no-deps vietocr==0.3.13
+#   .venv\Scripts\python.exe -m pip install gdown   # dependency thật của vietocr (tải weight lần đầu), bị --no-deps bỏ qua ở trên
 
 # scripts/api/ (Phase 7 — backend FastAPI bridge sang pipeline KIS/QA/TRAKE + submission):
 # Lưu ý: fastapi đã có sẵn trong .venv do gradio==6.24.0 kéo theo (0.141.x). KHÔNG hạ về bản cũ hơn

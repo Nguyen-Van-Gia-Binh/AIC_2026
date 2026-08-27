@@ -4,16 +4,20 @@ import type { Hit, QueueRow } from "../api/client";
 import { getSessionId } from "../session";
 import KeyframeDetail from "../components/KeyframeDetail";
 import Thumb from "../components/Thumb";
+import RewriteChips from "../components/RewriteChips";
+import TopKSlider from "../components/TopKSlider";
 
 type ShortlistItem = Hit & { _key: string };
 
 export default function KisScreen() {
   const [query, setQuery] = useState("");
-  const [topK] = useState(20);
+  const [topK, setTopK] = useState(20);
   const [hits, setHits] = useState<Hit[]>([]);
   const [status, setStatus] = useState("");
   const [loading, setLoading] = useState(false);
   const [shortlist, setShortlist] = useState<ShortlistItem[]>([]);
+  // Sua tay so frame cho tung dong shortlist (van cho chinh truoc khi nop, giong o Dataframe cu).
+  const [frameEdits, setFrameEdits] = useState<Record<string, string>>({});
   // Toa do dong dang keo (drag) trong shortlist — logic reorder giong het mockup 1b (onDragStart/
   // onDragEnter/onDragOver/onDragEnd), chuyen tu JS thuan sang React state.
   const [dragFrom, setDragFrom] = useState<number | null>(null);
@@ -30,6 +34,7 @@ export default function KisScreen() {
       const { hits } = await api.kisSearch(query, topK);
       setHits(hits);
       setShortlist(hits.slice(0, 5).map((h, i) => ({ ...h, _key: `${h.video_id}-${h.frame_id}-${i}` })));
+      setFrameEdits({});
       setStatus(`✅ Tìm thấy ${hits.length} kết quả | điểm cao nhất = ${hits[0]?.score.toFixed(4) ?? "-"}`);
     } catch (e) {
       setStatus(`❌ Lỗi: ${(e as Error).message}`);
@@ -57,14 +62,21 @@ export default function KisScreen() {
       setStatus("⚠️ Chưa có kết quả để thêm.");
       return;
     }
+    // Kiem tra frame_id sua tay: phai la so nguyen duong (giong _df_to_submission_rows ben app.py cu).
+    const rows: { video_id: string; frame_id: number }[] = [];
+    for (const h of shortlist) {
+      const raw = (frameEdits[h._key] ?? String(h.frame_id)).trim();
+      const n = Number(raw);
+      if (!raw || !Number.isInteger(n) || n <= 0) {
+        setStatus(`⚠️ frame_id không hợp lệ ở ${h.video_id}: "${raw}" — phải là số nguyên dương.`);
+        return;
+      }
+      rows.push({ video_id: h.video_id, frame_id: n });
+    }
     const qid = queryId.trim() || "kis-query-001";
-    const row: QueueRow = {
-      query_id: qid,
-      query_type: "kis",
-      rows: shortlist.map((h) => ({ video_id: h.video_id, frame_id: h.frame_id })),
-    };
+    const row: QueueRow = { query_id: qid, query_type: "kis", rows };
     await api.addToQueue(getSessionId(), row);
-    setStatus(`✅ Đã thêm ${qid} (${shortlist.length} dòng) vào hàng đợi.`);
+    setStatus(`✅ Đã thêm ${qid} (${rows.length} dòng) vào hàng đợi.`);
   }
 
   if (detail) {
@@ -73,7 +85,7 @@ export default function KisScreen() {
         hit={detail}
         onBack={() => setDetail(null)}
         onAddToShortlist={(h) => {
-          setShortlist((list) => [...list, { ...h, _key: `${h.video_id}-${h.frame_id}-${list.length}` }]);
+          setShortlist((list) => [...list, { ...h, _key: `${h.video_id}-${h.frame_id}-${list.length}-${Date.now()}` }]);
           setDetail(null);
         }}
       />
@@ -94,6 +106,10 @@ export default function KisScreen() {
           {loading ? "Đang tìm…" : "Tìm"}
         </button>
       </div>
+
+      <RewriteChips query={query} onPick={setQuery} />
+      <TopKSlider label="Số kết quả (top-k)" value={topK} min={5} max={100} step={5} onChange={setTopK} />
+
       <p className="status-line">{status}</p>
 
       {hits.length === 0 ? (
@@ -107,7 +123,7 @@ export default function KisScreen() {
         <div className="kis-body">
           <aside className="shortlist-panel">
             <h4>Danh sách nộp</h4>
-            <p className="text-muted">Kéo để đổi thứ tự — hạng 1 là đáp án chính khi nộp.</p>
+            <p className="text-muted">Kéo để đổi thứ tự — hạng 1 là đáp án chính khi nộp. Sửa số frame nếu cần.</p>
             <div className="shortlist-list">
               {shortlist.map((h, i) => (
                 <div
@@ -125,9 +141,17 @@ export default function KisScreen() {
                   </div>
                   <div className="shortlist-meta">
                     <div className="mono">{h.video_id}</div>
-                    <div className="mono text-muted">frame {h.frame_id} · {h.pts_time.toFixed(1)}s</div>
+                    <div className="mono text-muted">{h.pts_time.toFixed(1)}s · score {h.score.toFixed(3)}</div>
                   </div>
-                  <span className="mono score">{h.score.toFixed(4)}</span>
+                  <input
+                    className="input frame-input"
+                    type="number"
+                    min={1}
+                    value={frameEdits[h._key] ?? String(h.frame_id)}
+                    onChange={(e) => setFrameEdits((m) => ({ ...m, [h._key]: e.target.value }))}
+                    onClick={(e) => e.stopPropagation()}
+                    title="frame_id — sửa tay nếu cần"
+                  />
                   <button className="remove-btn" onClick={() => removeFromShortlist(h._key)}>×</button>
                 </div>
               ))}

@@ -103,6 +103,9 @@ directly with the venv Python, not via a test framework. There is no linter/form
   concern gets its own folder under `scripts/`, not scattered across existing ones. It must call into
   `scripts/agent/config.py:call_llm()` and `scripts/submit/build_submission.py` the same way
   `scripts/app.py` does today — no bypassing those two single-call-site rules from the API layer.
+  Routers under `scripts/api/routers/`: `kis` (+ `/api/rewrite`, keyframe neighbors), `qa`, `trake`,
+  `queue` (+ export), `images` (serve keyframe `.jpg`), `videos` (serve source `.mp4` with HTTP
+  Range for in-browser scrubbing, + `/meta` for fps/duration).
 - `frontend/` — **new, being introduced** — the React + Vite frontend (Node/npm toolchain lives only
   here, isolated from the rest of the Python repo), replacing the Gradio UI. See
   `docs/superpowers/specs/2026-08-27-multiagent-chat-architecture-design.md` and the Phase 7 plan(s)

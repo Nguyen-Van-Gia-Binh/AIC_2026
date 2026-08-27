@@ -3,11 +3,13 @@ import { api } from "../api/client";
 import type { QaHit, QueueRow } from "../api/client";
 import { getSessionId } from "../session";
 import Thumb from "../components/Thumb";
+import RewriteChips from "../components/RewriteChips";
+import TopKSlider from "../components/TopKSlider";
 
 export default function QaScreen() {
   const [query, setQuery] = useState("");
   const [question, setQuestion] = useState("");
-  const [topK] = useState(20);
+  const [topK, setTopK] = useState(20);
   const [hits, setHits] = useState<QaHit[]>([]);
   const [answer, setAnswer] = useState("");
   const [confidence, setConfidence] = useState(0);
@@ -39,6 +41,10 @@ export default function QaScreen() {
       setStatus("⚠️ Chưa có kết quả.");
       return;
     }
+    if (!answer.trim()) {
+      setStatus("⚠️ Đáp án đang trống — điền/sửa đáp án trước khi chốt.");
+      return;
+    }
     const qid = queryId.trim() || "qa-query-001";
     const row: QueueRow = {
       query_id: qid,
@@ -56,10 +62,12 @@ export default function QaScreen() {
         <label>Mô tả cảnh (để tìm kiếm)</label>
         <textarea className="input" value={query} onChange={(e) => setQuery(e.target.value)} />
       </div>
+      <RewriteChips query={query} question={question} onPick={setQuery} />
       <div className="field">
         <label>Câu hỏi cụ thể</label>
         <textarea className="input" value={question} onChange={(e) => setQuestion(e.target.value)} />
       </div>
+      <TopKSlider label="Top-k truy xuất" value={topK} min={5} max={50} step={5} onChange={setTopK} />
       <button className="btn btn-primary" onClick={run} disabled={loading}>
         {loading ? "Đang chạy…" : "Run Q&A"}
       </button>
@@ -75,8 +83,10 @@ export default function QaScreen() {
             />
           </div>
           <div className="qa-side">
-            <label>Đáp án (sửa được)</label>
-            <input className="input answer-input" value={answer} onChange={(e) => setAnswer(e.target.value)} />
+            <div className="field">
+              <label>Đáp án (sửa được)</label>
+              <input className="input answer-input" value={answer} onChange={(e) => setAnswer(e.target.value)} />
+            </div>
             <div className="confidence-bar"><div style={{ width: `${confidence * 100}%` }} /></div>
             <div className="field">
               <label>Query ID</label>
