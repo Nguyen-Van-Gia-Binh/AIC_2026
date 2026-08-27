@@ -47,11 +47,11 @@ Cấu hình API key: copy `.env.example` → `.env`, điền ít nhất `GEMINI_
   - `pipeline_kis.py` / `pipeline_qa.py` / `pipeline_trake.py`
   - `tools/` — `retrieve.py` (CLIP search), `rewrite.py` (VN→EN), `answer_qa.py`, `ocr_lookup.py`
 - `scripts/submit/` — `build_submission.py` (sinh CSV/ZIP), `validate_submission.py`
-- `scripts/eval/` — bộ eval offline Phase 6, so baseline embedding (`clip_vitb32`/`vitl14`/`siglip`/
-  `dfn`) bằng công thức R@k thật; không đụng luồng KIS/Q&A/TRAKE sản xuất
+- `test_eval/` — Thư mục kiểm thử & đánh giá (2 nhánh độc lập):
+  - `Test/` — Harness đường production: `score_pipelines.py` (Final Score BTC thật), `test_smoke_tools.py`, `test_smoke_pipelines.py`, các test phase 3–6
+  - `Eval/` — Backbone bake-off (retrieval-only, không LLM): `run_eval.py` (so sánh embedding), `multi_index.py`, `widen_gt_windows.py`, `eval_ground_truth.json`
 - `data/` — **git-ignored**, dữ liệu ngoại tuyến (keyframe, embedding, objects JSON)
 - `kaggle_jobs/` — 4 job encode SOTA trên Kaggle GPU (thăm dò, ngoài pipeline chính)
-- `queries/` — Query mẫu/test (JSON)
 - `submissions/` — Output CSV/ZIP (`*.zip` git-ignored)
 - `docs/` — Luật thi, training transcript, paper/slide (tham khảo, không phải code)
 
