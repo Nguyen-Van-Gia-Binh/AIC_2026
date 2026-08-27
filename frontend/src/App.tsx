@@ -38,7 +38,7 @@ export default function App() {
             khi chuyen tab (truoc day dung `mode === x && <Screen/>` nen React unmount, xoa het state). */}
         <div style={{ display: mode === "kis" ? "block" : "none" }}><KisScreen /></div>
         <div style={{ display: mode === "qa" ? "block" : "none" }}><QaScreen active={mode === "qa"} /></div>
-        <div style={{ display: mode === "trake" ? "block" : "none" }}><TrakeScreen /></div>
+        <div style={{ display: mode === "trake" ? "block" : "none" }}><TrakeScreen active={mode === "trake"} /></div>
         <div style={{ display: mode === "queue" ? "block" : "none" }}><QueueScreen active={mode === "queue"} /></div>
       </main>
     </div>

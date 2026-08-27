@@ -104,6 +104,15 @@ Claude Design (plan: `docs/superpowers/plans/2026-08-27-phase1-fastapi-react-fro
   đáp án cho toàn bộ / ✓ cập nhật frame); widget "🚀 Chốt & Thêm vào hàng đợi" nổi cố định góc
   dưới-phải, phím tắt Ctrl/Cmd+Enter. Không cần đổi backend (dùng lại `qa/run`, `keyframes/{id}/all`,
   `videos/{id}/meta`).
+- [ ] Phase con 1.8 — làm lại UI TRAKE theo cùng khuôn: header 2 cột (mô tả tổng quát + chip rewrite |
+  danh sách khoảnh khắc đánh số 1..N) + thanh điều khiển (slider top-k video 3–10 + Run TRAKE); kết quả
+  là các thẻ video xếp dọc, kéo-thả (drag handle ⋮⋮) hoặc nút ▲/▼ để đổi thứ tự ưu tiên, mỗi thẻ có
+  nút "🚀 Nộp riêng video này"; thân thẻ = dải timeline N mốc (thumbnail + ô sửa `frame_id` + `pts_time`
+  quy đổi, viền đỏ + ⚠️ khi lệch thứ tự `frame_k > frame_{k+1}`); bấm 1 mốc → màn soi video riêng
+  `TrakeKeyframeDetail` (video + dải keyframe + nhảy nhanh, hiện frame mốc trước/sau, nút "✓ Cập nhật
+  frame cho Mốc này"); widget "🚀 Chốt & Nộp vào hàng đợi" nổi cố định góc dưới-phải (ghi nhận đúng
+  thứ tự thẻ đã sắp), phím tắt Ctrl/Cmd+Enter. Không đổi backend (dùng lại `trake/run`,
+  `keyframes/{id}/all`, `videos/{id}/meta`).
 - [ ] Phase con 2 — AI Graph (LangGraph)
 - [ ] Phase con 3 — nối Agent Backend hoàn chỉnh vào frontend
 - [ ] Phase con 4 — pytest suite + hoàn thiện end-to-end

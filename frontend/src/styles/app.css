@@ -100,12 +100,6 @@
 .confidence-bar { height: 8px; border-radius: 999px; background: var(--color-neutral-300); overflow: hidden; }
 .confidence-bar div { height: 100%; background: var(--color-accent-2); }
 
-.trake-table td { vertical-align: top; }
-.trake-strip { display: flex; gap: 6px; flex-wrap: wrap; }
-.trake-strip-item { display: flex; flex-direction: column; align-items: center; gap: 2px; width: 92px; }
-.trake-strip-item .thumb { width: 92px; height: 58px; border-radius: var(--radius-sm); }
-.trake-strip-item > span { font-size: 10px; }
-
 .queue-header { display: flex; align-items: center; justify-content: space-between; }
 .queue-header > div { display: flex; gap: 8px; }
 
@@ -161,8 +155,6 @@
   width: 74px; min-height: 30px; padding: 3px 8px; font-size: 12px;
   border-radius: var(--radius-sm) !important; text-align: center;
 }
-.trake-fids { display: flex; flex-wrap: wrap; gap: 6px; }
-.trake-fid { display: flex; flex-direction: column; gap: 2px; align-items: center; font-size: 10px; }
 
 /* — trinh phat video kiem chung keyframe — */
 .video-verifier { display: flex; flex-direction: column; gap: 8px; }
@@ -210,8 +202,8 @@
 .kis-card:hover .card-remove { opacity: 1; }
 .card-remove:hover { color: var(--color-accent); background: var(--color-bg); }
 
-/* Thanh Query ID + "Them vao hang doi" noi co dinh goc duoi-phai (KIS + Q&A). */
-.kis-submit-bar, .qa-submit-bar {
+/* Thanh Query ID + "Them vao hang doi" noi co dinh goc duoi-phai (KIS + Q&A + TRAKE). */
+.kis-submit-bar, .qa-submit-bar, .trake-submit-bar {
   position: fixed; right: 24px; bottom: 22px; z-index: 30;
   display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
   max-width: min(92vw, 460px);
@@ -219,10 +211,10 @@
   background: var(--color-surface); border: 1px solid var(--color-divider);
   box-shadow: var(--shadow-lg, 0 10px 34px rgba(30, 20, 10, 0.22));
 }
-.qa-submit-bar { max-width: min(94vw, 520px); }
-.kis-submit-bar .input, .qa-submit-bar .input { width: 188px; min-height: 36px; }
-.kis-submit-bar .btn, .qa-submit-bar .btn { min-height: 36px; white-space: nowrap; }
-.kis-submit-msg, .qa-submit-msg {
+.qa-submit-bar, .trake-submit-bar { max-width: min(94vw, 520px); }
+.kis-submit-bar .input, .qa-submit-bar .input, .trake-submit-bar .input { width: 188px; min-height: 36px; }
+.kis-submit-bar .btn, .qa-submit-bar .btn, .trake-submit-bar .btn { min-height: 36px; white-space: nowrap; }
+.kis-submit-msg, .qa-submit-msg, .trake-submit-msg {
   flex-basis: 100%; font-size: 11.5px; line-height: 1.4;
   color: color-mix(in srgb, var(--color-text) 68%, transparent);
 }
@@ -290,3 +282,82 @@
 /* Nhom 3 nut hanh dong Q&A trong man soi video chi tiet. */
 .qa-detail-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .qa-detail-actions .btn { min-height: 38px; }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Phase 1.8 — TRAKE: header 2 cot + thanh dieu khien, cac the video xep doc
+   keo-tha doi thu tu, than the = dai timeline N moc (sua frame_id + canh bao
+   lech thu tu), man soi video rieng (TrakeKeyframeDetail), widget chot noi.
+   ══════════════════════════════════════════════════════════════════════ */
+
+.trake-screen { max-width: none; padding-bottom: 104px; }
+
+/* Header: [mo ta tong quat + chip] [danh sach khoanh khac danh so] */
+.trake-header {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start;
+}
+.trake-header .trake-col { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.trake-header textarea.input { min-height: 74px; }
+@media (max-width: 900px) {
+  .trake-header { grid-template-columns: 1fr; }
+}
+
+.trake-events-count { font-weight: 600; color: var(--color-accent-800, var(--color-accent)); }
+.trake-events-preview { font-size: 12px; color: color-mix(in srgb, var(--color-text) 65%, transparent); }
+.trake-events-preview ol { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 2px; }
+
+/* Thanh dieu khien: slider top-k video + Run TRAKE. */
+.trake-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; }
+.trake-controls .btn { align-self: auto; }
+
+/* — the video ung vien (xep doc, keo-tha doi thu tu) — */
+.trake-cards { display: flex; flex-direction: column; gap: 14px; }
+.trake-card {
+  border: 1px solid var(--color-divider); border-radius: var(--radius-lg);
+  background: var(--color-surface); padding: 12px 14px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.trake-card.dragging { opacity: 0.45; border-color: var(--color-accent); }
+
+.trake-card-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 13px; }
+.trake-drag {
+  cursor: grab; user-select: none; font-size: 15px; line-height: 1;
+  color: color-mix(in srgb, var(--color-text) 45%, transparent); padding: 0 2px;
+}
+.trake-drag:active { cursor: grabbing; }
+.trake-badge {
+  font-weight: 700; padding: 2px 9px; border-radius: 999px;
+  background: var(--color-accent-100); color: var(--color-accent-800, var(--color-accent));
+}
+.trake-order-btns { display: flex; gap: 4px; }
+.trake-order-btns .btn { min-height: 28px; padding: 2px 9px; font-size: 12px; }
+.trake-submit-one { margin-left: auto; min-height: 30px; padding: 3px 12px; font-size: 12px; }
+
+/* — dai timeline N moc trong 1 the — */
+.trake-timeline {
+  display: flex; gap: 8px; overflow-x: auto; overflow-y: hidden; padding: 2px 2px 8px;
+}
+.trake-moment {
+  flex: 0 0 auto; width: 168px; display: flex; flex-direction: column; gap: 4px;
+  border: 1px solid var(--color-divider); border-radius: var(--radius-md); padding: 6px;
+}
+.trake-moment.invalid { border-color: var(--color-danger, #c0392b); background: color-mix(in srgb, var(--color-danger, #c0392b) 8%, transparent); }
+.trake-moment-title {
+  font-size: 11px; line-height: 1.3; font-weight: 600;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  color: color-mix(in srgb, var(--color-text) 78%, transparent);
+}
+.trake-moment-thumb {
+  width: 100%; aspect-ratio: 16 / 10; border-radius: var(--radius-sm); overflow: hidden;
+  padding: 0; border: 1px solid var(--color-divider); background: none; cursor: pointer;
+}
+.trake-moment-thumb:hover { border-color: var(--color-accent); }
+.trake-moment-foot { display: flex; align-items: center; gap: 6px; }
+.trake-moment-foot .frame-input { width: 84px; flex: 0 0 84px; }
+.trake-moment-foot > .mono { font-size: 11px; color: color-mix(in srgb, var(--color-text) 60%, transparent); }
+.trake-warn { font-size: 10.5px; font-weight: 600; color: var(--color-danger, #c0392b); }
+
+/* — man soi video chi tiet 1 moc — */
+.trake-detail-ctx {
+  font-size: 12.5px; line-height: 1.5;
+  color: color-mix(in srgb, var(--color-text) 65%, transparent);
+}

@@ -1,0 +1,194 @@
+<h2>Mô phỏng Giao diện Chat & Cấu trúc Tin nhắn Assistant</h2>
+<p class="subtitle">Trực quan hóa cách hiển thị kết quả tìm kiếm video đa tác vụ (KIS / Q&A / TRAKE) ngay trong dòng hội thoại</p>
+
+<div class="options" data-choice-container style="margin-bottom: 2rem;">
+  <div class="option selected" data-choice="rich_card" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Phương án A: Rich Card Đa Tầng (Đề xuất)</h3>
+      <p>Hiển thị tóm tắt trực quan: Badge phân loại + Agent Thinking (đóng/mở) + Dải thumbnail frame/mốc thời gian + Nút mở Drawer & Chốt hàng đợi trực tiếp.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="minimal" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Phương án B: Tối giản (Minimalist Text)</h3>
+      <p>Chỉ hiển thị dòng chữ trả lời và 1 nút bấm "Xem kết quả". Mọi ảnh thumbnail, video verifier và danh sách đều dồn sang Drawer.</p>
+    </div>
+  </div>
+</div>
+
+<div class="mockup" style="background: #0f172a; border-radius: 12px; border: 1px solid #334155; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+  <div class="mockup-header" style="background: #1e293b; padding: 12px 18px; border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center;">
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #10b981;"></span>
+      <span style="font-weight: 600; color: #f8fafc; font-size: 14px;">AIC 2026 — Trợ lý Chat Đa Phương thức</span>
+    </div>
+    <div style="font-size: 12px; color: #94a3b8; background: #0f172a; padding: 4px 10px; border-radius: 6px; border: 1px solid #334155;">
+      💡 Nhấn vào Card bất kỳ để mô phỏng mở Drawer kiểm chứng
+    </div>
+  </div>
+
+  <!-- Main layout mockup: Chat container with slide-over drawer -->
+  <div style="display: grid; grid-template-columns: 1fr 380px; min-height: 580px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+    
+    <!-- Left: Chat Stream -->
+    <div style="padding: 20px; background: #0b1120; display: flex; flex-direction: column; gap: 16px; border-right: 1px solid #1e293b; overflow-y: auto;">
+      
+      <!-- User Message -->
+      <div style="display: flex; justify-content: flex-end;">
+        <div style="background: #2563eb; color: #fff; padding: 10px 16px; border-radius: 16px 16px 4px 16px; max-width: 80%; font-size: 14px; box-shadow: 0 2px 8px rgba(37,99,235,0.3);">
+          Tìm video người mặc áo vàng đi xe đạp qua ngã tư và cho biết biển số xe ô tô dừng phía trước màu gì?
+        </div>
+      </div>
+
+      <!-- Assistant Rich Card Message (QA Type) -->
+      <div style="display: flex; gap: 12px; max-width: 95%;">
+        <div style="width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, #6366f1, #8b5cf6); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 14px; flex-shrink: 0;">
+          AI
+        </div>
+        <div style="flex: 1; background: #1e293b; border: 1px solid #334155; border-radius: 4px 16px 16px 16px; padding: 14px; color: #e2e8f0; font-size: 13px;">
+          
+          <!-- Layer 1: Header + Badges + Agent Trace -->
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <div style="display: flex; gap: 6px; align-items: center;">
+              <span style="background: #0284c7; color: white; font-weight: 600; font-size: 11px; padding: 2px 8px; border-radius: 4px;">❓ Q&A Pipeline</span>
+              <span style="background: #059669; color: white; font-size: 11px; padding: 2px 8px; border-radius: 4px;">Độ tin cậy: 94%</span>
+              <span style="background: #334155; color: #94a3b8; font-size: 11px; padding: 2px 6px; border-radius: 4px;">1 vòng reflection</span>
+            </div>
+            <span style="color: #64748b; font-size: 11px;">02:24</span>
+          </div>
+
+          <!-- Collapsible Agent Trace / Thoughts -->
+          <details style="background: #0f172a; border-radius: 6px; padding: 8px 10px; margin-bottom: 12px; border: 1px solid #1e293b;" open>
+            <summary style="cursor: pointer; color: #38bdf8; font-weight: 500; font-size: 12px; user-select: none;">
+              🧠 Tiến trình suy luận của Agent (Nhấn để ẩn/hiện)
+            </summary>
+            <div style="margin-top: 8px; font-size: 11px; color: #94a3b8; line-height: 1.5;">
+              <div>• <b>Router:</b> Phân loại tác vụ <code>Q&A</code> (Câu hỏi về đặc tính trực quan đối tượng).</div>
+              <div>• <b>Rewrite:</b> <i>"person in yellow shirt riding bicycle crossing intersection, car license plate color"</i></div>
+              <div>• <b>VLM / OCR Cross-check:</b> Phát hiện biển số nền trắng chữ đen trên video <code>L21_V004</code> (frame 1420).</div>
+            </div>
+          </details>
+
+          <!-- Layer 2: Main Answer Callout -->
+          <div style="background: rgba(16, 185, 129, 0.12); border-left: 4px solid #10b981; padding: 10px 12px; border-radius: 0 6px 6px 0; margin-bottom: 12px;">
+            <div style="font-size: 11px; color: #6ee7b7; font-weight: 600; text-transform: uppercase;">Đáp án được tổng hợp:</div>
+            <div style="font-size: 15px; color: #f0fdf4; font-weight: 600; margin-top: 2px;">
+              Biển số xe màu trắng (chữ đen, viền xanh)
+            </div>
+          </div>
+
+          <!-- Layer 3: Candidate Thumbnails Carousel / Mini Grid -->
+          <div style="margin-bottom: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <span style="font-size: 12px; color: #cbd5e1; font-weight: 500;">Top 3 Keyframe chứng cứ tốt nhất:</span>
+              <span style="font-size: 11px; color: #38bdf8; cursor: pointer;">Xem tất cả (20) →</span>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
+              
+              <!-- Card 1 -->
+              <div style="background: #0f172a; border: 1px solid #10b981; border-radius: 6px; padding: 6px; cursor: pointer; transition: transform 0.2s;">
+                <div style="background: #334155; height: 70px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 11px; color: #94a3b8; position: relative;">
+                  🖼️ Keyframe #1
+                  <span style="position: absolute; top: 4px; left: 4px; background: #10b981; color: black; font-size: 9px; font-weight: bold; padding: 1px 4px; border-radius: 2px;">#1 Hạng đầu</span>
+                </div>
+                <div style="margin-top: 4px; font-size: 11px; font-weight: bold; color: #f8fafc;">L21_V004 / 1420</div>
+                <div style="font-size: 10px; color: #34d399;">Score: 0.8842 · PTS: 56.8s</div>
+              </div>
+
+              <!-- Card 2 -->
+              <div style="background: #0f172a; border: 1px solid #334155; border-radius: 6px; padding: 6px; cursor: pointer;">
+                <div style="background: #334155; height: 70px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 11px; color: #94a3b8; position: relative;">
+                  🖼️ Keyframe #2
+                  <span style="position: absolute; top: 4px; left: 4px; background: #475569; color: white; font-size: 9px; padding: 1px 4px; border-radius: 2px;">#2</span>
+                </div>
+                <div style="margin-top: 4px; font-size: 11px; font-weight: bold; color: #f8fafc;">L21_V004 / 1445</div>
+                <div style="font-size: 10px; color: #94a3b8;">Score: 0.8410 · PTS: 57.8s</div>
+              </div>
+
+              <!-- Card 3 -->
+              <div style="background: #0f172a; border: 1px solid #334155; border-radius: 6px; padding: 6px; cursor: pointer;">
+                <div style="background: #334155; height: 70px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 11px; color: #94a3b8; position: relative;">
+                  🖼️ Keyframe #3
+                  <span style="position: absolute; top: 4px; left: 4px; background: #475569; color: white; font-size: 9px; padding: 1px 4px; border-radius: 2px;">#3</span>
+                </div>
+                <div style="margin-top: 4px; font-size: 11px; font-weight: bold; color: #f8fafc;">L18_V012 / 0560</div>
+                <div style="font-size: 10px; color: #94a3b8;">Score: 0.7915 · PTS: 22.4s</div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Layer 4: Quick Action Buttons -->
+          <div style="display: flex; gap: 8px; justify-content: flex-end; border-top: 1px solid #334155; padding-top: 10px;">
+            <button style="background: #334155; color: #e2e8f0; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+              🔍 Mở Video Verifier (Drawer)
+            </button>
+            <button style="background: #10b981; color: white; border: none; padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 4px; box-shadow: 0 2px 8px rgba(16,185,129,0.3);">
+              📥 Chốt vào Hàng đợi nộp
+            </button>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Right: Slide-over Drawer (Inspector & Verifier) -->
+    <div style="background: #0f172a; padding: 16px; display: flex; flex-direction: column; gap: 14px; border-left: 1px solid #334155;">
+      
+      <!-- Drawer Header -->
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1e293b; padding-bottom: 10px;">
+        <div>
+          <div style="font-weight: bold; color: #f8fafc; font-size: 13px;">Kiểm chứng Video #1</div>
+          <div style="font-size: 11px; color: #94a3b8;">L21_V004 · Frame: 1420 · PTS: 56.80s</div>
+        </div>
+        <button style="background: transparent; border: 1px solid #475569; color: #cbd5e1; border-radius: 4px; padding: 2px 8px; font-size: 11px; cursor: pointer;">✕ Đóng</button>
+      </div>
+
+      <!-- Mock Video Player -->
+      <div style="background: #000; border-radius: 6px; height: 180px; position: relative; display: flex; flex-direction: column; justify-content: space-between; padding: 8px;">
+        <div style="display: flex; justify-content: space-between; color: white; font-size: 10px; background: rgba(0,0,0,0.6); padding: 2px 6px; border-radius: 4px;">
+          <span>L21_V004.mp4 (25.0 fps)</span>
+          <span>00:56.80 / 02:30.00</span>
+        </div>
+        <div style="text-align: center; color: #64748b; font-size: 13px;">
+          🎥 [Video Verifier Player]<br/>
+          <span style="font-size: 10px; color: #94a3b8;">Nhấn [A]/[D] để tua từng frame | [Space] phát</span>
+        </div>
+        <div style="background: rgba(0,0,0,0.7); padding: 4px; border-radius: 4px;">
+          <input type="range" style="width: 100%; accent-color: #38bdf8;" value="38" />
+        </div>
+      </div>
+
+      <!-- Metadata & Update Button -->
+      <div style="background: #1e293b; padding: 10px; border-radius: 6px; font-size: 11px; color: #cbd5e1;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+          <span style="color: #94a3b8;">Frame ID đang tua:</span>
+          <b style="color: #38bdf8;">1422 (+2 frames)</b>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+          <span style="color: #94a3b8;">Đáp án Q&A:</span>
+          <input type="text" value="Biển số màu trắng" style="background: #0f172a; border: 1px solid #475569; color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 11px; width: 60%;" />
+        </div>
+        <button style="width: 100%; background: #2563eb; color: white; border: none; padding: 6px; border-radius: 4px; font-weight: 600; cursor: pointer;">
+          📌 Cập nhật Frame 1422 vào vị trí #1
+        </button>
+      </div>
+
+      <!-- Keyframe strip -->
+      <div>
+        <div style="font-size: 11px; color: #94a3b8; margin-bottom: 4px;">Dải keyframe lân cận (±5 frames):</div>
+        <div style="display: flex; gap: 4px; overflow-x: auto; padding-bottom: 4px;">
+          <div style="width: 45px; height: 35px; background: #334155; border-radius: 3px; flex-shrink: 0; font-size: 8px; color: #94a3b8; display: flex; align-items: center; justify-content: center;">1415</div>
+          <div style="width: 45px; height: 35px; background: #0284c7; border: 1px solid #38bdf8; border-radius: 3px; flex-shrink: 0; font-size: 8px; color: #fff; display: flex; align-items: center; justify-content: center;">1420 (Gốc)</div>
+          <div style="width: 45px; height: 35px; background: #334155; border-radius: 3px; flex-shrink: 0; font-size: 8px; color: #94a3b8; display: flex; align-items: center; justify-content: center;">1425</div>
+          <div style="width: 45px; height: 35px; background: #334155; border-radius: 3px; flex-shrink: 0; font-size: 8px; color: #94a3b8; display: flex; align-items: center; justify-content: center;">1430</div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</div>
