@@ -19,7 +19,7 @@ if sys.platform == "win32":
     except Exception:
         pass
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent.parent.parent.parent
 ENV_PATH = ROOT / ".env"
 KAGGLE_EXE = ROOT / ".venv" / "Scripts" / "kaggle.exe"
 if not KAGGLE_EXE.exists():

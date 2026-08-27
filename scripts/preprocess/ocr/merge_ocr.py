@@ -1,5 +1,5 @@
 """
-scripts/merge_ocr.py — Hợp nhất & kiểm định kết quả OCR (PaddleOCR detect + VietOCR recognize) từ
+scripts/preprocess/ocr/merge_ocr.py — Hợp nhất & kiểm định kết quả OCR (PaddleOCR detect + VietOCR recognize) từ
 3 shard Colab (colab_jobs/06_paddleocr_vietocr_shard{0,1,2}/notebook.ipynb).
 
 Quy trình:
@@ -20,7 +20,7 @@ Quy trình:
      Elasticsearch qua scripts/index_ocr_es.py --ocr-jsonl-dir.
 
 Usage:
-  .venv\\Scripts\\python.exe scripts\\merge_ocr.py
+  .venv\\Scripts\\python.exe scripts\\preprocess\\ocr\\merge_ocr.py
 """
 
 import sys
@@ -36,7 +36,7 @@ if sys.platform == "win32":
     except Exception:
         pass
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent.parent.parent.parent
 DATA_DIR = ROOT / "data"
 EXTRACTED_DIR = DATA_DIR / "extracted"
 DEST_DIR = EXTRACTED_DIR / "ocr_text_paddleocr"

@@ -1,35 +1,26 @@
 """
-scripts/bundle_shards_self_contained.py — Nhúng trực tiếp manifest vào main.py của từng Shard.
-Giúp mỗi folder chỉ gồm đúng 2 file chuẩn (main.py + kernel-metadata.json),
-và title khớp 100% với slug để tránh lỗi 409 Conflict từ Kaggle API.
+scripts/setup_kaggle_shards.py — Thiết lập 3 thư mục Kaggle Jobs (Shard 0, 1, 2) cho Vintern-1B Captioning.
+
+Mỗi thư mục gồm:
+  - main.py (tối ưu hóa theo manifest, GPU T4, bfloat16, batch resume, progress logging)
+  - manifest_shard.json (chứa 291 video và danh sách frame cụ thể của Shard đó)
+  - kernel-metadata.json (metadata để đẩy trực tiếp qua Kaggle CLI)
 """
 
 from pathlib import Path
+import shutil
 import json
-import sys
 
-if sys.platform == "win32":
-    try:
-        sys.stdout.reconfigure(encoding="utf-8")
-        sys.stderr.reconfigure(encoding="utf-8")
-    except Exception:
-        pass
-
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent.parent.parent.parent
 MANIFEST_DIR = ROOT / "data" / "manifests"
 KAGGLE_JOBS_DIR = ROOT / "kaggle_jobs"
 
-SHARD_ACCOUNTS = [
-    {"shard": 0, "user": "thanhnghiphan"},
-    {"shard": 1, "user": "coduckzz"},
-    {"shard": 2, "user": "sonasuzz"},
-]
 
-MAIN_TEMPLATE_HEAD = '''"""
-Kaggle GPU Job — Vintern-1B-v3.5 Captioning (SHARD __SHARD_IDX__ / 3).
+MAIN_PY_TEMPLATE = '''"""
+Kaggle GPU Job — Vintern-1B-v3.5 Captioning (SHARD __SHARD_IDX__ / __TOTAL_SHARDS__).
 
 Chạy trên GPU Nvidia Tesla T4 (Kaggle).
-Tập dữ liệu: __NUM_VIDEOS__ video (__NUM_FRAMES__ keyframe theo Semantic Manifest Filtering).
+Tập dữ liệu: __NUM_VIDEOS__ video (~__NUM_FRAMES__ keyframe được chọn theo Semantic Manifest Filtering).
 Output: /kaggle/working/caption_vintern1b_shard__SHARD_IDX__.zip
 """
 
@@ -45,6 +36,7 @@ from pathlib import Path
 def _pip_install(*pkgs):
     subprocess.run([sys.executable, "-m", "pip", "install", "-q", *pkgs], check=True)
 
+# Cài đặt dependency tương thích
 _pip_install("transformers==4.57.3", "timm", "einops", "sentencepiece", "accelerate")
 
 import torch
@@ -54,10 +46,11 @@ from torchvision.transforms.functional import InterpolationMode
 from transformers import AutoModel, AutoTokenizer
 
 SHARD_IDX = __SHARD_IDX__
-TOTAL_SHARDS = 3
+TOTAL_SHARDS = __TOTAL_SHARDS__
 TAG = f"caption_vintern1b_shard{SHARD_IDX}"
 MODEL_ID = "5CD-AI/Vintern-1B-v3_5"
 
+# Chế độ Smoke-Test (chuyển False khi chạy thật trên Kaggle)
 SMOKE_TEST = False
 SMOKE_TEST_NUM_VIDEOS = 2
 SMOKE_TEST_NUM_IMAGES = 5
@@ -80,12 +73,37 @@ IMAGENET_STD = (0.229, 0.224, 0.225)
 
 _MODEL = None
 _TOKENIZER = None
+_MANIFEST = None
 
-# MANIFEST TỰ CHỨA (Self-contained)
-MANIFEST = __MANIFEST_DICT__
-'''
 
-MAIN_TEMPLATE_TAIL = '''
+def load_manifest() -> dict[str, set[int]]:
+    global _MANIFEST
+    if _MANIFEST is not None:
+        return _MANIFEST
+
+    candidates = [
+        Path(__file__).parent / "manifest_shard.json",
+        Path("/kaggle/working/manifest_shard.json"),
+    ]
+    for c in candidates:
+        if c.exists():
+            with open(c, "r", encoding="utf-8") as f:
+                raw = json.load(f)
+            _MANIFEST = {k: set(v) for k, v in raw.items()}
+            print(f"[{TAG}] Đã nạp manifest_shard.json: {len(_MANIFEST)} video được chỉ định.")
+            return _MANIFEST
+
+    found = next(Path(".").rglob("manifest_shard.json"), None)
+    if found and found.exists():
+        with open(found, "r", encoding="utf-8") as f:
+            raw = json.load(f)
+        _MANIFEST = {k: set(v) for k, v in raw.items()}
+        print(f"[{TAG}] Đã nạp manifest từ {found}: {len(_MANIFEST)} video.")
+        return _MANIFEST
+
+    raise FileNotFoundError("Không tìm thấy manifest_shard.json trong bundle code!")
+
+
 def build_transform(input_size):
     return T.Compose([
         T.Lambda(lambda img: img.convert('RGB') if img.mode != 'RGB' else img),
@@ -180,17 +198,16 @@ def restore_resume_cache() -> int:
     return restored
 
 
-def list_videos_for_shard(root: Path):
-    manifest_set = {k: set(v) for k, v in MANIFEST.items()}
+def list_videos_for_shard(root: Path, manifest: dict[str, set[int]]):
     found_map = {}
     for jpg in root.rglob("*.jpg"):
         vid_id = jpg.parent.name
-        if vid_id in manifest_set:
+        if vid_id in manifest:
             found_map.setdefault(vid_id, []).append(jpg)
 
     videos = []
     for vid_id in sorted(found_map.keys()):
-        selected_set = manifest_set[vid_id]
+        selected_set = manifest[vid_id]
         jpgs = []
         for p in found_map[vid_id]:
             try:
@@ -275,10 +292,11 @@ def process_video(model, tokenizer, video_id: str, jpgs) -> tuple[int, int]:
 
 def main():
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    manifest = load_manifest()
+
     print(f"[{TAG}] ======================================================")
     print(f"[{TAG}] KHỞI CHẠY SHARD {SHARD_IDX} / {TOTAL_SHARDS}")
     print(f"[{TAG}] Device: {DEVICE}, Max Tokens: {MAX_NEW_TOKENS}, Dynamic Tiles: {DYNAMIC_TILE_MAX_NUM}")
-    print(f"[{TAG}] Số video trong manifest: {len(MANIFEST)}")
     print(f"[{TAG}] ======================================================")
 
     restored = restore_resume_cache()
@@ -289,8 +307,8 @@ def main():
     input_root = resolve_keyframes_root()
     print(f"[{TAG}] Keyframes root: {input_root}")
 
-    videos = list_videos_for_shard(input_root)
-    print(f"[{TAG}] Số video thuộc Shard {SHARD_IDX} tìm thấy: {len(videos)}")
+    videos = list_videos_for_shard(input_root, manifest)
+    print(f"[{TAG}] Số video thuộc Shard {SHARD_IDX}: {len(videos)}")
 
     if SMOKE_TEST:
         videos = [(vid, jpgs[:SMOKE_TEST_NUM_IMAGES]) for vid, jpgs in videos[:SMOKE_TEST_NUM_VIDEOS]]
@@ -331,41 +349,38 @@ if __name__ == "__main__":
 
 
 def main():
-    for item in SHARD_ACCOUNTS:
-        shard_idx = item["shard"]
-        user = item["user"]
+    if not MANIFEST_DIR.exists():
+        raise FileNotFoundError(f"Không tìm thấy thư mục {MANIFEST_DIR}. Hãy chạy scripts/build_caption_manifest.py trước!")
+
+    for shard_idx in range(3):
         shard_dir = KAGGLE_JOBS_DIR / f"07_vintern_caption_shard{shard_idx}"
         shard_dir.mkdir(parents=True, exist_ok=True)
 
-        # Xóa manifest_shard.json thừa trong thư mục job nếu có
-        stale_json = shard_dir / "manifest_shard.json"
-        if stale_json.exists():
-            stale_json.unlink()
-
         manifest_src = MANIFEST_DIR / f"manifest_shard_{shard_idx}.json"
+        manifest_dst = shard_dir / "manifest_shard.json"
+        shutil.copy2(manifest_src, manifest_dst)
+
         with open(manifest_src, "r", encoding="utf-8") as f:
-            manifest_dict = json.load(f)
+            shard_manifest = json.load(f)
 
-        num_videos = len(manifest_dict)
-        num_frames = sum(len(v) for v in manifest_dict.values())
+        num_videos = len(shard_manifest)
+        num_frames = sum(len(v) for v in shard_manifest.values())
 
-        # Tạo main.py tự chứa
-        manifest_str = json.dumps(manifest_dict)
-        main_py_code = (
-            MAIN_TEMPLATE_HEAD
+        # Thay thế placeholder đơn giản
+        content = (
+            MAIN_PY_TEMPLATE
             .replace("__SHARD_IDX__", str(shard_idx))
+            .replace("__TOTAL_SHARDS__", "3")
             .replace("__NUM_VIDEOS__", str(num_videos))
             .replace("__NUM_FRAMES__", f"{num_frames:,}")
-            .replace("__MANIFEST_DICT__", manifest_str)
-            + MAIN_TEMPLATE_TAIL
         )
         with open(shard_dir / "main.py", "w", encoding="utf-8") as f:
-            f.write(main_py_code)
+            f.write(content)
 
-        # Ghi kernel-metadata.json chuẩn
+        # Ghi kernel-metadata.json
         metadata = {
-            "id": f"{user}/aic2026-caption-07-vintern1b-shard{shard_idx}",
-            "title": f"AIC2026 Caption 07 Vintern1B Shard{shard_idx}",
+            "id": f"thanhnghiphan/aic2026-caption-07-vintern1b-shard{shard_idx}",
+            "title": f"AIC2026 Caption 07 Vintern1B Shard {shard_idx}",
             "code_file": "main.py",
             "language": "python",
             "kernel_type": "script",
@@ -384,7 +399,7 @@ def main():
         with open(shard_dir / "kernel-metadata.json", "w", encoding="utf-8") as f:
             json.dump(metadata, f, indent=2)
 
-        print(f"✅ Shard {shard_idx} (@{user}) đã được bundle tự chứa ({num_videos} video, {num_frames:,} frames).")
+        print(f"✅ Đã tạo Shard {shard_idx}: {shard_dir} ({num_videos} video, {num_frames:,} frames)")
 
 
 if __name__ == "__main__":

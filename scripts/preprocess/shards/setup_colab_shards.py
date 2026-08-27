@@ -37,7 +37,7 @@ qua File > Upload notebook), làm theo hướng dẫn ở cell Markdown đầu t
 import json
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent.parent.parent.parent
 COLAB_JOBS_DIR = ROOT / "colab_jobs"
 
 TOTAL_SHARDS = 3

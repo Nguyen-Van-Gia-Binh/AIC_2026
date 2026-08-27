@@ -18,7 +18,7 @@ if sys.platform == "win32":
     except Exception:
         pass
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent.parent.parent.parent
 ENV_PATH = ROOT / ".env"
 DATA_DIR = ROOT / "data" / "extracted"
 KAGGLE_EXE = ROOT / ".venv" / "Scripts" / "kaggle.exe"
