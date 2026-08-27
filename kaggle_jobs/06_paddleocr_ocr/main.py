@@ -25,16 +25,33 @@ CÀI ĐẶT — SỬA 2026-08-24 LẦN 4 (3 lần trước đều lỗi thật k
     bootstrap pip: `ensurepip --upgrade` trả exit code 1 (nhiều khả năng image Kaggle không có sẵn
     wheel ensurepip bundled, không rõ lý do chính xác — lỗi xảy ra quá nhanh (~1.5s) để có traceback
     chi tiết từ chính ensurepip).
-  SỬA TẬN GỐC (lần này, không cần venv/ensurepip): dùng `pip install --target <thư mục riêng>
+  Lần 4 (không cần venv/ensurepip): dùng `pip install --target <thư mục riêng>
   --ignore-installed` để cài paddleocr+paddlepaddle-gpu (và mọi dependency, gồm cả 1 bản torch mới
   do modelscope kéo theo) vào /kaggle/working/paddle_pkgs — TÁCH BIỆT hoàn toàn khỏi site-packages
-  gốc (pip --target không đụng/ghi đè gì vào site-packages gốc, khác hẳn lần 1 cài thẳng). Cờ
-  --ignore-installed bắt buộc phải có: nếu thiếu, pip thấy torch "đã có sẵn" trong site-packages gốc
-  (dù bản đó đã hỏng) và BỎ QUA không cài torch mới vào thư mục riêng, làm hỏng ý đồ cô lập. Gọi lại
+  gốc (pip --target không đụng/ghi đè gì vào site-packages gốc, khác hẳn lần 1 cài thẳng). Gọi lại
   chính file này bằng CÙNG python gốc (không cần python riêng của venv) nhưng với biến môi trường
   PYTHONPATH chèn /kaggle/working/paddle_pkgs lên ĐẦU — Python ưu tiên PYTHONPATH trước site-packages
   gốc trong sys.path, nên `import torch`/`import paddleocr` sẽ tự động lấy bản mới cô lập, không
   chạm bản hỏng trong site-packages gốc.
+  **CHẠY THẬT (2026-08-25) VẪN CRASH** — log xác nhận traceback dừng ở
+  `/usr/local/lib/python3.12/dist-packages/torch/__init__.py` (site-packages GỐC, không phải
+  `paddle_pkgs/torch/`), cùng lỗi `undefined symbol: ncclCommShrink` như lần 1. Đối chiếu traceback:
+  `paddle_pkgs/modelscope/__init__.py` (module modelscope) ĐÃ cài đúng vào thư mục cô lập — cách ly
+  hoạt động cho modelscope — nhưng `modelscope/utils/torch_utils.py` gọi `import torch` lại rơi về
+  bản gốc, nghĩa là **torch không hề tồn tại trong paddle_pkgs/** dù có `--ignore-installed`. Nguyên
+  nhân: `--ignore-installed` không đảm bảo pip cài lại mọi dependency BẮC CẦU (transitive, torch chỉ
+  được modelscope kéo theo gián tiếp, không nằm trong danh sách gói truyền thẳng cho lệnh pip) vào
+  đúng `--target` — đây là hành vi đã biết của pip, không nhất quán giữa các bản.
+  SỬA LẦN 5 (lần này): liệt kê `torch` TRỰC TIẾP trong danh sách gói của lệnh pip install (không để
+  modelscope kéo theo gián tiếp nữa) — ép nó thành dependency THẲNG nên `--target` chắc chắn cài vào
+  `paddle_pkgs/`. Đồng thời chọn bản `torch` CPU-only (`--index-url
+  https://download.pytorch.org/whl/cpu`, không kèm hậu tố phiên bản cụ thể) thay vì để pip tự chọn
+  bản mặc định trên PyPI (bản Linux mặc định trên PyPI LÀ bản GPU, phụ thuộc đúng nhóm gói
+  `nvidia-*-cu12` gây lỗi NCCL ban đầu) — vì torch ở đây CHỈ được `modelscope.utils.torch_utils`
+  dùng để kiểm tra `is_dist()`/`is_master()` (không phải để chạy OCR — paddlepaddle-gpu mới là engine
+  OCR thật, dùng runtime CUDA riêng của nó, không qua torch), nên bản CPU-only vẫn đủ để import
+  thành công mà KHÔNG kéo theo bất kỳ gói `nvidia-*-cu12` nào — loại bỏ hẳn khả năng lệch version
+  NCCL/CUDA thay vì phải đoán đúng version cần ghim. **Chưa chạy lại thật để xác nhận.**
 
 Input dataset: kiet1106/aic26-frames — cùng dataset và cách dò path như các job trước.
 
@@ -74,15 +91,30 @@ def _bootstrap_isolated_install_and_reexec() -> None:
     (KHÔNG đụng site-packages gốc, KHÔNG cần venv/ensurepip — xem CÀI ĐẶT ở docstring đầu file), rồi
     gọi lại chính file main.py này bằng CÙNG python nhưng PYTHONPATH ưu tiên PKG_DIR. Không bao giờ
     return — luôn sys.exit() theo exit code của subprocess con."""
-    print(f"[{TAG}] Cài paddleocr + paddlepaddle-gpu vào thư mục cô lập {PKG_DIR} "
-          f"(--target --ignore-installed, không đụng site-packages gốc)...")
+    print(f"[{TAG}] Cài torch (CPU-only, riêng) + paddleocr + paddlepaddle-gpu vào thư mục cô lập "
+          f"{PKG_DIR} (--target --ignore-installed, không đụng site-packages gốc)...")
     PKG_DIR.mkdir(parents=True, exist_ok=True)
+    # torch chỉ để modelscope.utils.torch_utils import được (is_dist()/is_master(), KHÔNG dùng để
+    # chạy OCR — paddlepaddle-gpu mới là engine OCR thật). Liệt kê torch TRỰC TIẾP (không để
+    # modelscope kéo theo gián tiếp) vì --ignore-installed không đảm bảo cài lại dependency bắc cầu
+    # vào đúng --target (xác nhận thật qua log lần chạy trước — xem "SỬA LẦN 5" ở docstring đầu
+    # file). Ép bản CPU-only qua --index-url riêng để torch KHÔNG kéo theo nhóm gói nvidia-*-cu12
+    # (nguồn gốc lỗi `undefined symbol: ncclCommShrink` ở các lần sửa trước) — cài trong 1 lệnh
+    # pip install duy nhất, --extra-index-url PyPI + paddle repo để paddleocr/paddlepaddle-gpu vẫn
+    # resolve được (chỉ torch mới bị ép về index CPU-only).
     subprocess.run([
         sys.executable, "-m", "pip", "install", "-q",
         "--target", str(PKG_DIR),
         "--ignore-installed",
+        # wheel paddlepaddle-gpu ~1.9GB — pip mặc định chỉ chờ 15s/lần đọc socket, không đủ nếu CDN
+        # (paddle-whl.cdn.bcebos.com) khựng vài giây giữa chừng (đã dính ReadTimeoutError thật ở lần
+        # chạy trước, không liên quan gì tới phần cách ly torch). Nới timeout + thêm retry cho bền.
+        "--timeout", "120",
+        "--retries", "5",
+        "--index-url", "https://download.pytorch.org/whl/cpu",
+        "--extra-index-url", "https://pypi.org/simple",
         "--extra-index-url", "https://www.paddlepaddle.org.cn/packages/stable/cu126/",
-        "paddleocr==3.7.0", "paddlepaddle-gpu==3.3.0",
+        "torch", "paddleocr==3.7.0", "paddlepaddle-gpu==3.3.0",
     ], check=True)
     print(f"[{TAG}] Cài xong. Gọi lại script với PYTHONPATH ưu tiên {PKG_DIR}...")
 
