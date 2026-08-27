@@ -6,7 +6,7 @@ from pathlib import Path
 
 def main():
     raw_dir = Path(r"data/raw/SOTUYEN1-bo-de-thi")
-    out_csv = Path(r"queries/sotuyen1_bo_de_thi.csv")
+    out_csv = Path(r"test_eval/sotuyen1_bo_de_thi.csv")
 
     files = list(raw_dir.glob("*.txt"))
     print(f"Found {len(files)} files in {raw_dir}")

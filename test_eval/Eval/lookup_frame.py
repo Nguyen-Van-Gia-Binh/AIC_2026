@@ -3,17 +3,17 @@ Công cụ tra cứu frame_id từ timestamp — hỗ trợ NGƯỜI ghi ground 
 
 Không đụng gì tới scripts/index.py hay scripts/agent/tools/retrieve.py (pipeline sản xuất) — chỉ
 đọc thẳng data/extracted/map-keyframes/{video_id}.csv, độc lập hoàn toàn. Xem PLAN.md Phase 6 và
-queries/EVAL_GUIDE.md để biết quy trình ghi ground truth đầy đủ.
+test_eval/Eval/EVAL_GUIDE.md để biết quy trình ghi ground truth đầy đủ.
 
 Cách dùng:
   # 1 timestamp -> in ra keyframe gần nhất + vài keyframe lân cận để tự chọn khoảng [s, e]
-  .venv\\Scripts\\python.exe scripts\\eval\\lookup_frame.py L21_V001 83.5
+  .venv\\Scripts\\python.exe test_eval\\Eval\\lookup_frame.py L21_V001 83.5
 
   # 1 khoảng thời gian [start, end] giây -> in luôn khoảng frame_id [s, e] gợi ý
-  .venv\\Scripts\\python.exe scripts\\eval\\lookup_frame.py L21_V001 83.5 --end 86.0
+  .venv\\Scripts\\python.exe test_eval\\Eval\\lookup_frame.py L21_V001 83.5 --end 86.0
 
   # đổi số keyframe lân cận in ra (mặc định 2 mỗi phía)
-  .venv\\Scripts\\python.exe scripts\\eval\\lookup_frame.py L21_V001 83.5 --window 4
+  .venv\\Scripts\\python.exe test_eval\\Eval\\lookup_frame.py L21_V001 83.5 --window 4
 """
 
 from __future__ import annotations

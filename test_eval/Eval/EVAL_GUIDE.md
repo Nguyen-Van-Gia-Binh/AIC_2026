@@ -1,6 +1,6 @@
 # Hướng dẫn ghi ground truth cho bộ eval Phase 6
 
-> Xem [PLAN.md](../PLAN.md) §Phase 6 để biết bối cảnh đầy đủ. File dữ liệu thật cần điền:
+> Xem [PLAN.md](../../PLAN.md) §Phase 6 để biết bối cảnh đầy đủ. File dữ liệu thật cần điền:
 > [eval_ground_truth.json](eval_ground_truth.json) (khởi tạo rỗng `[]`).
 
 ## Vì sao việc này cần người, không phải AI
@@ -8,7 +8,7 @@
 AI cố vấn/agent không xem được nội dung video thật. Ground truth (video nào, frame nào đúng) chỉ
 có thể lấy được bằng cách 1 người tự xem video trong `data/extracted/keyframes/{batch}/{video_id}/`
 (hoặc video gốc nếu có) rồi ghi lại. Dùng
-[scripts/eval/lookup_frame.py](../scripts/eval/lookup_frame.py) để tra nhanh `frame_id` từ timestamp
+[lookup_frame.py](lookup_frame.py) để tra nhanh `frame_id` từ timestamp
 thay vì tự tính bằng tay từ fps.
 
 ## Cỡ mẫu đề xuất
@@ -37,20 +37,22 @@ hỏng), phần còn lại dồn vào các dạng **lắt léo** sau (nên có �
 3. Chạy `lookup_frame.py` để ra `frame_id` gần nhất + gợi ý khoảng `[gt_frame_start, gt_frame_end]`:
 
    ```
-   .venv\Scripts\python.exe scripts\eval\lookup_frame.py L21_V001 25.0
+   .venv\Scripts\python.exe test_eval\Eval\lookup_frame.py L21_V001 25.0
    ```
 
    Khoảng gợi ý mặc định khá rộng (tới keyframe lân cận) — nên tự thu hẹp lại bằng mắt (xem ảnh in
    ra ở cột "ảnh") cho khớp đúng lúc khoảnh khắc bắt đầu/kết thúc, giống cách BTC định nghĩa `[s, e]`
    trong `docs/Thong tin vong So tuyen AIC2026.md` §2.1 — khoảng càng sát thật càng đo baseline chính
    xác, khoảng quá rộng sẽ làm mọi model "ăn điểm dễ" và mất khả năng phân biệt model mạnh/yếu.
+   Nếu lỡ ghi `gt_frame_start == gt_frame_end` (1 frame — quá chặt vì hệ thống chỉ trả được
+   frame_id của keyframe), chạy `widen_gt_windows.py` để nới tự động ra keyframe lân cận rồi dò tay lại.
 4. Thêm 1 object vào mảng trong `eval_ground_truth.json` theo đúng schema bên dưới.
 
 ## Schema
 
 Field chung cho cả 3 loại: `query_id` (duy nhất, ví dụ `"e-kis-001"`), `type`
 (`"KIS"`/`"QA"`/`"TRAKE"`), `text_vi`, `text_en` (English — dùng để retrieve, cùng quy ước
-`queries/sample_queries.json`), `difficulty_tags` (mảng string tuỳ chọn, ví dụ
+`../sample_queries.json`), `difficulty_tags` (mảng string tuỳ chọn, ví dụ
 `["small_object", "counting"]` — dùng để soi kết quả theo từng dạng lắt léo sau này, không bắt buộc).
 
 ### KIS
@@ -81,8 +83,11 @@ Field chung cho cả 3 loại: `query_id` (duy nhất, ví dụ `"e-kis-001"`), 
   "gt_video_id": "L22_V010",
   "gt_frame_start": 100,
   "gt_frame_end": 120,
-  "gt_answer": "3"    // lưu để dùng SAU — Phase 6 KHÔNG dùng field này để tính điểm (xem PLAN.md
-                       // lý do: answer do LLM sinh, không phản ánh chất lượng retrieval đang so sánh)
+  "gt_answers": ["3", "ba", "three"]   // MẢNG các cách diễn đạt chấp nhận được. test_eval/Test/
+                                        // score_pipelines.py chấm answer theo §2.1.2: answer pipeline
+                                        // sinh ra được tính đúng nếu (sau chuẩn hoá) TRÙNG / CHỨA / là
+                                        // CON của bất kỳ phần tử nào ở đây. run_eval.py (backbone
+                                        // bake-off) KHÔNG đọc field này — nó chỉ đo retrieval.
 }
 ```
 
@@ -110,9 +115,9 @@ Field chung cho cả 3 loại: `query_id` (duy nhất, ví dụ `"e-kis-001"`), 
 
 ## Sau khi ghi xong (dù chưa đủ 50 câu)
 
-Không cần đợi ghi đủ hết mới chạy thử — `scripts/eval/run_eval.py` chạy được ngay cả khi
+Không cần đợi ghi đủ hết mới chạy thử — `run_eval.py` chạy được ngay cả khi
 `eval_ground_truth.json` mới có vài dòng, hữu ích để phát hiện lỗi format sớm:
 
 ```
-.venv\Scripts\python.exe scripts\eval\run_eval.py
+.venv\Scripts\python.exe test_eval\Eval\run_eval.py
 ```

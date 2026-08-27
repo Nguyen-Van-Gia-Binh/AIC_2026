@@ -13,7 +13,7 @@ KHONG cham diem dung/sai (khong co gt_answer cho 3 cau nay, chi la cau tu tao de
 duoc chu that hay khong) — nguoi dung tu doc va danh gia.
 
 Usage:
-    .venv\\Scripts\\python.exe scripts\\test_phase5_ocr.py
+    .venv\\Scripts\\python.exe test_eval\\Test\\test_phase5_ocr.py
 """
 from __future__ import annotations
 
@@ -25,7 +25,7 @@ try:
 except Exception:
     pass
 
-_ROOT = Path(__file__).resolve().parent.parent
+_ROOT = Path(__file__).resolve().parents[2]  # test_eval/Test/ -> repo root
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 

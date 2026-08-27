@@ -4,7 +4,7 @@ ocr_lookup.py — Doc Objects JSON cua BTC (Faster R-CNN, OpenImages V4).
 Khong can goi API. Tra ve danh sach object detect duoc trong 1 keyframe.
 Dung de cross-check answer Q&A va rerank KIS.
 
-Data path: data/extracted/objects-aic25-b1/objects/{video_id}/{n:03d}.json
+Data path: data/extracted/objects/{video_id}/{n:03d}.json
   n: so thu tu keyframe (cot "n" trong map-keyframes CSV, bat dau tu 1)
 
 JSON format:
@@ -18,7 +18,12 @@ import json
 from pathlib import Path
 
 _ROOT = Path(__file__).resolve().parent.parent.parent.parent
-OBJECTS_DIR = _ROOT / "data" / "extracted" / "objects-aic25-b1" / "objects"
+_DATA_DIR = _ROOT / "data" / "extracted"
+OBJECTS_DIR = (
+    _DATA_DIR / "objects"
+    if (_DATA_DIR / "objects").is_dir()
+    else _DATA_DIR / "objects-aic25-b1" / "objects"
+)
 
 DEFAULT_SCORE_THRESHOLD = 0.3
 

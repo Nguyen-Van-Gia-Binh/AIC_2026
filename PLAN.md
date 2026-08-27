@@ -47,9 +47,27 @@ cho phần chưa dựng lại được. Link trong 2 file archive giờ trỏ đ
 - [ ] **Freeze 03/09** — mốc quy trình của round 2 (không merge thay đổi mới, chỉ sửa lỗi chặn) —
   xác nhận lại còn áp dụng hay đã lùi lịch trước khi coi round 2 thật sự đóng.
 
-## Phase 7: (chưa đặt tên — chờ scope)
+## Phase 7: Sửa chấm điểm eval khớp BTC + gom `test_eval/`
 
-_Chưa có mục tiêu cụ thể cho đợt cải tiến tiếp theo — điền vào đây khi có._
+Cơ chế chấm điểm so model/phương án chưa bám đúng công thức BTC (§2.1–2.2); test/eval nằm rải rác.
+
+- [x] **Nới khoảng ground truth** — `test_eval/Eval/widen_gt_windows.py` (mới): mọi entry
+  `gt_frame_start == gt_frame_end` (KIS/QA/event TRAKE) nới ra keyframe lân cận từ `map-keyframes`.
+  Đã chạy (27 khoảng). **Cần dò tay lại** — vài khoảng còn rộng do keyframe thưa.
+- [x] **Fix `score_trake` trong `run_eval.py`** — bỏ cách cũ (mean-trên-event, không cổng video,
+  không thứ tự). Giờ: dựng ứng viên (video + N frame, chuỗi `frame_idx` không giảm bằng DP) có xếp
+  hạng → cổng video (`v ≠ GT` → 0) → `R@k = max` trên k ứng viên đầu. Vẫn retrieval-only, không LLM.
+  Thêm cột `Final` = (1/5)Σ R@k. Header report viết lại trung thực từng loại.
+- [x] **Harness end-to-end mới** — `test_eval/Test/score_pipelines.py`: chạy `run_kis/run_qa/run_trake`
+  production → Final Score BTC thật, **QA có chấm answer** (`answer_matches`, substring 2 chiều so với
+  `gt_answers`). Cờ `--types/--limit/--no-rewrite/--self-test`. Ghi `docs/eval_e2e_scores.md`.
+- [x] **Schema** `gt_answer` (string) → `gt_answers` (list) — 5 câu QA + file draft + `EVAL_GUIDE.md`.
+- [x] **Gom `test_eval/`** (đổi từ `queries/`): `Test/` (harness đường production: `test_phase3–6`,
+  `score_pipelines`, `test_smoke_tools`/`test_smoke_pipelines` gộp từ `test_day*`), `Eval/`
+  (`run_eval`/`multi_index`/`lookup_frame`/`widen_gt_windows` + ground truth + `EVAL_GUIDE.md`),
+  `README.md` ở gốc. `git mv` giữ lịch sử; `retrieve.py` repoint import `multi_index` sang vị trí mới.
+- [ ] **Chạy lại `run_eval.py` đủ 5 model** + `score_pipelines.py` cho QA/TRAKE (cần API key) sau khi
+  user dò tay xong ground truth — cập nhật `docs/eval_baseline_comparison.md` / `docs/eval_e2e_scores.md`.
 
 ---
 

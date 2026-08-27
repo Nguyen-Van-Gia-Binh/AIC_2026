@@ -1,11 +1,11 @@
 """
 test_phase3_rerank.py — So sanh R@k truoc/sau khi ap dung apply_risk_aware_ranking (Phase 3) tren
-cac cau KIS/QA that trong queries/eval_ground_truth.json, dung DUNG duong dan production
-(scripts/agent/tools/retrieve.py, model clip_vitb32) — khac voi scripts/eval/run_eval.py (chi so
+cac cau KIS/QA that trong test_eval/Eval/eval_ground_truth.json, dung DUNG duong dan production
+(scripts/agent/tools/retrieve.py, model clip_vitb32) — khac voi test_eval/Eval/run_eval.py (chi so
 sanh embedding baseline qua multi_index.py, khong dung retrieve.py).
 
 Usage:
-    .venv\\Scripts\\python.exe scripts\\test_phase3_rerank.py
+    .venv\\Scripts\\python.exe test_eval\\Test\\test_phase3_rerank.py
 """
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ import json
 import sys
 from pathlib import Path
 
-_ROOT = Path(__file__).resolve().parent.parent
+_ROOT = Path(__file__).resolve().parents[2]  # test_eval/Test/ -> repo root
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
@@ -21,7 +21,7 @@ from scripts.agent.tools.retrieve import fast_retrieve
 from scripts.agent.tools.rerank import apply_risk_aware_ranking, RETRIEVAL_POOL_SIZE
 
 K_VALUES = [1, 5, 20, 50, 100]
-EVAL_SET_PATH = _ROOT / "queries" / "eval_ground_truth.json"
+EVAL_SET_PATH = _ROOT / "test_eval" / "Eval" / "eval_ground_truth.json"
 
 
 def _rank_of_gt(hits: list[dict], gt_video_id: str, gt_start: int, gt_end: int) -> int | None:

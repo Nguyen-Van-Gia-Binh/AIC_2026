@@ -5,8 +5,8 @@ Bọc index.py với singleton pattern: build_index() chỉ chạy 1 lần per p
 
 Chọn model embedding qua biến môi trường AIC_RETRIEVE_MODEL (mặc định / không set =
 "clip_vitb32" — baseline duy nhất đã kiểm chứng, luồng này KHÔNG đổi, không route qua
-scripts/eval/multi_index.py). Set thành "vitl14" / "siglip" / "dfn" để dùng thử model khác đã
-encode sẵn (Kaggle jobs, xem PLAN.md Phase 6) qua scripts/eval/multi_index.py — chỉ dùng để
+test_eval/Eval/multi_index.py). Set thành "vitl14" / "siglip" / "dfn" để dùng thử model khác đã
+encode sẵn (Kaggle jobs, xem PLAN.md Phase 6) qua test_eval/Eval/multi_index.py — chỉ dùng để
 so sánh điểm ở Vòng thử nghiệm, KHÔNG đổi mặc định.
 
 Usage:
@@ -100,9 +100,12 @@ def _ensure_loaded() -> None:
         print("[retrieve] Ready.")
         return
 
-    # Model khác baseline (vitl14 / siglip / dfn) — nạp qua scripts/eval/multi_index.py (đã viết sẵn
-    # cho Phase 6), KHÔNG viết lại logic load model ở đây.
-    from eval.multi_index import get_index, get_encoder, MODEL_REGISTRY
+    # Model khác baseline (vitl14 / siglip / dfn) — nạp qua test_eval/Eval/multi_index.py (đã viết
+    # sẵn cho Phase 6), KHÔNG viết lại logic load model ở đây.
+    _eval_dir = _SCRIPTS_DIR.parent / "test_eval" / "Eval"
+    if str(_eval_dir) not in sys.path:
+        sys.path.insert(0, str(_eval_dir))
+    from multi_index import get_index, get_encoder, MODEL_REGISTRY
     if _MODEL_TAG not in MODEL_REGISTRY:
         raise ValueError(
             f"[retrieve] AIC_RETRIEVE_MODEL='{_MODEL_TAG}' không hợp lệ — có sẵn: "

@@ -14,8 +14,8 @@ sau them trong video dang "dat cuoc" — khong tu doc/ghi index, khong doi retri
 
 MARGIN_THRESHOLD / BET_VIDEO_SHARE / SPREAD_MAX_PER_VIDEO la gia tri khoi diem, da can chinh so bo
 bang du lieu that (xem docs/superpowers/plans/2026-08-24-phase2-3-rewrite-negation-risk-ranking.md) —
-se tinh chinh tiep o Phase 6 checkpoint bang benchmark that (scripts/test_phase3_rerank.py), khong
-phai doan mo hinh.
+se tinh chinh tiep o Phase 6 checkpoint bang benchmark that (test_eval/Test/test_phase3_rerank.py),
+khong phai doan mo hinh.
 
 Usage:
     from scripts.agent.tools.rerank import apply_risk_aware_ranking

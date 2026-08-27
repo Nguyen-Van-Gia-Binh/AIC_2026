@@ -96,6 +96,28 @@ torch nạp DLL của nó trước khi opencv kịp che khuất. Đồng thời 
 
 _Nguồn: `docs/_archive/PLAN_Lan2.md` Phase 5, đoạn "Task 1 (OCR engine)"._
 
+## Phase 7 — `run_eval.py::score_trake` cũ không bám công thức BTC TRAKE (§2.1.3)
+
+**Triệu chứng:** điểm TRAKE trong `docs/eval_baseline_comparison.md` lạc quan bất thường, không phân
+biệt được model theo cách công thức thi làm.
+
+**Nguyên nhân:** `score_trake` cũ retrieve **từng event độc lập trên toàn corpus** rồi lấy **trung
+bình R@k của N event**. Sai 3 chỗ so với §2.1.3: (a) không có cổng video toàn câu (`v_i ≠ GT_v` → 0
+cả truy vấn — chính là Giai đoạn 1 Retrieval của TRAKE, phần khó nhất, bị bỏ qua); (b) thay
+`max`-trên-ứng-viên-trọn-vẹn bằng `mean`-trên-event (cấu trúc `(1/N)Σ` này là của *R-Score*, không
+phải của *Final Score* `R@k = max`); (c) bỏ ràng buộc `frame_id` tăng dần (§4.2).
+
+**Fix:** dựng danh sách **ứng viên có xếp hạng** — mỗi ứng viên = 1 `video_id` (rank theo mean score
+pool của global query, mirror Giai đoạn 1) + N `frame_id` (chuỗi `frame_idx` không giảm, chọn bằng
+DP sao chép từ `pipeline_trake._find_best_increasing_chain`, **không import** để giữ eval độc lập với
+production). `R-Score(ứng viên) = 0` nếu video sai, ngược lại `(1/N)Σ_j I(frame_j ∈ [s_j,e_j])`.
+`R@k = max` trên k ứng viên đầu. Vẫn retrieval-only, không LLM. Thêm cột `Final = (1/5)Σ R@k`.
+Muốn Final Score có LLM crosscheck + đúng đường nộp → `test_eval/Test/score_pipelines.py`.
+
+**Bài học:** khi "xấp xỉ" một công thức chấm, kiểm lại xem bước xấp xỉ có đổi *ý nghĩa* của đại lượng
+không (ở đây `mean` thay `max`, và bỏ mất precondition có sức nặng nhất). Docstring có ghi "xấp xỉ"
+nhưng header report vẫn tự nhận "đúng công thức thi" — cả 2 giờ đã sửa cho khớp thực tế.
+
 ## TODO — bổ sung dần
 
 - Bài học/lỗi cụ thể trong lúc dựng 4 job Kaggle (ViT-L/14, SigLIP, Jina, DFN) ở round 1 — đã có tóm

@@ -207,9 +207,9 @@
     "gt_video_id": null,
     "gt_frame_start": null,
     "gt_frame_end": null,
-    "gt_answer": null,
     "status": "needs_labeling",
-    "source_file": "query-p1-15-qa.txt"
+    "source_file": "query-p1-15-qa.txt",
+    "gt_answers": []
   },
   {
     "query_id": "p1-16-trake",
@@ -309,9 +309,9 @@
     "gt_video_id": null,
     "gt_frame_start": null,
     "gt_frame_end": null,
-    "gt_answer": null,
     "status": "needs_labeling",
-    "source_file": "query-p1-19-qa.txt"
+    "source_file": "query-p1-19-qa.txt",
+    "gt_answers": []
   },
   {
     "query_id": "p1-20-kis",
@@ -353,9 +353,9 @@
     "gt_video_id": null,
     "gt_frame_start": null,
     "gt_frame_end": null,
-    "gt_answer": null,
     "status": "needs_labeling",
-    "source_file": "query-p1-22-qa.txt"
+    "source_file": "query-p1-22-qa.txt",
+    "gt_answers": []
   },
   {
     "query_id": "p1-23-kis",

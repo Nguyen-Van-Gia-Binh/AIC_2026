@@ -1,6 +1,6 @@
 """
 test_phase4_trake.py — Benchmark that cho pipeline_trake.py (Phase 4: DP tang dan + cross-check
-tang 3) tren cac cau TRAKE that trong queries/eval_ground_truth.json.
+tang 3) tren cac cau TRAKE that trong test_eval/Eval/eval_ground_truth.json.
 
 Metric (khac KIS/QA — TRAKE la 1 phuong an tron ven cho ca chuoi N moc, khong phai 1 dong/moc):
   - video_rank:      video co gt_video_id dung nam o hang thu may trong results (None = khong xuat
@@ -16,7 +16,7 @@ deterministic, phan chenh lech giua 2 pass co the quy thang cho cross-check, kho
 thien cua LLM rewrite.
 
 Usage:
-    .venv\\Scripts\\python.exe scripts\\test_phase4_trake.py
+    .venv\\Scripts\\python.exe test_eval\\Test\\test_phase4_trake.py
 """
 from __future__ import annotations
 
@@ -24,7 +24,7 @@ import json
 import sys
 from pathlib import Path
 
-_ROOT = Path(__file__).resolve().parent.parent
+_ROOT = Path(__file__).resolve().parents[2]  # test_eval/Test/ -> repo root
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
@@ -34,11 +34,11 @@ import scripts.agent.pipeline_trake as _trake_module
 # Benchmark-only: rewrite_query() goi LLM (temperature=0.2, khong cache) ngay ca khi text da la tieng
 # Anh san (dung text_en tu eval_ground_truth.json) — gay bien thien ket qua retrieval giua cac lan
 # chay, lam so sanh "truoc/sau" khong con dang tin cay. Thay bang identity function CHI trong benchmark
-# nay (khong dung production code) — giong cach scripts/test_phase3_rerank.py da tranh van de nay bang
+# nay (khong dung production code) — giong cach test_eval/Test/test_phase3_rerank.py da tranh van de nay bang
 # cach goi fast_retrieve(text_en) truc tiep thay vi qua pipeline co rewrite.
 _trake_module.rewrite_query = lambda text: text
 
-EVAL_SET_PATH = _ROOT / "queries" / "eval_ground_truth.json"
+EVAL_SET_PATH = _ROOT / "test_eval" / "Eval" / "eval_ground_truth.json"
 
 
 def _rank_of_video(results: list[dict], gt_video_id: str) -> int | None:

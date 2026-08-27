@@ -241,9 +241,9 @@ toàn dự phòng, không thực sự được dùng tới nữa với bản 4.5
 
 Đã tắt lại `SMOKE_TEST = False` trong `01_vit_l14/main.py` — sẵn sàng push chạy thật.
 
-**Lưu ý:** `requirements.txt` ở gốc repo (dùng cho `scripts/eval/` local) pin `transformers==5.15.0`
+**Lưu ý:** `requirements.txt` ở gốc repo (dùng cho `test_eval/Eval/` local) pin `transformers==5.15.0`
 — KHÁC bản `4.57.3` pin ở đây cho Kaggle. Đây là chủ đích, không phải lệch sót: 2 môi trường không
-cần khớp version vì `scripts/eval/multi_index.py:_extract_embedding()` đã đọc shape tensor lúc
+cần khớp version vì `test_eval/Eval/multi_index.py:_extract_embedding()` đã đọc shape tensor lúc
 runtime thay vì đoán cứng field/API theo version cụ thể (xem docstring hàm đó) — encode ảnh (Kaggle,
 pin 4.57.3) và encode text (local, 5.15.0) chỉ cần ra đúng chiều vector, không cần cùng version thư
 viện.
@@ -251,7 +251,7 @@ viện.
 ## Cập nhật 8 (2026-08-20, LỖI NGHIÊM TRỌNG — output `features_jina/` 100% NaN, xác nhận thật)
 
 Sau khi giải nén `features_jina.zip` vào `data/extracted/` và smoke-test qua
-`scripts/eval/multi_index.py jina` (đã thêm entry vào `MODEL_REGISTRY` + `_build_jina_encoder()` +
+`test_eval/Eval/multi_index.py jina` (đã thêm entry vào `MODEL_REGISTRY` + `_build_jina_encoder()` +
 patch `_patch_missing_clip_loss()` tái dùng từ mục 6/7 ở trên), kết quả trả về `score=nan` cho mọi
 kết quả. Debug tận gốc bằng script riêng (không đoán):
 - Text encoder (`model.encode_text()`, chạy CPU local, `transformers==5.15.0` sau khi vá `clip_loss`)
@@ -270,7 +270,7 @@ score/rotary embedding tràn số → NaN). Đã ghi cảnh báo chi tiết + h�
 `03_jina/main.py` (gần định nghĩa `DEVICE`).
 
 **Đã xử lý ở phía dùng dữ liệu** (không thể tự sửa dữ liệu nguồn — phải encode lại trên Kaggle):
-`scripts/eval/multi_index.py:load_feature_index()` giờ fail loud (raise `RuntimeError`) nếu phát hiện
+`test_eval/Eval/multi_index.py:load_feature_index()` giờ fail loud (raise `RuntimeError`) nếu phát hiện
 NaN trong bất kỳ `.npy` nào, thay vì âm thầm cho qua rồi ra `score=nan` không ai để ý. Áp dụng chung
 cho mọi model, không riêng jina.
 

@@ -8,8 +8,8 @@
       "easy_sanity_check"
     ],
     "gt_video_id": "L21_V001",
-    "gt_frame_start": 5761,
-    "gt_frame_end": 5761
+    "gt_frame_start": 5551,
+    "gt_frame_end": 5890
   },
   {
     "query_id": "e-kis-ai-002",
@@ -20,8 +20,8 @@
       "multi_similar_object"
     ],
     "gt_video_id": "L21_V001",
-    "gt_frame_start": 17881,
-    "gt_frame_end": 17881
+    "gt_frame_start": 17791,
+    "gt_frame_end": 18075
   },
   {
     "query_id": "e-kis-ai-003",
@@ -32,8 +32,8 @@
       "small_object"
     ],
     "gt_video_id": "L23_V001",
-    "gt_frame_start": 626,
-    "gt_frame_end": 626
+    "gt_frame_start": 501,
+    "gt_frame_end": 702
   },
   {
     "query_id": "e-kis-ai-004",
@@ -44,8 +44,8 @@
       "easy_sanity_check"
     ],
     "gt_video_id": "L23_V001",
-    "gt_frame_start": 1906,
-    "gt_frame_end": 1906
+    "gt_frame_start": 1876,
+    "gt_frame_end": 2001
   },
   {
     "query_id": "e-kis-ai-005",
@@ -56,8 +56,8 @@
       "small_object"
     ],
     "gt_video_id": "L25_V001",
-    "gt_frame_start": 2195,
-    "gt_frame_end": 2195
+    "gt_frame_start": 2127,
+    "gt_frame_end": 2229
   },
   {
     "query_id": "e-kis-ai-006",
@@ -68,8 +68,8 @@
       "multi_similar_object"
     ],
     "gt_video_id": "L25_V001",
-    "gt_frame_start": 19479,
-    "gt_frame_end": 19479
+    "gt_frame_start": 19448,
+    "gt_frame_end": 19501
   },
   {
     "query_id": "e-qa-ai-001",
@@ -81,9 +81,13 @@
       "counting"
     ],
     "gt_video_id": "L25_V001",
-    "gt_frame_start": 19479,
-    "gt_frame_end": 19479,
-    "gt_answer": "2"
+    "gt_frame_start": 19448,
+    "gt_frame_end": 19501,
+    "gt_answers": [
+      "2",
+      "hai",
+      "two"
+    ]
   },
   {
     "query_id": "e-kis-ai-007",
@@ -94,8 +98,8 @@
       "fine_detail"
     ],
     "gt_video_id": "L22_V001",
-    "gt_frame_start": 13198,
-    "gt_frame_end": 13198
+    "gt_frame_start": 13170,
+    "gt_frame_end": 13396
   },
   {
     "query_id": "e-kis-ai-008",
@@ -106,8 +110,8 @@
       "small_object"
     ],
     "gt_video_id": "L22_V003",
-    "gt_frame_start": 12031,
-    "gt_frame_end": 12031
+    "gt_frame_start": 11911,
+    "gt_frame_end": 12121
   },
   {
     "query_id": "e-kis-ai-009",
@@ -118,8 +122,8 @@
       "multi_similar_object"
     ],
     "gt_video_id": "L24_V002",
-    "gt_frame_start": 8193,
-    "gt_frame_end": 8193
+    "gt_frame_start": 8065,
+    "gt_frame_end": 8245
   },
   {
     "query_id": "e-kis-ai-010",
@@ -130,8 +134,8 @@
       "multi_similar_object"
     ],
     "gt_video_id": "L24_V004",
-    "gt_frame_start": 9046,
-    "gt_frame_end": 9046
+    "gt_frame_start": 9027,
+    "gt_frame_end": 9089
   },
   {
     "query_id": "e-kis-ai-011",
@@ -142,8 +146,8 @@
       "small_object"
     ],
     "gt_video_id": "L26_V001",
-    "gt_frame_start": 2589,
-    "gt_frame_end": 2589
+    "gt_frame_start": 2566,
+    "gt_frame_end": 2632
   },
   {
     "query_id": "e-kis-ai-012",
@@ -154,8 +158,8 @@
       "small_object"
     ],
     "gt_video_id": "L26_V003",
-    "gt_frame_start": 2628,
-    "gt_frame_end": 2628
+    "gt_frame_start": 2566,
+    "gt_frame_end": 2681
   },
   {
     "query_id": "e-kis-ai-013",
@@ -166,8 +170,8 @@
       "fine_detail"
     ],
     "gt_video_id": "L27_V001",
-    "gt_frame_start": 3985,
-    "gt_frame_end": 3985
+    "gt_frame_start": 3916,
+    "gt_frame_end": 4026
   },
   {
     "query_id": "e-kis-ai-014",
@@ -178,8 +182,8 @@
       "multi_similar_object"
     ],
     "gt_video_id": "L27_V003",
-    "gt_frame_start": 3241,
-    "gt_frame_end": 3241
+    "gt_frame_start": 3157,
+    "gt_frame_end": 3323
   },
   {
     "query_id": "e-kis-ai-015",
@@ -190,8 +194,8 @@
       "fine_detail"
     ],
     "gt_video_id": "L28_V002",
-    "gt_frame_start": 8101,
-    "gt_frame_end": 8101
+    "gt_frame_start": 7966,
+    "gt_frame_end": 8236
   },
   {
     "query_id": "e-kis-ai-016",
@@ -202,8 +206,8 @@
       "fine_detail"
     ],
     "gt_video_id": "L28_V003",
-    "gt_frame_start": 10821,
-    "gt_frame_end": 10821
+    "gt_frame_start": 10801,
+    "gt_frame_end": 10936
   },
   {
     "query_id": "e-kis-ai-017",
@@ -214,8 +218,8 @@
       "multi_similar_object"
     ],
     "gt_video_id": "L29_V001",
-    "gt_frame_start": 7351,
-    "gt_frame_end": 7351
+    "gt_frame_start": 7324,
+    "gt_frame_end": 7402
   },
   {
     "query_id": "e-kis-ai-018",
@@ -226,8 +230,8 @@
       "image_in_image"
     ],
     "gt_video_id": "L30_V001",
-    "gt_frame_start": 1604,
-    "gt_frame_end": 1604
+    "gt_frame_start": 1546,
+    "gt_frame_end": 1651
   },
   {
     "query_id": "e-trake-001",
@@ -242,13 +246,13 @@
     "events": [
       {
         "text_en": "the first moment the ribbon is being cut",
-        "gt_frame_start": 25654,
-        "gt_frame_end": 25654
+        "gt_frame_start": 25510,
+        "gt_frame_end": 25714
       },
       {
         "text_en": "the moment the ribbon is cut",
-        "gt_frame_start": 25714,
-        "gt_frame_end": 25714
+        "gt_frame_start": 25654,
+        "gt_frame_end": 25816
       }
     ]
   },
@@ -264,18 +268,18 @@
     "events": [
       {
         "text_en": "man starts crossing the street",
-        "gt_frame_start": 13770,
-        "gt_frame_end": 13770
+        "gt_frame_start": 13641,
+        "gt_frame_end": 13923
       },
       {
         "text_en": "man is halfway across the street",
-        "gt_frame_start": 13923,
-        "gt_frame_end": 13923
+        "gt_frame_start": 13770,
+        "gt_frame_end": 13945
       },
       {
         "text_en": "man reaches the other side",
-        "gt_frame_start": 13923,
-        "gt_frame_end": 13923
+        "gt_frame_start": 13770,
+        "gt_frame_end": 13945
       }
     ]
   },
@@ -318,13 +322,13 @@
     "events": [
       {
         "text_en": "criminal starts being escorted",
-        "gt_frame_start": 28531,
-        "gt_frame_end": 28531
+        "gt_frame_start": 28411,
+        "gt_frame_end": 28681
       },
       {
         "text_en": "criminal is escorted",
-        "gt_frame_start": 28531,
-        "gt_frame_end": 28531
+        "gt_frame_start": 28411,
+        "gt_frame_end": 28681
       },
       {
         "text_en": "criminal is being interrogated",
@@ -345,7 +349,11 @@
     "gt_video_id": "L30_V096",
     "gt_frame_start": 820,
     "gt_frame_end": 1100,
-    "gt_answer": "15"
+    "gt_answers": [
+      "15",
+      "mười lăm",
+      "fifteen"
+    ]
   },
   {
     "query_id": "e-qa-ai-003",
@@ -359,7 +367,11 @@
     "gt_video_id": "L30_V096",
     "gt_frame_start": 25828,
     "gt_frame_end": 25993,
-    "gt_answer": "8"
+    "gt_answers": [
+      "8",
+      "tám",
+      "eight"
+    ]
   },
   {
     "query_id": "e-qa-ai-004",
@@ -373,7 +385,10 @@
     "gt_video_id": "L26_V296",
     "gt_frame_start": 1537,
     "gt_frame_end": 1665,
-    "gt_answer": "Phú Sĩ"
+    "gt_answers": [
+      "Phú Sĩ",
+      "Phu Si"
+    ]
   },
   {
     "query_id": "e-qa-ai-005",
@@ -387,7 +402,12 @@
     "gt_video_id": "L27_V003",
     "gt_frame_start": 7021,
     "gt_frame_end": 7156,
-    "gt_answer": "Rau sống"
+    "gt_answers": [
+      "Rau sống",
+      "rau sống ăn kèm",
+      "fresh herbs",
+      "herbs"
+    ]
   },
   {
     "query_id": "e-trake-005",
@@ -412,8 +432,8 @@
       },
       {
         "text_en": "yellow lion jumping and standing up on hind legs",
-        "gt_frame_start": 1613,
-        "gt_frame_end": 1613
+        "gt_frame_start": 1489,
+        "gt_frame_end": 1737
       },
       {
         "text_en": "yellow lion leaping from one pole to another on high stilts",
@@ -422,7 +442,7 @@
       }
     ]
   },
-    {
+  {
     "query_id": "e-trake-006",
     "type": "TRAKE",
     "text_vi": "Cảnh múa lân sư rồng với con lân màu trắng biểu diễn trên dàn cột Mai Hoa Thung, bắt đầu từ quay đầu lại phía sau, nhảy lên bậc tiếp theo, bật nhảy lùi cho đến khi cúi đầu xuống.",
@@ -455,7 +475,7 @@
       }
     ]
   },
-    {
+  {
     "query_id": "e-trake-007",
     "type": "TRAKE",
     "text_vi": "Chương trình nấu ăn với các công đoạn chế biến món cua, bắt đầu từ cảnh người đầu bếp cầm đĩa cua trên tay, cắt hành tây thành múi cau, cắt cà chua thành múi cau, cho đến khi dùng muỗng khuấy bột chiên giòn với nước.",
@@ -488,7 +508,7 @@
       }
     ]
   },
-    {
+  {
     "query_id": "e-trake-008",
     "type": "TRAKE",
     "text_vi": "Chương trình làm bánh cam với các bước thực hiện, bắt đầu từ dùng dao cắt lát trái cam trên thớt gỗ, đổ bột bánh vào tô thủy tinh, đặt chảo phẳng lên bếp ga bật lửa, cho đến khi múc bột đổ vào khuôn tròn trên chảo.",

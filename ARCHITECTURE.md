@@ -87,7 +87,7 @@ pipeline_kis.py     pipeline_qa.py          pipeline_trake.py
   loại thẳng video không có chuỗi hợp lệ thay vì âm thầm trả sai.
 - **Anti-hallucination bắt buộc cho Q&A**: mọi answer từ tầng vision phải qua `_crosscheck_answer()`
   đối chiếu với Objects JSON trước khi coi là đáng tin (`confidence` cao/thấp theo kết quả cross-check).
-- **File-based, không DB**: toàn bộ state là file (`.npy`/`.csv` index, `queries/*.json`,
+- **File-based, không DB**: toàn bộ state là file (`.npy`/`.csv` index, `test_eval/**/*.json`,
   `submissions/*.csv|zip`). Hàng đợi submission trong `app.py` chỉ sống trong session Gradio (RAM).
 - **frame_id luôn tính từ `frame_idx + 1`** ngay tại `retrieve.py` (điểm duy nhất) — pipeline và UI
   phía sau không tự +1 lần nữa ở đâu khác.
@@ -111,7 +111,7 @@ Lý do chi tiết đằng sau từng quyết định (kể cả các quyết đ�
 - Không precompute OCR/mô tả VLM cho toàn bộ 177K keyframe (chi phí/thời gian vượt ngân sách) — mọi
   OCR/tín hiệu phụ mới đều phải chạy **on-demand**, chỉ trên candidate đã retrieve.
 - Không đổi ngưỡng risk-aware ranking / margin cross-check TRAKE mà không hiệu chỉnh lại bằng
-  `scripts/eval/run_eval.py` trên `queries/eval_ground_truth.json` trước.
+  `test_eval/Eval/run_eval.py` trên `test_eval/Eval/eval_ground_truth.json` trước.
 
 ## 5. Điểm giao tiếp (interface)
 

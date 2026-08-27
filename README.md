@@ -93,7 +93,7 @@ Chi tiết đầy đủ → [`ARCHITECTURE.md`](ARCHITECTURE.md)
 | Cấu hình       | `python-dotenv` — load API key từ `.env`                                                       |
 | Object detection | Faster R-CNN — dữ liệu Objects JSON offline (không gọi API)                                     |
 
-**Không sử dụng**: database, ORM, message queue. Mọi dữ liệu nằm trong file tĩnh dưới `data/`, `queries/`, `submissions/`.
+**Không sử dụng**: database, ORM, message queue. Mọi dữ liệu nằm trong file tĩnh dưới `data/`, `test_eval/`, `submissions/`.
 
 ---
 
@@ -117,13 +117,7 @@ AIC2026/
 │   ├── submit/                     # Sinh & kiểm tra bài nộp
 │   │   ├── build_submission.py     # Sinh CSV/ZIP theo format BTC
 │   │   └── validate_submission.py  # Validator nội bộ (encoding, frame≥1, ≤100 dòng)
-│   ├── eval/                       # Phase 6 — bộ eval offline, so baseline embedding bằng R@k
-│   │   ├── multi_index.py          # Index + text encoder cho nhiều model (clip_vitb32/vitl14/siglip/dfn)
-│   │   ├── run_eval.py             # So baseline theo eval_ground_truth.json, ghi eval_baseline_comparison.md
-│   │   └── lookup_frame.py         # CLI tra frame_id theo (video_id, giây) khi gán ground truth
-│   ├── test_day1.py                # Test tích hợp end-to-end KIS
-│   ├── test_day2_basic.py          # Test cơ bản Q&A/TRAKE
-│   └── test_day2_full.py           # Test đầy đủ Q&A/TRAKE
+│   └── generate_sotuyen1_csv.py    # Gom gói đề BTC .txt → test_eval/sotuyen1_bo_de_thi.csv
 │
 ├── data/                           # [git-ignored] Dữ liệu ngoại tuyến từ BTC
 │   └── extracted/
@@ -131,7 +125,7 @@ AIC2026/
 │       ├── keyframes/              # Ảnh keyframe (.jpg)
 │       ├── map-keyframes/          # CSV mapping video_id → frame metadata
 │       ├── media-info/             # Thông tin video gốc
-│       └── objects-aic25-b1/       # Objects JSON (Faster R-CNN)
+│       └── objects/                # Objects JSON (Faster R-CNN)
 │
 ├── kaggle_jobs/                    # 4 job encode keyframe SOTA trên Kaggle GPU
 │   ├── 01_vit_l14/                 # OpenAI CLIP ViT-L/14
@@ -139,10 +133,22 @@ AIC2026/
 │   ├── 03_jina/                    # Jina CLIP v2
 │   └── 04_dfn/                     # OpenCLIP DFN-5B ViT-H/14
 │
-├── queries/                        # Query mẫu/test (JSON)
-│   ├── sample_queries.json
-│   ├── eval_ground_truth.json      # Bộ ground truth tự chấm Phase 6 (video_id/frame_id đúng)
-│   └── EVAL_GUIDE.md               # Quy trình + schema gán ground truth cho eval_ground_truth.json
+├── test_eval/                      # Kiểm thử hệ thống + đo/so chất lượng theo công thức BTC (xem test_eval/README.md)
+│   ├── README.md
+│   ├── sample_queries.json         # Query mẫu dùng chung
+│   ├── sotuyen1_bo_de_thi.csv      # Gói đề BTC (sơ tuyển đợt 1)
+│   ├── thunghiem_bo_de_thi.csv     # Gói đề BTC (vòng thử nghiệm)
+│   ├── Test/                       # Harness chạy qua ĐƯỜNG PRODUCTION (cần API key)
+│   │   ├── test_phase3_rerank.py / test_phase4_trake.py / test_phase5_ocr.py / test_phase6_margin_sweep.py
+│   │   ├── score_pipelines.py      # Final Score BTC thật end-to-end (KIS/QA/TRAKE, có chấm answer)
+│   │   └── test_smoke_tools.py / test_smoke_pipelines.py   # Smoke test sau khi setup
+│   └── Eval/                       # Bake-off backbone embedding — KHÔNG LLM, deterministic
+│       ├── multi_index.py          # Index + text encoder cho nhiều model (clip_vitb32/vitl14/siglip/dfn)
+│       ├── run_eval.py             # So baseline theo eval_ground_truth.json, ghi eval_baseline_comparison.md
+│       ├── lookup_frame.py         # CLI tra frame_id theo (video_id, giây) khi gán ground truth
+│       ├── widen_gt_windows.py     # Nới khoảng [s,e] single-frame từ map-keyframes
+│       ├── eval_ground_truth.json  # Bộ ground truth tự chấm (video_id/frame_id đúng)
+│       └── EVAL_GUIDE.md           # Quy trình + schema gán ground truth
 │
 ├── submissions/                    # Output CSV/ZIP (*.zip git-ignored)
 │
@@ -193,7 +199,7 @@ torch==2.13.0+cpu
 litellm==1.97.0
 python-dotenv==1.2.3
 
-# scripts/eval/ (Phase 6 — so sánh baseline embedding, không phải app sản xuất KIS/QA/TRAKE):
+# test_eval/Eval/ (Phase 6 — so sánh baseline embedding, không phải app sản xuất KIS/QA/TRAKE):
 transformers==5.15.0
 open_clip_torch==2.32.0
 sentencepiece==0.2.2

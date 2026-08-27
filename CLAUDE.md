@@ -38,10 +38,13 @@ Daily commands — always run through the project venv's Python directly (no act
 .venv\Scripts\python.exe scripts\index.py             # build the index standalone, print stats (sanity check)
 .venv\Scripts\python.exe scripts\agent\pipeline_kis.py "<query>"   # run one pipeline from the CLI, e.g. for debugging
 .venv\Scripts\python.exe scripts\submit\validate_submission.py    # validate the newest file in submissions/
+.venv\Scripts\python.exe test_eval\Eval\run_eval.py               # compare embedding backbones (retrieval-only, no LLM) → docs/eval_baseline_comparison.md
+.venv\Scripts\python.exe test_eval\Test\score_pipelines.py --types kis  # true BTC Final Score through the production pipelines (needs OPENROUTER_API_KEY)
 ```
-There is no `npm test`-equivalent test runner configured — `scripts/test_day1.py`, `test_day2_basic.py`,
-`test_day2_full.py` are ad-hoc integration scripts, run directly with the venv Python, not via a test
-framework. There is no linter/formatter configured either.
+There is no `npm test`-equivalent test runner configured — the scripts under `test_eval/Test/`
+(`test_phase3_rerank.py`, `test_phase4_trake.py`, `test_phase5_ocr.py`, `test_phase6_margin_sweep.py`,
+`test_smoke_tools.py`, `test_smoke_pipelines.py`) are ad-hoc integration/benchmark scripts, run
+directly with the venv Python, not via a test framework. There is no linter/formatter configured either.
 
 ## Folder Structure
 
@@ -54,16 +57,21 @@ framework. There is no linter/formatter configured either.
     (offline Objects JSON reader), `answer_qa.py` (Q&A answer + cross-check).
 - `scripts/submit/` — `build_submission.py` (CSV/ZIP writer), `validate_submission.py` (format checker).
   This is the only place that should serialize a submission file.
-- `scripts/eval/` — Phase 6 offline benchmark harness, comparing embedding baselines
-  (`clip_vitb32`/`vitl14`/`siglip`/`dfn`) by the real scoring formula (R@k). `multi_index.py` (index
-  loader + text encoders per model, self-contained — deliberately does NOT import `index.py`/
-  `retrieve.py`, see its docstring), `run_eval.py` (main comparison script, reads
-  `queries/eval_ground_truth.json`, writes `docs/eval_baseline_comparison.md`), `lookup_frame.py`
-  (CLI helper for ground-truth labeling — see `queries/EVAL_GUIDE.md`). Separate top-level folder
-  because it's a standalone offline benchmark tool, not a pipeline/shared-tool/submission-writer —
-  same rationale as `kaggle_jobs/`. Never touches the KIS/QA/TRAKE production path.
-- `queries/` — sample/test query sets (JSON), not competition-official queries. Also holds
-  `eval_ground_truth.json` (Phase 6 hand-labeled eval set) and `EVAL_GUIDE.md` (how to label it).
+- `test_eval/` — everything for testing the system and scoring/comparing quality by the BTC formula
+  (see `test_eval/README.md`). Two branches:
+  - `test_eval/Eval/` — Phase 6 offline backbone bake-off: `multi_index.py` (index loader + per-model
+    text encoders, self-contained — deliberately does NOT import `index.py`/`retrieve.py`),
+    `run_eval.py` (compares `clip_vitb32`/`vitl14`/`siglip`/`dfn`/... by R@k, reads
+    `eval_ground_truth.json` here, writes `docs/eval_baseline_comparison.md`), `lookup_frame.py` +
+    `widen_gt_windows.py` (ground-truth labeling helpers — see `EVAL_GUIDE.md`),
+    `eval_ground_truth.json` (hand-labeled eval set). Retrieval-only, no LLM, deterministic; never
+    touches the KIS/QA/TRAKE production path.
+  - `test_eval/Test/` — harnesses that DO run the production path (`scripts/agent/*`), need an API
+    key, results may vary between runs: `test_phase{3,4,5,6}_*.py` (before/after benchmarks per
+    phase), `score_pipelines.py` (true BTC Final Score end-to-end, incl. Q&A answer match),
+    `test_smoke_{tools,pipelines}.py` (setup sanity checks).
+  - Root of `test_eval/` also holds shared query data: `sample_queries.json`,
+    `sotuyen1_bo_de_thi.csv`, `thunghiem_bo_de_thi.csv` (BTC query packages).
 - `submissions/` — generated CSV/ZIP output. `*.zip` is git-ignored; keep CSVs for inspection.
 - `data/` — git-ignored, external state (video/keyframe/CLIP-feature/Objects-JSON files from BTC).
   Must already be unzipped locally before any script will run.
@@ -98,7 +106,7 @@ three buckets above.
 - `gradio` — the UI (`scripts/app.py`).
 - `litellm` — routes all text and vision LLM calls through OpenRouter; the model is configured by
   `OPENROUTER_MODEL` and defaults to `google/gemini-2.5-flash`.
-- No database, no ORM, no message queue — everything is files under `data/`, `queries/`, `submissions/`.
+- No database, no ORM, no message queue — everything is files under `data/`, `test_eval/`, `submissions/`.
 
 ## Code Rules
 

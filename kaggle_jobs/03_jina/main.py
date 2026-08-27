@@ -87,7 +87,7 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 # trừ nghi phạm này. Đồng thời main() giờ kiểm tra `np.isnan(feats).any()` ngay sau khi encode xong
 # 1 video, dừng sớm + báo lỗi rõ thay vì lặng lẽ ghi NaN ra .npy như lần trước. CHƯA CHẠY LẠI TRÊN
 # KAGGLE ĐỂ XÁC NHẬN FIX — nếu float32 vẫn ra NaN thì nghi phạm khác là chính bug encode-time trong
-# code tuỳ biến của Jina, không phải dtype. Xem scripts/eval/multi_index.py (đã thêm fail-loud check
+# code tuỳ biến của Jina, không phải dtype. Xem test_eval/Eval/multi_index.py (đã thêm fail-loud check
 # NaN ở `load_feature_index()` để bắt lỗi này sớm ở phía dùng dữ liệu, phòng khi chạy sót bug này).
 
 

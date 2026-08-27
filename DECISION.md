@@ -55,6 +55,23 @@ chứng để đổi model production** (mẫu nhỏ, thiếu câu TRAKE lúc đ
 _Nguồn: `docs/_archive/PLAN_Lan1.md` Phase 6, nhắc lại ở `docs/_archive/PLAN_Lan2.md` "Tóm tắt round
 trước"._
 
+### Phase 7 — 2 harness chấm điểm tách rời, không gộp làm một
+
+`run_eval.py` giữ **retrieval-only, không LLM, deterministic** (bake-off backbone: cần nhanh, chạy
+được không API key, lặp lại y hệt để so 5 model). Chấm answer QA (§2.1.2) và LLM crosscheck TRAKE
+**bắt buộc** phải gọi LLM → tách sang `test_eval/Test/score_pipelines.py` (chậm, cần API key, QA có
+biến thiên giữa các lần chạy). Không nhét answer-scoring vào `run_eval.py` vì sẽ phá cả 3 tính chất
+trên mà lợi ích (answer phụ thuộc chủ yếu vào LLM, không phải backbone) thì nhỏ.
+
+### Phase 7 — gom `queries/` → `test_eval/` với 2 nhánh `Test/` (đường production) vs `Eval/` (không LLM)
+
+Ranh giới "có đi qua `scripts/agent/*` hay không" đã có sẵn trong repo (`scripts/eval/` vs
+`scripts/test_phase*.py`) nhưng nằm rải rác. Gom về 1 chỗ, đặt tên nhánh theo đúng ranh giới đó để
+người đọc biết ngay harness nào cần API key / có biến thiên. Tên thư mục dùng `test_eval` (snake_case)
+thay vì `Test & Eval` — dấu cách và `&` làm vỡ lệnh shell/PowerShell ở mọi chỗ tham chiếu.
+`test_day1/2_*.py` gộp thành `test_smoke_{tools,pipelines}.py` (bản chất là smoke test, không phải
+"ngày").
+
 ### TODO — chưa dựng lại được, cần bạn xác nhận
 
 - **Vì sao đổi từ multi-provider LLM fallback (Gemini→Groq→NVIDIA NIM) sang 1 provider OpenRouter

@@ -7,15 +7,15 @@ gia tri cuoi cung cho TRAKE_CROSSCHECK_MARGIN trong scripts/agent/pipeline_trake
 neu muon doi.
 
 Tai dung dung logic tinh diem (_run_pass/_rank_of_video) va cach khu nhieu rewrite_query (monkeypatch
-thanh identity) da co san o scripts/test_phase4_trake.py — khong viet lai (DRY).
+thanh identity) da co san o test_eval/Test/test_phase4_trake.py — khong viet lai (DRY).
 
 Usage (chay that, can data/extracted/ + LLM key hop le vi run_trake() con goi rewrite_query cho tung
 event — da bi patch thanh identity o day, nhung fast_retrieve van can index/model that):
-    .venv\\Scripts\\python.exe scripts\\test_phase6_margin_sweep.py
-    .venv\\Scripts\\python.exe scripts\\test_phase6_margin_sweep.py --margins -1.0,0.006,0.012,0.018,0.024,0.030
+    .venv\\Scripts\\python.exe test_eval\\Test\\test_phase6_margin_sweep.py
+    .venv\\Scripts\\python.exe test_eval\\Test\\test_phase6_margin_sweep.py --margins -1.0,0.006,0.012,0.018,0.024,0.030
 
 Self-test (khong can data/extracted/, khong goi model that):
-    .venv\\Scripts\\python.exe scripts\\test_phase6_margin_sweep.py --self-test
+    .venv\\Scripts\\python.exe test_eval\\Test\\test_phase6_margin_sweep.py --self-test
 """
 from __future__ import annotations
 
@@ -25,16 +25,18 @@ import sys
 from pathlib import Path
 from unittest.mock import patch
 
-_ROOT = Path(__file__).resolve().parent.parent
-if str(_ROOT) not in sys.path:
-    sys.path.insert(0, str(_ROOT))
+_ROOT = Path(__file__).resolve().parents[2]  # test_eval/Test/ -> repo root
+_TEST_DIR = Path(__file__).resolve().parent   # de import test_phase4_trake (sibling)
+for _p in (str(_ROOT), str(_TEST_DIR)):
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
 
 DEFAULT_MARGINS = [-1.0, 0.006, 0.012, 0.018, 0.024, 0.030]
 
 
 def _sweep(margins: list[float]) -> list[dict]:
     """Chay _run_pass() 1 lan cho moi gia tri margin, tra ve list dict (1 dict/margin)."""
-    import scripts.test_phase4_trake as t4
+    import test_phase4_trake as t4
 
     eval_set = json.loads(t4.EVAL_SET_PATH.read_text(encoding="utf-8"))
     queries = [q for q in eval_set if q["type"] == "TRAKE"]
@@ -67,7 +69,7 @@ def _self_test() -> None:
     """Khong goi model/index that - fake run_trake() tra ve ket qua co dinh, chi kiem tra vong lap
     sweep + bang tong hop chay dung, khong crash. KHONG danh gia do chinh xac that (viec do la cua
     nguoi dung tren du lieu that - xem docstring dau file)."""
-    import scripts.test_phase4_trake as t4
+    import test_phase4_trake as t4
 
     fake_eval_set = [
         {
@@ -89,7 +91,7 @@ def _self_test() -> None:
             "n_events": len(events),
         }
 
-    eval_path = _ROOT / "queries" / "_fake_eval_for_selftest.json"
+    eval_path = _TEST_DIR / "_fake_eval_for_selftest.json"
     eval_path.write_text(json.dumps(fake_eval_set), encoding="utf-8")
     try:
         with patch.object(t4, "EVAL_SET_PATH", eval_path), patch.object(t4, "run_trake", _fake_run_trake):

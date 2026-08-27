@@ -147,7 +147,7 @@ hơn mức ad-hoc còn dễ quản lý; phần code cũ không đổi quy ước
 5. **Error handling** — ép recursion cap, ép LLM lỗi (fallback qua lớp API vẫn chạy đúng), câu mơ hồ
    phải rơi vào `Clarify`.
 6. **Parity check (quan trọng nhất):** so R@k khi gọi qua graph/API với R@k khi gọi trực tiếp
-   `run_kis`/`run_qa` (benchmark cũ `scripts/test_phase3_rerank.py`) trên cùng `eval_ground_truth.json`
+   `run_kis`/`run_qa` (benchmark cũ `test_eval/Test/test_phase3_rerank.py`) trên cùng `eval_ground_truth.json`
    — đảm bảo lớp orchestration mới không làm sai lệch kết quả so với pipeline gốc.
 
 ## 7. Dependency mới cần thêm
