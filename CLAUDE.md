@@ -37,7 +37,6 @@ Then copy `.env.example` to `.env` and fill in a real `OPENROUTER_API_KEY` (get 
 Daily commands — always run through the project venv's Python directly (no activation needed):
 ```
 .venv\Scripts\python.exe scripts\app.py              # main entry point: Gradio UI (KIS/Q&A/TRAKE/Export tabs), http://127.0.0.1:7860
-.venv\Scripts\python.exe scripts\index.py             # build the index standalone, print stats (sanity check)
 .venv\Scripts\python.exe scripts\agent\pipeline_kis.py "<query>"   # run one pipeline from the CLI, e.g. for debugging
 .venv\Scripts\python.exe -m uvicorn scripts.api.main:app --reload --port 8000   # new backend API (Phase 7), http://127.0.0.1:8000/api/health
 cd frontend; npm run dev                                                        # new React/Vite frontend (Phase 7), http://localhost:5173 (proxy /api → :8000)
@@ -53,9 +52,9 @@ directly with the venv Python, not via a test framework. There is no linter/form
 
 ## Folder Structure
 
-- `scripts/index.py` — **[RETIRED 2026-08-28]** Từng build CLIP embedding matrix từ `clip-features-32/`.
+- `docs/_archive/index_retired.py` — **[RETIRED 2026-08-28]** Từng build CLIP embedding matrix từ `clip-features-32/`.
   Không dùng trong production nữa sau khi `clip-features-32/` đã bị xóa (benchmark 33 query:
-  `clip_vitb32` Final=0.290 vs `siglip`=0.549). Giữ nguyên để không phá import chain.
+  `clip_vitb32` Final=0.290 vs `siglip`=0.549). Giữ nguyên để tham chiếu lịch sử.
 - `scripts/app.py` — legacy Gradio UI; still the operative entry point for running/submitting until
   `frontend/` + `scripts/api/` replace it (see Tech Stack).
 - `scripts/agent/` — pipelines and LLM/tool code:
