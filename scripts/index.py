@@ -1,21 +1,21 @@
 """
-Dựng "index" tìm kiếm từ dữ liệu BTC cung cấp.
+[RETIRED 2026-08-28] scripts/index.py — Đã retire khỏi production path.
 
-Cấu trúc dữ liệu (đã xác nhận bằng cách đọc file thật):
-  data/extracted/clip-features-32/{video_id}.npy   -> (num_keyframes, 512) float16, đã L2-normalize
-  data/extracted/map-keyframes/{video_id}.csv      -> cột: n, pts_time, fps, frame_idx
-  data/extracted/media-info/{video_id}.json        -> metadata YouTube (title, author, ...)
-  data/extracted/keyframes/{batch}/{video_id}/{n:03d}.jpg  -> ảnh keyframe thật (đã xác nhận đủ
-                                                       10 batch L21–L30, 177.321 keyframe, 2026-08-20;
-                                                       lồng thêm 1 cấp thư mục batch so với
-                                                       {video_id}/{n}.jpg — build_index() bên dưới
-                                                       tự dò cả 2 kiểu, ưu tiên kiểu lồng batch)
+File này từng build index cho clip_vitb32 (clip-features-32/*.npy, 512 chiều).
+Sau khi benchmark 33 query xác nhận siglip/siglip2 vượt clip_vitb32 ở mọi task
+(Final ALL: siglip=0.549, siglip2=0.551 vs 0.290), clip-features-32 đã bị xoá
+(xem docs/superpowers/plans/2026-08-28-retire-clip-promote-siglip.md).
 
-video_id ví dụ: "L23_V001" (L = batch/"level", V = số thứ tự video trong batch).
+production path hiện tại:
+  - scripts/agent/tools/retrieve.py  <- dùng multi_index.py + features_siglip/*.npy (KIS/TRAKE)
+  - scripts/agent/tools/retrieve.py  <- dùng multi_index.py + features_siglip2/*.npy (QA)
 
-Vì clip-features-32 và map-keyframes là 2 zip PHỦ TOÀN BỘ dataset, index này tìm đúng trên toàn bộ
-~873 video. Với video chưa tải ảnh (nếu có), kết quả vẫn trả về đúng video_id/timestamp, chỉ là
-chưa có ảnh xem trước.
+File này GIỮ NGUYÊN (không xoá) để:
+  1. Không phá bất kỳ import nào còn sót trong codebase.
+  2. Ghi lại context lịch sử quyết định retire.
+  3. Phòng trường hợp cần tham chiếu lại logic build_index() trong tương lai.
+
+KHÔNG gọi build_index() từ production code nữa.
 """
 
 from pathlib import Path
@@ -35,7 +35,7 @@ KEYFRAMES_DIR = DATA_DIR / "keyframes"
 
 
 
-def build_index() -> tuple[np.ndarray, pd.DataFrame]:
+def build_index() -> tuple[np.ndarray, pd.DataFrame]:  # [RETIRED] Không được gọi từ production nữa — xem docstring module.
     """Quét toàn bộ npy + csv có sẵn, ghép thành 1 ma trận embedding + 1 bảng metadata.
 
     Trả về:
