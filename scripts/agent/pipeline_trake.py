@@ -158,6 +158,7 @@ def run_trake(
     events: list[str],
     top_k_video: int = 20,
     top_k_frame: int = 20,
+    query_en: str | None = None,
 ) -> dict:
     """
     Chay pipeline TRAKE day du.
@@ -168,6 +169,10 @@ def run_trake(
                      Vi du: ["athlete takes off", "athlete clears bar", "athlete lands"]
         top_k_video: So video candidate de thu alignment (default 20).
         top_k_frame: So frame candidate moi event khi alignment (default 20).
+        query_en:    Neu co (vd. nguoi dung da xem/sua cau rewrite global query trong UI — xem
+                     agent/tools/rewrite.py rewrite_query_candidates() + scripts/app.py), bo qua
+                     rewrite global query o Giai doan 1 va dung thang gia tri nay. Rewrite tung event
+                     o Giai doan 2 khong doi (van tu dong nhu cu — xem docstring module).
 
     Returns:
         dict:
@@ -179,8 +184,11 @@ def run_trake(
     print(f"[trake] {n_events} events, finding video candidates...", flush=True)
 
     # ─── Giai doan 1: Tim video ────────────────────────────────────────────────
-    query_en = rewrite_query(query_text)
-    print(f"[trake]   Global query: {query_en!r}")
+    if query_en:
+        print(f"[trake]   Global query co san (bo qua rewrite): {query_en!r}")
+    else:
+        query_en = rewrite_query(query_text)
+        print(f"[trake]   Global query: {query_en!r}")
 
     all_hits = fast_retrieve(query_en, top_k=RETRIEVAL_POOL_SIZE)
 

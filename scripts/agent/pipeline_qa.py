@@ -36,6 +36,7 @@ def run_qa(
     query_text: str,
     question: str | None = None,
     top_k: int = 100,
+    query_en: str | None = None,
 ) -> dict:
     """
     Chay pipeline Q&A day du.
@@ -44,6 +45,11 @@ def run_qa(
         query_text: Mo ta canh can tim (tieng Viet hoac Anh).
         question:   Cau hoi cu the (neu None, dung query_text lam question).
         top_k:      So ket qua retrieve toi da (100 theo rule BTC).
+        query_en:   Neu co (vd. nguoi dung da xem/sua cau rewrite trong UI — xem
+                    agent/tools/rewrite.py rewrite_query_candidates() + scripts/app.py), bo qua rewrite
+                    vong 1 va dung thang gia tri nay de retrieve. Vong 2 (confidence thap) van tu
+                    rewrite lai binh thuong tu query_text goc — day la auto-retry noi bo, khong phai
+                    buoc preview thu cong.
 
     Returns:
         dict:
@@ -56,9 +62,12 @@ def run_qa(
         question = query_text
 
     # ─── Vong 1 ────────────────────────────────────────────────────────────────
-    print(f"[qa] Vong 1: rewrite + retrieve...", flush=True)
-    query_en = rewrite_query(query_text, question=question)
-    print(f"[qa]   query_en: {query_en!r}")
+    if query_en:
+        print(f"[qa] Vong 1: dung query_en co san (bo qua rewrite): {query_en!r}", flush=True)
+    else:
+        print(f"[qa] Vong 1: rewrite + retrieve...", flush=True)
+        query_en = rewrite_query(query_text, question=question)
+        print(f"[qa]   query_en: {query_en!r}")
 
     pool_size = max(top_k, RETRIEVAL_POOL_SIZE)
     hits = fast_retrieve(query_en, top_k=pool_size)

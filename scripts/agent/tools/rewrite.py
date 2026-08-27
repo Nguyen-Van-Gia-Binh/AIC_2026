@@ -11,6 +11,7 @@ Usage:
 """
 from __future__ import annotations
 
+import re
 import sys
 from pathlib import Path
 
@@ -20,12 +21,14 @@ if str(_ROOT) not in sys.path:
 
 from agent.config import call_llm  # noqa: E402
 
-REWRITE_PROMPT = """\
+# Phan "rules" dung chung cho ca che do rewrite 1 cau (REWRITE_PROMPT) va nhieu cau
+# (REWRITE_CANDIDATES_PROMPT) — tach rieng de khong lap lai/lech nhau giua 2 prompt.
+REWRITE_INTRO = """\
 You are a visual search query optimizer for a video retrieval system using CLIP (image-text matching)
 on Vietnamese TV/news-style footage (cooking, wildlife, sports, education, disaster coverage, festivals).
 
-Task: Translate and rewrite the following query into ONE concise English sentence describing a SINGLE
-video frame, optimized for CLIP image search.
+Task: Translate and rewrite the following query into {n_desc} concise English sentence(s) describing a
+SINGLE video frame, optimized for CLIP image search.
 
 Rules:
 - Output ONLY the rewritten query (no explanations, no quotes)
@@ -74,10 +77,31 @@ Rules:
 - If already in English, just clean and optimize it while preserving the anchor object and rules above
 
 Preferred format: "[distinctive anchor object/display] + [main action] + [people/clothing/colors] + [visible setting]"
+"""
 
+# Duoi cho che do 1 cau (rewrite_query) — giu nguyen hanh vi cu.
+_SINGLE_SUFFIX = """
 Query: {query}
 
 Rewritten query:"""
+
+# Duoi cho che do nhieu phuong an (rewrite_query_candidates) — moi phuong an la 1 dong danh so.
+# So luong KHONG co dinh — LLM tu quyet dinh can bao nhieu phuong an tuy do mo ho/ngu canh cua
+# query (co the chi 1 neu query da ro rang), toi da max_n, thay vi ep du so dong bang paraphrase
+# thua. Van chi 1 lan goi LLM (khong goi rieng cho tung phuong an) de do ton thoi gian/chi phi.
+_CANDIDATES_SUFFIX = """
+Additionally: decide how many candidate rewrites are actually useful here, from 1 up to {max_n}.
+Only output MORE THAN ONE candidate if the query genuinely has multiple plausible interpretations or
+multiple distinctive objects/moments worth emphasizing differently — in that case make each candidate
+emphasize a different one (still following all rules above, each candidate independently valid on its
+own). If the query is unambiguous and has one clear best rewrite, output ONLY 1 candidate — do NOT pad
+with near-duplicate paraphrases just to reach {max_n}.
+
+Query: {query}
+
+Output ONLY the candidates you decide are meaningfully different (1 to {max_n} lines), nothing else
+(no blank lines, no extra commentary). Each line format:
+N. <rewritten query>"""
 
 
 def rewrite_query(query: str, feedback: str | None = None, question: str | None = None) -> str:
@@ -94,21 +118,85 @@ def rewrite_query(query: str, feedback: str | None = None, question: str | None 
     Returns:
         Query tieng Anh da toi uu.
     """
-    prompt = REWRITE_PROMPT.format(query=query)
+    prompt = REWRITE_INTRO.format(n_desc="ONE") + _SINGLE_SUFFIX.format(query=query)
+    prompt += _build_extra_context(question, feedback)
+
+    result = call_llm(prompt, model="text", temperature=0.2, max_tokens=60)
+    # Clean up: bo dau ngoac kep, xuong dong thua
+    result = result.strip().strip('"').strip("'").split("\n")[0].strip()
+    return result
+
+
+def rewrite_query_candidates(
+    query: str,
+    max_n: int = 3,
+    feedback: str | None = None,
+    question: str | None = None,
+) -> list[str]:
+    """
+    Sinh TOI DA max_n phuong an rewrite KHAC NHAU cho query — so luong thuc te do LLM tu quyet dinh
+    tuy theo query co nhieu cach hieu/nhieu vat the dang chu y hay khong (query ro rang -> co the
+    chi 1 phuong an), de nguoi dung chon 1 hoac tu viet lai trong UI (xem scripts/app.py) thay vi he
+    thong tu dong dung 1 cau rewrite roi search luon.
+
+    Args:
+        query:    Query goc (tieng Viet hoac Anh).
+        max_n:    So phuong an toi da (mac dinh 3) — LLM co the tra ve it hon neu khong can thiet.
+        feedback: Xem rewrite_query().
+        question: Xem rewrite_query().
+
+    Returns:
+        list[str] do dai trong [1, max_n] — neu LLM loi hoac khong tra ve dong nao parse duoc,
+        fallback ve 1 phan tu la ket qua cua rewrite_query().
+    """
+    prompt = REWRITE_INTRO.format(n_desc=f"1 to {max_n} DIFFERENT") + _CANDIDATES_SUFFIX.format(max_n=max_n, query=query)
+    prompt += _build_extra_context(question, feedback)
+
+    try:
+        result = call_llm(prompt, model="text", temperature=0.4, max_tokens=200)
+        candidates = _parse_candidates(result)
+    except Exception as e:
+        print(f"[rewrite] rewrite_query_candidates loi ({type(e).__name__}: {e}), fallback ve 1 cau")
+        candidates = []
+
+    if not candidates:
+        # Fallback: LLM khong tra ve dong nao parse duoc (hoac loi) -> dung lai rewrite 1 cau.
+        candidates = [rewrite_query(query, feedback=feedback, question=question)]
+
+    return candidates[:max_n]
+
+
+def _build_extra_context(question: str | None, feedback: str | None) -> str:
+    """Doan prompt bo sung dung chung cho ca rewrite_query va rewrite_query_candidates."""
+    extra = ""
     if question:
-        prompt += (
+        extra += (
             f"\n\nThis rewritten query will be used to retrieve the video frame needed to answer this "
             f"question: {question}\nMake sure the object/detail the question asks about (e.g. a number "
             f"on a display, a sign, a specific item) is kept in the rewritten query, even if it was "
             f"described earlier in the query than other moments."
         )
     if feedback:
-        prompt += f"\n\nPrevious search failed. Feedback: {feedback}\nRewrite with different keywords:"
+        extra += f"\n\nPrevious search failed. Feedback: {feedback}\nRewrite with different keywords:"
+    return extra
 
-    result = call_llm(prompt, model="text", temperature=0.2, max_tokens=60)
-    # Clean up: bo dau ngoac kep, xuong dong thua
-    result = result.strip().strip('"').strip("'").split("\n")[0].strip()
-    return result
+
+_CANDIDATE_LINE_RE = re.compile(r"^\s*\d+[\.\)]\s*(.+?)\s*$")
+
+
+def _parse_candidates(raw: str) -> list[str]:
+    """Tach output nhieu dong dang '1. ...' / '2) ...' thanh list string sach (bo so thu tu,
+    ngoac kep thua). Bo qua dong khong khop pattern thay vi crash — LLM doi khi chen dong trong
+    hoac ghi chu ngoai y muon."""
+    candidates = []
+    for line in raw.strip().splitlines():
+        m = _CANDIDATE_LINE_RE.match(line)
+        if not m:
+            continue
+        text = m.group(1).strip().strip('"').strip("'").strip()
+        if text:
+            candidates.append(text)
+    return candidates
 
 
 # ─── CLI test ──────────────────────────────────────────────────────────────────
@@ -119,9 +207,17 @@ if __name__ == "__main__":
         "A red sports car driving on a highway at night",
         "Trong video ve le trao giai am nhac, nguoi phu nu mac vay do dang cam ly mau gi?",
     ]
-    print("[rewrite] Testing query rewriter...\n")
+    print("[rewrite] Testing query rewriter (1 cau)...\n")
     for q in test_queries:
         en = rewrite_query(q)
         print(f"  VI: {q[:60]}...")
         print(f"  EN: {en}")
+        print()
+
+    print("[rewrite] Testing query rewriter (nhieu phuong an)...\n")
+    for q in test_queries:
+        cands = rewrite_query_candidates(q, max_n=3)
+        print(f"  VI: {q[:60]}...")
+        for i, c in enumerate(cands, 1):
+            print(f"    {i}. {c}")
         print()
