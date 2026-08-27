@@ -53,14 +53,18 @@ directly with the venv Python, not via a test framework. There is no linter/form
 
 ## Folder Structure
 
-- `scripts/index.py` — original baseline: builds the CLIP embedding matrix + metadata from `data/extracted/`.
+- `scripts/index.py` — **[RETIRED 2026-08-28]** Từng build CLIP embedding matrix từ `clip-features-32/`.
+  Không dùng trong production nữa sau khi `clip-features-32/` đã bị xóa (benchmark 33 query:
+  `clip_vitb32` Final=0.290 vs `siglip`=0.549). Giữ nguyên để không phá import chain.
 - `scripts/app.py` — legacy Gradio UI; still the operative entry point for running/submitting until
   `frontend/` + `scripts/api/` replace it (see Tech Stack).
 - `scripts/agent/` — pipelines and LLM/tool code:
   - `config.py` — the one place that calls the LLM (`call_llm()`, via LiteLLM → Gemini).
   - `pipeline_kis.py` / `pipeline_qa.py` / `pipeline_trake.py` — one pipeline per query type.
-  - `tools/` — `retrieve.py` (CLIP search), `rewrite.py` (VN→EN query rewrite), `ocr_lookup.py`
-    (offline Objects JSON reader), `answer_qa.py` (Q&A answer + cross-check).
+  - `tools/` — `retrieve.py` (CLIP search — **2 singleton**: `fast_retrieve`/`fast_retrieve_for_video`
+    dùng **siglip** cho KIS/TRAKE, `fast_retrieve_qa` dùng **siglip2** cho Q&A), `rewrite.py`
+    (VN→EN query rewrite), `ocr_lookup.py` (offline Objects JSON reader), `answer_qa.py`
+    (Q&A answer + cross-check).
 - `scripts/submit/` — `build_submission.py` (CSV/ZIP writer), `validate_submission.py` (format checker).
   This is the only place that should serialize a submission file.
 - `test_eval/` — everything for testing the system and scoring/comparing quality by the BTC formula
@@ -120,7 +124,9 @@ code in the four buckets above.
 
 - Python via project `.venv` for everything under `scripts/`, `test_eval/` — retrieval, pipelines,
   agent/LLM code, submission building. This part of the repo stays Node/JS-free.
-- `sentence-transformers` (`clip-ViT-B-32`) — both the image and text encoder; one shared embedding space.
+- `transformers` — text encoder cho **siglip** (`google/siglip-so400m-patch14-384`, KIS/TRAKE)
+  và **siglip2** (`google/siglip2-so400m-patch14-384`, Q&A); load qua `multi_index.py`.
+  `clip-ViT-B-32` (`sentence-transformers`) đã retire 2026-08-28.
 - `torch` (CPU build) — backing framework for `sentence-transformers`.
 - `pandas` / `numpy` — metadata table and the embedding matrix.
 - `litellm` — routes all text and vision LLM calls through OpenRouter; the model is configured by
@@ -150,16 +156,16 @@ code in the four buckets above.
   anything that touches retrieval, pipelines, or submission output.
 - `frame_id` = `frame_idx + 1` (BTC counts frames from 1, the index is 0-based). This conversion happens
   in exactly one place — `scripts/agent/tools/retrieve.py` — don't re-derive it elsewhere.
-- CLIP (`clip-ViT-B-32`) is strongest on **English** — query text should be English for best retrieval;
+- CLIP / SigLIP is strongest on **English** — query text should be English for best retrieval;
   `scripts/agent/tools/rewrite.py` handles VN→EN translation for the agent pipelines. `pipeline_kis.py`
   alone does not auto-translate (by design — see [ARCHITECTURE.md](ARCHITECTURE.md)).
 - Embeddings are stored as float16 in `.npy` files but upcast to float32 and re-normalized on load
   (`index.py`) to avoid drift from float16 rounding — don't skip the re-normalize step if you touch
   index-loading code.
-- Error handling: fail loud with a clear message for setup/data problems (e.g. `index.py` raises
-  `FileNotFoundError` immediately if `clip-features-32/` is empty); in the Gradio UI, catch and show a
-  short `⚠️` status message instead of letting the callback crash — don't let a bad user edit (e.g. an
-  emptied `frame_id` cell) take down the whole app.
+- Error handling: fail loud with a clear message for setup/data problems (e.g. `multi_index.py` raises
+  `FileNotFoundError` immediately if `features_siglip/` or `features_siglip2/` is empty); in the
+  Gradio UI, catch and show a short `⚠️` status message instead of letting the callback crash — don't
+  let a bad user edit (e.g. an emptied `frame_id` cell) take down the whole app.
 - Logging: plain `print()` with a `[module_name]` prefix (e.g. `[retrieve]`, `[qa]`, `[trake]`) — no
   logging framework configured, keep using this convention for consistency.
 

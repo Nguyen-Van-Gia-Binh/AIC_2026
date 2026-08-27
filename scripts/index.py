@@ -23,13 +23,15 @@ import numpy as np
 import pandas as pd
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data" / "extracted"
-# clip-features-32: nếu file .npy nằm trong thư mục con cùng tên (do giải nén zip tạo thêm 1 cấp)
-_CF_BASE = DATA_DIR / "clip-features-32"
-FEATURES_DIR = (
-    _CF_BASE / "clip-features-32"
-    if not any(_CF_BASE.glob("*.npy")) and (_CF_BASE / "clip-features-32").is_dir()
-    else _CF_BASE
-)
+# [RETIRED] clip-features-32 đã bị xoá 2026-08-28 — production chuyển sang features_siglip/ + features_siglip2/.
+# Giữ lại code bên dưới chỉ để tham chiếu lịch sử, không được gọi build_index() từ production nữa.
+# _CF_BASE = DATA_DIR / "clip-features-32"
+# FEATURES_DIR = (
+#     _CF_BASE / "clip-features-32"
+#     if not any(_CF_BASE.glob("*.npy")) and (_CF_BASE / "clip-features-32").is_dir()
+#     else _CF_BASE
+# )
+FEATURES_DIR = DATA_DIR / "clip-features-32"  # [RETIRED] thư mục này không còn tồn tại
 MAPKF_DIR = DATA_DIR / "map-keyframes"      # trỏ đến junction → map-keyframes-aic25-b1/map-keyframes
 KEYFRAMES_DIR = DATA_DIR / "keyframes"
 
