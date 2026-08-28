@@ -105,7 +105,128 @@ Question: {question}
 
 Answer:"""
 
+CANONICAL_PROMPT = """\
+Compress the following answer into the shortest possible form: 1-3 keywords that directly answer the \
+question. Remove all conversational wording, full sentences and explanations. Keep numbers, names and \
+colors exactly as written. Answer in the SAME language as the original answer.
+
+Question: {question}
+Long answer: {answer}
+
+Short answer:"""
+
 MAX_ANSWER_CHARS = 100
+
+# Answer dai hon nguong nay (theo so tu) moi goi LLM rut gon — answer ngan san thi chi can lam sach
+# bang rule, khong ton them 1 luot goi API.
+CANONICAL_MAX_WORDS = 5
+
+# Van phong giao tiep can cat bo o dau answer (rule, khong ton LLM).
+_CONVERSATIONAL_PREFIX = re.compile(
+    r"^\s*(?:"
+    r"(?:the\s+)?(?:answer|color|number|name)\s+(?:is|shown\s+is)|"
+    r"(?:in\s+)?(?:the\s+)?(?:image|frame|photo|video)\s+(?:shows?|there\s+(?:is|are))|"
+    r"i\s+(?:can\s+)?see|there\s+(?:is|are)|it\s+is|this\s+is|"
+    r"trong\s+(?:hình|ảnh|khung\s+hình|video)\s*(?:có|là)?|"
+    r"(?:câu\s+trả\s+lời|đáp\s+án)\s*(?:là|:)|(?:có|là)\s+"
+    r")\s*[:,]?\s*",
+    re.IGNORECASE,
+)
+
+# Dau hieu VLM/OCR KHONG doc duoc — khong duoc bien thanh 1 dap an "co ve dung" (chong ao giac §4.2).
+_NON_ANSWER_HINTS = re.compile(
+    r"(cannot\s+(?:be\s+)?(?:determine|tell|read|see)|can't\s+(?:tell|read|see)|not\s+visible|"
+    r"not\s+legible|unable\s+to|no\s+visible|unclear|khong\s+(?:nhìn|thấy|rõ|xác\s+định|đọc)|"
+    r"không\s+(?:nhìn|thấy|rõ|xác\s+định|đọc)|không\s+có\s+thông\s+tin)",
+    re.IGNORECASE,
+)
+
+# Cau hoi ve SO/CHU DUOC HIEN THI tren khung hinh (bien so, ty so, gia, dong ho, nam...) — nhom duy
+# nhat duoc phep de OCR ghi de truc tiep ket qua VLM (§4.2 "OCR Direct Overwrite"). CO Y KHONG gom
+# cau hoi dem so luong ("bao nhiêu người", "how many cars") — OCR khong dem duoc vat the, chi doc chu.
+_DISPLAYED_NUMBER_RE = re.compile(
+    r"(biển\s*số|số\s*áo|tỷ\s*số|giá(?:\s*tiền|\s*bao\s*nhiêu)?|đồng\s*hồ|nhiệt\s*độ|"
+    r"số\s+(?:hiển\s*thị|ghi|trên|mấy)|con\s+số|năm\s+(?:nào|mấy|bao\s+nhiêu)|"
+    r"license\s+plate|jersey\s+number|score(?:board)?|what\s+number|number\s+(?:shown|on|displayed))",
+    re.IGNORECASE,
+)
+
+_DIGIT_TOKEN_RE = re.compile(r"\d[\d.,:/-]*\d|\d")
+
+
+def _asks_displayed_number(question: str) -> bool:
+    """True neu cau hoi hoi ve so/chu DUOC HIEN THI tren khung hinh (khac voi dem so luong vat the)."""
+    return bool(_DISPLAYED_NUMBER_RE.search(question or ""))
+
+
+def is_non_answer(answer: str) -> bool:
+    """True neu answer thuc chat la "khong doc/nhin duoc" — cong chong ao giac (§4.2): khong duoc
+    dem chuoi nay di nop nhu 1 dap an, va phai keo confidence xuong."""
+    return bool(_NON_ANSWER_HINTS.search(answer or "")) or not (answer or "").strip()
+
+
+def canonicalize_answer(raw_answer: str, question: str = "", use_llm: bool = True) -> str:
+    """
+    Canonical Extractor (§4.2): dua answer ve 1-3 tu khoa trong tam, bo van phong giao tiep.
+
+    Vi sao can: cham diem BTC so khop answer voi dap an mau; 1 cau tra loi dung y nhung boc trong
+    cau van ("Trong hinh co mot chiec xe mau trang") de truot so voi dap an mau ("màu trắng").
+
+    2 tang, uu tien re truoc:
+      1. Rule — bo tien to giao tiep, bo dau cau thua. Chay luon, khong goi API.
+      2. LLM — chi khi sau buoc 1 answer VAN dai hon CANONICAL_MAX_WORDS tu. Loi LLM -> giu ket qua
+         buoc 1 (khong bao gio crash, khong bao gio tra ve rong).
+    """
+    answer = _normalize_answer(raw_answer)
+    if not answer or is_non_answer(answer):
+        return answer
+
+    stripped = _CONVERSATIONAL_PREFIX.sub("", answer).strip(" \t\"'.,;:")
+    if stripped:
+        answer = stripped
+
+    if len(answer.split()) <= CANONICAL_MAX_WORDS or not use_llm:
+        return answer
+
+    try:
+        short = call_llm(
+            CANONICAL_PROMPT.format(question=question or "(none)", answer=answer),
+            model="text", temperature=0.0, max_tokens=40,
+        )
+    except Exception as error:
+        print(f"[answer_qa] Canonical extractor loi ({type(error).__name__}: {error}) — giu answer rule-based")
+        return answer
+
+    short = _normalize_answer(short)
+    short = _CONVERSATIONAL_PREFIX.sub("", short).strip(" \t\"'.,;:")
+    # Chi nhan ban rut gon neu no THUC SU ngan hon va khong rong — tranh LLM tra ve loi giai thich.
+    if short and len(short.split()) < len(answer.split()):
+        print(f"[answer_qa] Canonical: {answer!r} -> {short!r}")
+        return short
+    return answer
+
+
+def ocr_direct_answer(question: str, ocr_results: dict) -> str | None:
+    """
+    OCR Direct Overwrite (§4.2): neu cau hoi hoi ve SO DUOC HIEN THI tren khung hinh va OCR doc duoc
+    DUY NHAT 1 chuoi so tren cac frame candidate, tra thang chuoi so do — khong de VLM tu phong doan
+    con so.
+
+    Co y RAT chat: chi kich hoat khi (a) cau hoi thuoc nhom "so hien thi" (khong phai dem vat the),
+    va (b) tat ca frame candidate doc ra CUNG 1 chuoi so duy nhat. Nhieu chuoi so khac nhau -> tra
+    None (de VLM nhin anh quyet dinh), vi luc do khong biet so nao thuoc "vung quan tam".
+    """
+    if not _asks_displayed_number(question) or not ocr_results:
+        return None
+    tokens: set = set()
+    for lines in ocr_results.values():
+        for line in lines or []:
+            tokens.update(m.group(0) for m in _DIGIT_TOKEN_RE.finditer(line))
+    if len(tokens) != 1:
+        return None
+    token = tokens.pop()
+    print(f"[answer_qa] OCR direct overwrite: cau hoi ve so hien thi, OCR doc duy nhat {token!r}")
+    return token
 
 # Cau hoi doi hoi doc so/chu/dem tren man hinh (bien bao, dong ho, chu giai ban do, ten dia danh...).
 # Objects JSON (Faster R-CNN/OpenImages) chi tra ve TEN OBJECT chung chung, khong doc duoc text/so, nen
@@ -194,12 +315,12 @@ def answer_from_hits(
             )
             ans1 = call_llm(prompt1, model="text", temperature=0.1, max_tokens=80)
 
-            if "CANNOT_ANSWER_FROM_OBJECTS" not in ans1:
+            if "CANNOT_ANSWER_FROM_OBJECTS" not in ans1 and not is_non_answer(ans1):
                 # Cross-check
                 crosscheck = _crosscheck_answer(question, ans1, unique_objects[:15], transcript1)
                 conf = 0.75 if crosscheck else 0.45
                 return {
-                    "answer":     _normalize_answer(ans1),
+                    "answer":     canonicalize_answer(ans1, question),
                     "best_hit":   candidates[0],
                     "confidence": conf,
                     "method":     "objects",
@@ -220,6 +341,17 @@ def answer_from_hits(
             formatted = format_ocr_hint(ocr_results)
             if formatted:
                 ocr_hint = OCR_HINT_TEMPLATE.format(ocr_lines=formatted)
+
+            # OCR Direct Overwrite (§4.2) — cau hoi ve so HIEN THI tren khung hinh + OCR doc duoc
+            # duy nhat 1 chuoi so => lay thang chuoi do, khong de VLM phong doan con so.
+            direct = ocr_direct_answer(question, ocr_results)
+            if direct:
+                return {
+                    "answer":     direct,
+                    "best_hit":   vision_hits[0],
+                    "confidence": 0.8,
+                    "method":     "ocr_direct",
+                }
 
         top_vid2, top_pts2 = vision_hits[0].get("video_id", ""), vision_hits[0].get("pts_time")
         transcript2 = get_transcript(top_vid2, top_pts2) if top_vid2 and top_pts2 is not None else ""
@@ -243,8 +375,13 @@ def answer_from_hits(
                 combined_objs.extend(get_objects(hit_vid, int(hit_n)))
         crosscheck = _crosscheck_answer(question, ans2, list(dict.fromkeys(combined_objs)), transcript2)
         conf = 0.85 if crosscheck else 0.6
+        if is_non_answer(ans2):
+            # Cong chong ao giac: VLM tu noi khong doc/nhin duoc -> KHONG nang len thanh dap an,
+            # ha confidence de pipeline_qa thu vong 2 (rewrite + retrieve lai) thay vi nop chuoi nay.
+            print(f"[answer_qa] Vision tra loi khong xac dinh ({ans2!r}) -> ha confidence")
+            conf = min(conf, 0.3)
         return {
-            "answer":     _normalize_answer(ans2),
+            "answer":     canonicalize_answer(ans2, question),
             "best_hit":   vision_hits[0],
             "confidence": conf,
             "method":     "vision",
@@ -322,6 +459,48 @@ def _run_self_tests() -> None:
         result_b = answer_from_hits("What color is the car?", [hit], top_n=1)
         assert result_b["method"] == "objects", f"Phai dung Tier 1 (objects), duoc {result_b['method']}"
         print("[answer_qa] Test transcript rong khong crash: OK")
+
+        # Test C: Canonical Extractor (§4.2) — bo van phong giao tiep bang rule, khong goi LLM khi
+        # answer da ngan.
+        assert canonicalize_answer("The answer is: màu trắng") == "màu trắng"
+        assert canonicalize_answer("Trong hình có một chiếc xe") == "một chiếc xe"
+        assert canonicalize_answer("There are 15 people") == "15 people"
+        assert canonicalize_answer("15") == "15", "Answer da chuan phai giu nguyen"
+        print("[answer_qa] Test canonical rule-based: OK")
+
+        # Test D: answer dai -> goi LLM rut gon; LLM tra ve dai hon thi GIU ban rule (khong lam te di).
+        def _fake_canonical(prompt, **kwargs):
+            captured_prompts.append(prompt)
+            if "Compress the following answer" in prompt:
+                return "Phú Sĩ"
+            return "unexpected prompt"
+        call_llm = _fake_canonical
+        long_answer = "Ngọn núi xuất hiện trong khung hình này chính là núi Phú Sĩ ở Nhật Bản"
+        assert canonicalize_answer(long_answer, "Núi gì?") == "Phú Sĩ"
+        call_llm = lambda *a, **k: "Đây là một lời giải thích rất dài hơn cả câu trả lời gốc ban đầu"
+        assert canonicalize_answer(long_answer, "Núi gì?") == long_answer, (
+            "LLM tra ve dai hon -> phai giu ban rule-based"
+        )
+        print("[answer_qa] Test canonical qua LLM + tu choi ban dai hon: OK")
+
+        # Test E: cong chong ao giac — chuoi "khong doc duoc" khong duoc coi la dap an.
+        assert is_non_answer("The text is not legible in any frame") is True
+        assert is_non_answer("Không nhìn rõ biển số") is True
+        assert is_non_answer("") is True
+        assert is_non_answer("màu trắng") is False
+        print("[answer_qa] Test cong chong ao giac: OK")
+
+        # Test F: OCR Direct Overwrite — chi kich hoat voi cau hoi ve SO HIEN THI va OCR doc duy
+        # nhat 1 chuoi so.
+        assert ocr_direct_answer("Biển số xe là gì?", {0: ["AG 09399"], 1: ["AG 09399"]}) == "09399"
+        assert ocr_direct_answer("Biển số xe là gì?", {0: ["09399"], 1: ["12627"]}) is None, (
+            "Nhieu chuoi so khac nhau -> khong ghi de, de VLM quyet dinh"
+        )
+        assert ocr_direct_answer("Có bao nhiêu người trong hình?", {0: ["15"]}) is None, (
+            "Cau hoi DEM vat the khong duoc de OCR ghi de"
+        )
+        assert ocr_direct_answer("Biển số xe là gì?", {}) is None
+        print("[answer_qa] Test OCR direct overwrite: OK")
 
         print("[answer_qa] Tat ca self-test PASS")
     finally:

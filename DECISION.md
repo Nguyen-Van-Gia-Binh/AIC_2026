@@ -103,3 +103,25 @@ thay vì `Test & Eval` — dấu cách và `&` làm vỡ lệnh shell/PowerShell
 - Các quyết định kiến trúc round-1 (`ARCHITECTURE.md` dòng 97 nói "kể cả các quyết định của
   round-1" từng nằm ở đây) — chưa dựng lại được, có thể tham khảo thêm
   [docs/_archive/ARCHITECTURE_Lan1.md](docs/_archive/ARCHITECTURE_Lan1.md) nếu cần.
+
+## 2026-08-28 — Mặc định của Hybrid/Multi-Aspect sau BẢN ĐẶC TẢ §2–§6
+
+**Quyết định:** triển khai đủ §2–§6, nhưng 2 mặc định KHÔNG theo nguyên văn đặc tả, vì số đo thật
+(18 câu KIS, đường production, `test_eval`) nói ngược lại:
+
+1. **`SPARSE_TOP_K = 50`** (không đưa cả 500 ứng viên BM25 vào RRF). BM25 ở đây chạy trên tập từ khóa
+   rất thô (tên object Faster R-CNN + caption, ~5.5K term, doc ~10 token) nên chỉ đáng tin ở đỉnh:
+   `sparse_top_k` 0/20/50/100 → Final 0.656; 200/500 → 0.611. Với 50, hybrid trung tính trên bộ eval
+   hiện tại mà vẫn giữ được khả năng "cứu" query nêu tên vật thể cụ thể.
+2. **Multi-Aspect Prompt Expansion mặc định TẮT** (`run_kis(use_expansion=False)`). Bật lên làm
+   Final tụt 0.667 → 0.644 (và 0.667 → 0.611 khi đi cùng hybrid). SigLIP được huấn luyện trên caption
+   ảnh thật nên câu query gốc thường đã là caption tốt; 2 biến thể template chỉ kéo vector về trung
+   bình. Cơ chế giữ nguyên, bật bằng cờ (`use_expansion=True` / `run_eval.py --expand`) để đo lại khi
+   có bộ eval lớn hơn.
+
+**Quyết định thứ 3 (thuộc về thiết kế, không phải tắt/bật):** tách `score_key` (xếp hạng) khỏi
+`margin_key` (quyết định đặt cược/trải rủi ro) trong `rerank.py`. Xếp hạng theo RRF nhưng margin vẫn
+đo trên cosine — vì `MARGIN_THRESHOLD=0.012` được hiệu chỉnh bằng benchmark thật trên thang cosine.
+
+**Đánh đổi:** đặc tả yêu cầu hybrid + expansion là nền tảng cho cả 3 pipeline; ở đây expansion không
+chạy mặc định nên phần "3 góc nhìn" của §3.1 chỉ tồn tại dưới dạng tuỳ chọn cho tới khi có số ủng hộ.

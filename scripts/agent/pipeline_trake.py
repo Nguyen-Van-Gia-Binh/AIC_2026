@@ -3,22 +3,26 @@ pipeline_trake.py — Pipeline TRAKE: Retrieve video + Windowed Alignment.
 
 Workflow co dinh 2 giai doan (khong de LLM tu quyet dinh so buoc):
 
-Giai doan 1 - Retrieval:
-  query tong quat -> rewrite -> fast_retrieve(top_k=RETRIEVAL_POOL_SIZE)  # =500, xem rerank.py
-  -> group by video_id -> rank video theo diem trung binh (video_avg)
-  -> chon top_k_video video candidates (mac dinh 20, xem run_trake())
+Giai doan 1 - Multi-Event Coverage Pooling (BAN DAC TA §5.1):
+  rewrite global query VA ca N event query
+  -> fast_retrieve(top_k=RETRIEVAL_POOL_SIZE) cho global query + cho TUNG event
+  -> Video_Score(V) = Sim_global(V) + sum_i max_{f in V} Sim(e_i, f)
+  -> xep theo (so moc video co mat trong pool, tong diem) -> top_k_video candidate (mac dinh 20)
+  Y nghia: video "phu" du ca N moc thang video chi trung boi canh chung — dung dieu TRAKE can.
 
-Giai doan 2 - Alignment (N lan, 1 lan / khoang khac):
+Giai doan 2 - Strict Monotonic DP (§5.2):
   For moi video candidate:
-    For moi event_i in events[]:
-      -> rewrite(event_description_i)
-      -> fast_retrieve_for_video(query_i, video_id, top_k=10)
-      -> chon frame tot nhat, CO THOI GIAN sau frame[i-1] (world model nhe)
-    -> tinh trake_score = trung binh score cac event
-    -> LLM crosscheck 1 lan/video: doc objects (ocr_lookup) + transcript (asr_lookup) tung frame
-       trong chain, hoi LLM 1 diem plausibility 0.0-1.0 (_llm_crosscheck_chain) -> final_score =
-       trake_score + LLM_SCORE_WEIGHT * llm_score
-  -> Sap xep theo final_score -> chon video tot nhat
+    For moi event_i: fast_retrieve_for_video(event_query_i, video_id, top_k=top_k_frame)
+    -> DP tim chuoi 1 frame/event co frame_idx TANG NGHIEM NGAT (f_1 < ... < f_N), tong score max
+    -> video khong ton tai chuoi hop le bi LOAI hoan toan
+    -> trake_score = trung binh score cac event trong chuoi
+
+Giai doan 3 - Gated Multi-Modal Verification (§5.3):
+  Cong 1 (rule, mien phi, chay cho TAT CA candidate): do khop tu khoa Objects JSON tung frame trong
+    chuoi vs mo ta event -> rule_score -> score = trake_score + RULE_GATE_WEIGHT * rule_score
+  Cong 2 (LLM, dat): CHI mo khi chenh lech #1-#2 <= GATE_MARGIN (0.02) -> hoi LLM plausibility cho
+    top GATE_MAX_VIDEOS video (objects + transcript tung frame) -> cong LLM_SCORE_WEIGHT * llm_score
+  -> Sap xep lai theo final_score -> chon video tot nhat
 
 Output: list[dict] {video_id, frame_id_1, ..., frame_id_N}
 """
@@ -42,20 +46,25 @@ from scripts.agent.tools.ocr_lookup import get_objects
 from scripts.agent.tools.asr_lookup import get_transcript
 
 
-def _find_best_increasing_chain(event_hits: list[list[dict]]) -> list[dict] | None:
-    """Tim chuoi 1 frame/event sao cho frame_idx KHONG GIAM qua tung event (event sau >= event
-    truoc — cho phep bang nhau vi du lieu that co truong hop 2 event lien tiep trung 1 frame, xem
-    docs/superpowers/plans/2026-08-24-phase4-trake-dp-crosscheck.md) va TONG score la lon nhat, bang
-    quy hoach dong — thay vi greedy cu (chon diem cao nhat cho event dau tien roi khoa cung, co the
-    chan mat lua chon tot hon o cac event sau, xem "Ly do thiet ke" trong plan).
+def _find_best_increasing_chain(
+    event_hits: list[list[dict]], strict: bool = True
+) -> list[dict] | None:
+    """Tim chuoi 1 frame/event sao cho frame_idx TANG DAN qua tung event va TONG score la lon nhat,
+    bang quy hoach dong — thay vi greedy cu (chon diem cao nhat cho event dau tien roi khoa cung, co
+    the chan mat lua chon tot hon o cac event sau, xem "Ly do thiet ke" trong plan
+    docs/superpowers/plans/2026-08-24-phase4-trake-dp-crosscheck.md).
 
     Args:
         event_hits: event_hits[i] = list ung vien (tu fast_retrieve_for_video, da sap xep giam dan
                     theo score) cho event thu i.
+        strict:     True (mac dinh, BAN DAC TA §5.2 "Strict Monotonic") = frame_idx phai TANG NGHIEM
+                    NGAT (f_1 < f_2 < ... < f_N) — 2 moc khac nhau khong duoc tro ve cung 1 frame.
+                    False = cho phep bang nhau (hanh vi cu tu Phase 4; giu lai vi du lieu that co
+                    truong hop 2 event lien tiep roi vao cung 1 keyframe khi keyframe thua).
 
     Returns:
-        list[dict] do dai == len(event_hits), 1 hit/event, frame_idx khong giam dan, tong score lon
-        nhat co the; None neu KHONG TON TAI chuoi hop le nao (video nay bi loai hoan toan).
+        list[dict] do dai == len(event_hits), 1 hit/event, frame_idx tang dan, tong score lon nhat
+        co the; None neu KHONG TON TAI chuoi hop le nao (video nay bi loai hoan toan).
     """
     n = len(event_hits)
     if n == 0 or any(not candidates for candidates in event_hits):
@@ -72,8 +81,11 @@ def _find_best_increasing_chain(event_hits: list[list[dict]]) -> list[dict] | No
     for i in range(1, n):
         for j, hit in enumerate(event_hits[i]):
             for k, prev_hit in enumerate(event_hits[i - 1]):
-                if prev_hit["frame_idx"] > hit["frame_idx"]:
-                    continue  # phai khong giam (>=), khong duoc lui ve truoc
+                if strict:
+                    if prev_hit["frame_idx"] >= hit["frame_idx"]:
+                        continue  # phai TANG NGHIEM NGAT — 2 moc khong duoc trung 1 frame
+                elif prev_hit["frame_idx"] > hit["frame_idx"]:
+                    continue  # che do noi long: chi cam lui ve truoc
                 if dp[i - 1][k] == NEG_INF:
                     continue
                 candidate_score = dp[i - 1][k] + hit["score"]
@@ -104,6 +116,17 @@ LLM_SCORE_WEIGHT = 0.05
 
 # Diem trung lap khi LLM crosscheck loi hoac khong parse duoc — khong lam lech ranking so voi trake_score.
 DEFAULT_LLM_CROSSCHECK_SCORE = 0.5
+
+# Trong so cua "cong nhanh" rule-based (do khop tu khoa giua Objects JSON tung frame trong chuoi va
+# mo ta event) — chay cho TAT CA video candidate vi khong ton API call (BAN DAC TA §5.3).
+RULE_GATE_WEIGHT = 0.03
+
+# Chi kich hoat cong LLM/VLM (dat, cham) khi chenh lech diem giua video #1 va #2 nho hon nguong nay —
+# khi 1 video da thang cach biet thi LLM gan nhu khong the doi thu tu, chi ton tien (§5.3).
+GATE_MARGIN = 0.02
+
+# So video duoc dua qua cong LLM khi cong duoc kich hoat (§5.3 "Top 2-3").
+GATE_MAX_VIDEOS = 3
 
 _SCORE_RE = re.compile(r"SCORE:\s*(-?\d+(?:\.\d+)?)", re.IGNORECASE)
 
@@ -153,12 +176,38 @@ def _llm_crosscheck_chain(query_en: str, event_queries_en: list[str], chain: lis
     return max(0.0, min(1.0, float(match.group(1))))
 
 
+def _rule_plausibility(event_queries_en: list[str], chain: list[dict]) -> float:
+    """
+    Cong loc nhanh rule-based (§5.3): do khop tu khoa giua Objects JSON cua tung frame trong chuoi
+    va mo ta event tuong ung. Tra ve [0.0, 1.0] = trung binh ti le tu khoa event tim thay trong
+    objects cua frame do.
+
+    Khong goi API, khong doc anh — chay duoc cho ca 20 video candidate. Frame khong co objects JSON
+    duoc tinh 0 cho event do (khong doan bua), nhung khong lam ca chuoi bi loai.
+    """
+    from scripts.agent.tools.sparse_index import tokenize
+
+    if not chain:
+        return 0.0
+    per_event: list[float] = []
+    for eq, hit in zip(event_queries_en, chain):
+        tokens = set(tokenize(eq))
+        if not tokens:
+            continue
+        vid, n = hit.get("video_id", ""), hit.get("n")
+        objs = get_objects(vid, int(n)) if vid and n is not None else []
+        obj_tokens = set(tokenize(" ".join(objs)))
+        per_event.append(len(tokens & obj_tokens) / len(tokens) if obj_tokens else 0.0)
+    return sum(per_event) / len(per_event) if per_event else 0.0
+
+
 def run_trake(
     query_text: str,
     events: list[str],
     top_k_video: int = 20,
     top_k_frame: int = 20,
     query_en: str | None = None,
+    strict_monotonic: bool = True,
 ) -> dict:
     """
     Chay pipeline TRAKE day du.
@@ -172,7 +221,9 @@ def run_trake(
         query_en:    Neu co (vd. nguoi dung da xem/sua cau rewrite global query trong UI — xem
                      agent/tools/rewrite.py rewrite_query_candidates() + scripts/app.py), bo qua
                      rewrite global query o Giai doan 1 va dung thang gia tri nay. Rewrite tung event
-                     o Giai doan 2 khong doi (van tu dong nhu cu — xem docstring module).
+                     khong doi (van tu dong nhu cu — xem docstring module).
+        strict_monotonic: True (mac dinh, §5.2) = chuoi frame phai TANG NGHIEM NGAT. Dat False neu
+                     can cho phep 2 moc lien tiep roi vao cung 1 keyframe (video keyframe rat thua).
 
     Returns:
         dict:
@@ -190,35 +241,50 @@ def run_trake(
         query_en = rewrite_query(query_text)
         print(f"[trake]   Global query: {query_en!r}")
 
-    all_hits = fast_retrieve(query_en, top_k=RETRIEVAL_POOL_SIZE)
-
-    # Group by video, tinh trung binh score TAT CA frame cua video do trong pool (khong gioi han top-3)
-    video_scores: dict[str, float] = defaultdict(float)
-    video_frame_count: dict[str, int] = defaultdict(int)
-
-    for h in all_hits:
-        vid = h["video_id"]
-        video_scores[vid] += h["score"]
-        video_frame_count[vid] += 1
-
-    # Normalize theo so frame (lay trung binh) roi rank
-    video_avg = {v: s / video_frame_count[v] for v, s in video_scores.items()}
-    top_videos = sorted(video_avg, key=lambda v: video_avg[v], reverse=True)[:top_k_video]
-    print(f"[trake]   Top {len(top_videos)} videos: {top_videos}")
-
-    # ─── Giai doan 2: Alignment cho tung video ─────────────────────────────────
-    # Rewrite tung event query (chi lam 1 lan, dung chung cho moi video)
+    # Rewrite tung event query TRUOC giai doan 1 — can chung ngay de tinh do phu N moc khi loc video
+    # (chi rewrite 1 lan, dung chung cho moi video o giai doan 2).
     event_queries_en = []
     for i, ev in enumerate(events):
         eq = rewrite_query(ev)
         event_queries_en.append(eq)
         print(f"[trake]   Event {i+1}: {ev!r} -> {eq!r}")
 
+    # Multi-Event Coverage Pooling (§5.1): thay vi chi loc video bang 1 global query chung chung,
+    # cham diem video = Sim_global(V) + tong cac max_{f in V} Sim(e_i, f). Video "phu" du ca N moc se
+    # thang video chi trung boi canh chung — dung dieu TRAKE thuc su can.
+    def _video_best(hits: list[dict]) -> dict[str, float]:
+        best: dict[str, float] = {}
+        for h in hits:
+            vid = h["video_id"]
+            if vid not in best or h["score"] > best[vid]:
+                best[vid] = h["score"]
+        return best
+
+    global_best = _video_best(fast_retrieve(query_en, top_k=RETRIEVAL_POOL_SIZE))
+    coverage_score: dict[str, float] = defaultdict(float)
+    coverage_count: dict[str, int] = defaultdict(int)
+    for vid, s in global_best.items():
+        coverage_score[vid] += s
+
+    for eq in event_queries_en:
+        for vid, s in _video_best(fast_retrieve(eq, top_k=RETRIEVAL_POOL_SIZE)).items():
+            coverage_score[vid] += s
+            coverage_count[vid] += 1  # so moc ma video nay co mat trong pool -> do "phu"
+
+    # Uu tien video phu duoc NHIEU moc nhat truoc, roi moi den tong diem — dung §5.1 "Top-20 video
+    # co do phu day du N moc nhat".
+    top_videos = sorted(
+        coverage_score, key=lambda v: (coverage_count[v], coverage_score[v]), reverse=True
+    )[:top_k_video]
+    print(f"[trake]   Top {len(top_videos)} videos (phu {[coverage_count[v] for v in top_videos]}"
+          f"/{n_events} moc): {top_videos}")
+
+    # ─── Giai doan 2: Alignment cho tung video ─────────────────────────────────
     video_results = []
 
     for vid in top_videos:
         event_hits = [fast_retrieve_for_video(eq, vid, top_k=top_k_frame) for eq in event_queries_en]
-        chain = _find_best_increasing_chain(event_hits)
+        chain = _find_best_increasing_chain(event_hits, strict=strict_monotonic)
         if chain is None:
             print(f"[trake]   {vid}: khong tim duoc chuoi moc tang dan hop le -> loai")
             continue
@@ -231,19 +297,35 @@ def run_trake(
             "chain":       chain,  # giu hit day du (co "n") de cross-check tang 3 dung — khong vao CSV
         })
 
-    # ─── LLM crosscheck (objects + transcript) cho MOI video candidate ─────────
-    # Thay cho crosscheck rule-based (keyword-matching, chi chay khi margin top-2 sat) truoc day —
-    # xem scripts/agent/tools/asr_lookup.py va _llm_crosscheck_chain(). Danh doi: cham hon (toi da
-    # len(video_results) LLM call / lan chay TRAKE) doi lay danh gia ngu nghia thay vi khop tu tho.
+    # ─── Giai doan 3: Gated Multi-Modal Verification (§5.3) ────────────────────
+    # Cong 1 — loc nhanh rule-based (Objects JSON vs mo ta event): mien phi, chay cho TAT CA candidate.
     for vr in video_results:
-        llm_score = _llm_crosscheck_chain(query_en, event_queries_en, vr["chain"])
-        vr["llm_score"] = llm_score
-        vr["score"] = vr["trake_score"] + LLM_SCORE_WEIGHT * llm_score
-        print(f"[trake]   {vr['video_id']}: trake_score={vr['trake_score']:.4f} "
-              f"llm_score={llm_score:.2f} -> final_score={vr['score']:.4f}")
-
-    # Sap xep theo final_score (trake_score + LLM_SCORE_WEIGHT * llm_score)
+        vr["rule_score"] = _rule_plausibility(event_queries_en, vr["chain"])
+        vr["llm_score"] = None
+        vr["score"] = vr["trake_score"] + RULE_GATE_WEIGHT * vr["rule_score"]
     video_results.sort(key=lambda x: x["score"], reverse=True)
+    for vr in video_results[:5]:
+        print(f"[trake]   {vr['video_id']}: trake={vr['trake_score']:.4f} "
+              f"rule={vr['rule_score']:.2f} -> {vr['score']:.4f}")
+
+    # Cong 2 — LLM/VLM: CHI chay khi #1 va #2 sat nhau (<= GATE_MARGIN). Thay cho ban truoc goi LLM
+    # cho MOI candidate (toi da 20 luot/lan chay TRAKE) — khi 1 video da thang cach biet thi LLM
+    # khong the doi thu tu, luot goi do chi ton tien/thoi gian.
+    if len(video_results) >= 2:
+        margin = video_results[0]["score"] - video_results[1]["score"]
+        if margin <= GATE_MARGIN:
+            print(f"[trake]   margin #1-#2 = {margin:.4f} <= {GATE_MARGIN} -> mo cong LLM cho top "
+                  f"{GATE_MAX_VIDEOS} video")
+            for vr in video_results[:GATE_MAX_VIDEOS]:
+                llm_score = _llm_crosscheck_chain(query_en, event_queries_en, vr["chain"])
+                vr["llm_score"] = llm_score
+                vr["score"] = (vr["trake_score"] + RULE_GATE_WEIGHT * vr["rule_score"]
+                               + LLM_SCORE_WEIGHT * llm_score)
+                print(f"[trake]   {vr['video_id']}: llm={llm_score:.2f} -> final={vr['score']:.4f}")
+            video_results.sort(key=lambda x: x["score"], reverse=True)
+        else:
+            print(f"[trake]   margin #1-#2 = {margin:.4f} > {GATE_MARGIN} -> bo qua cong LLM "
+                  f"(video dan dau da cach biet)")
 
     # Moi video la 1 phuong an; giu tran 100 dong theo rule BTC.
     results = []
@@ -304,12 +386,38 @@ def _run_self_tests() -> None:
     assert chain_3 is not None and chain_3[0]["frame_idx"] == 20, "1 event phai chon diem cao nhat"
     print("[trake] Test 1 event: OK")
 
-    # Test 4: cho phep frame_idx BANG NHAU giua 2 event lien tiep (du lieu that co truong hop nay —
-    # xem docs/superpowers/plans/2026-08-24-phase4-trake-dp-crosscheck.md)
+    # Test 4: STRICT MONOTONIC (BAN DAC TA §5.2) — 2 event lien tiep KHONG duoc tro ve cung 1 frame
+    # o che do mac dinh; che do noi long (strict=False, hanh vi cu tu Phase 4) van cho phep.
     event_hits_4 = [[_fake_hit("V", 10, 0.5)], [_fake_hit("V", 10, 0.6)]]
-    chain_4 = _find_best_increasing_chain(event_hits_4)
-    assert chain_4 is not None, "Frame_idx bang nhau giua 2 event phai HOP LE (khong giam)"
-    print("[trake] Test frame_idx bang nhau: OK")
+    assert _find_best_increasing_chain(event_hits_4) is None, (
+        "Mac dinh strict: 2 moc trung frame_idx phai bi loai"
+    )
+    assert _find_best_increasing_chain(event_hits_4, strict=False) is not None, (
+        "strict=False phai cho phep frame_idx bang nhau (hanh vi cu)"
+    )
+    # Co lua chon khac tang nghiem ngat thi strict phai tim ra, khong loai ca video.
+    event_hits_4b = [[_fake_hit("V", 10, 0.5)], [_fake_hit("V", 10, 0.6), _fake_hit("V", 11, 0.4)]]
+    chain_4b = _find_best_increasing_chain(event_hits_4b)
+    assert chain_4b is not None and chain_4b[1]["frame_idx"] == 11, (
+        f"Strict phai chon phuong an tang nghiem ngat con lai: {chain_4b}"
+    )
+    print("[trake] Test strict monotonic: OK")
+
+    # Test 4c: cong loc nhanh rule-based (§5.3) — objects khop mo ta event thi diem cao hon.
+    global get_objects
+    _orig_get_objects = get_objects
+    try:
+        get_objects = lambda vid, n: {1: ["Bicycle", "Person"], 2: ["Car"]}.get(n, [])
+        chain_rule = [_fake_hit("V", 1, 0.5), _fake_hit("V", 2, 0.5)]
+        chain_rule[0]["n"], chain_rule[1]["n"] = 1, 2
+        score_match = _rule_plausibility(["a person riding a bicycle", "a car on the road"], chain_rule)
+        score_miss = _rule_plausibility(["an airplane taking off", "a boat on a river"], chain_rule)
+        assert score_match > score_miss, f"Khop tu khoa phai cho diem cao hon: {score_match} vs {score_miss}"
+        assert 0.0 <= score_match <= 1.0 and 0.0 <= score_miss <= 1.0, "rule_score phai nam trong [0,1]"
+        assert _rule_plausibility([], []) == 0.0, "Chuoi rong -> 0.0, khong crash"
+        print(f"[trake] Test cong rule-based: OK (khop={score_match:.2f}, khong khop={score_miss:.2f})")
+    finally:
+        get_objects = _orig_get_objects
 
     # Test 5-8: _llm_crosscheck_chain — monkeypatch call_llm (module-level, import truc tiep nen
     # gan lai bien global de "thay the ham that").

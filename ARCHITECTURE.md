@@ -65,6 +65,8 @@ pipeline_kis.py     pipeline_qa.py          pipeline_trake.py
   (nguyên tắc từ `docs/Training/AIC2026_TongHop_LuatThi_va_KienTrucAgent.md`, dựa trên
   "Building Effective AI Agents" của Anthropic):
   - **KIS** = workflow tuyến tính, không LLM, có hậu xử lý ranking (rank.py). Task đóng, không cần agent.
+    ⚠️ **Đã lật một phần ở [§6.4](#64-quyết-định-kiến-trúc-v2) (2026-08-28)**: KIS được thêm một bước
+    VLM rerank một chiều (`vlm_rerank.py`). Phần "không có vòng lặp reflection" vẫn giữ nguyên.
   - **Q&A** = orchestrator-workers, loop có trần (`MAX_AGENT_LOOPS=2`), có gate confidence rõ ràng.
     Task mở vừa phải (không biết trước câu hỏi cần bao nhiêu tầng info) nhưng rủi ro sai cao
     (trả lời sai answer = R-Score về 0 dù đúng frame) nên **bắt buộc cross-check** trước khi trả lời.
@@ -110,6 +112,9 @@ Lý do chi tiết đằng sau từng quyết định (kể cả các quyết đ�
   (hiện là `MAX_AGENT_LOOPS=2`), theo nguyên tắc ACI (giới hạn tool-call loop để kiểm soát cost/latency).
 - Không precompute OCR/mô tả VLM cho toàn bộ 177K keyframe (chi phí/thời gian vượt ngân sách) — mọi
   OCR/tín hiệu phụ mới đều phải chạy **on-demand**, chỉ trên candidate đã retrieve.
+  ⚠️ **Đã làm rõ ranh giới ở [§6.4](#64-quyết-định-kiến-trúc-v2) (2026-08-28)**: lệnh cấm này nhắm vào
+  việc **SINH** nội dung hàng loạt bằng VLM/OCR (vẫn cấm). **ENCODE** văn bản đã có sẵn (caption
+  Vintern-1B qua BGE-M3, ~10–15 phút GPU) không thuộc phạm vi cấm.
 - Không đổi ngưỡng risk-aware ranking / margin cross-check TRAKE mà không hiệu chỉnh lại bằng
   `test_eval/Eval/run_eval.py` trên `test_eval/Eval/eval_ground_truth.json` trước.
 
@@ -129,3 +134,121 @@ Lý do chi tiết đằng sau từng quyết định (kể cả các quyết đ�
   (PaddleOCR, chạy trên máy, không phải API). Dữ liệu vào là file tĩnh dưới `data/extracted/`.
 - **External service**: LLM qua LiteLLM, theo chuỗi fallback `PROVIDER_CHAIN` trong `agent/config.py`.
   Key trong `.env` (không commit); provider nào thiếu key sẽ tự bị bỏ qua trong chuỗi.
+
+---
+
+## 6. Kiến trúc v2 (Phase 10 — chốt 2026-08-28)
+
+> Phần này **thay thế** hai quyết định ở §3/§4 (đánh dấu ⚠️ tại chỗ) và bổ sung 4 module mới. Lý do
+> đằng sau → [DECISION.md](DECISION.md). Việc cần làm → [PLAN.md](PLAN.md) Phase 10.
+
+### 6.1. Ba phát hiện đo được đã dẫn tới v2
+
+**(1) Trần điểm TRAKE ≈ 0.12 — nút thắt không nằm ở thuật toán chọn keyframe.**
+
+Luật BTC (`docs/Thong tin vong So tuyen AIC2026.md` §2.1.3): cửa sổ đáp án của mỗi mốc TRAKE
+"thường rất ngắn, thông thường là dưới 10 frame". Đo phân bố khoảng cách keyframe liên tiếp trên
+400 video / 90.519 gap của `data/extracted/map-keyframes/`:
+
+| p10 | p25 | trung vị | p75 | p90 | trung bình | tỉ lệ gap ≤ 10 frame |
+|-----|-----|----------|-----|-----|------------|----------------------|
+| 9   | 34  | **80**   | 150 | 150 | 85,3       | 10,7 %               |
+
+⇒ `P(một keyframe bất kỳ rơi vào cửa sổ 10 frame) ≈ 10 / 85,3 ≈ 12 %`.
+
+Nghĩa là kể cả khi Coverage Pooling chọn đúng video, DP đơn điệu chọn đúng khoảnh khắc ngữ nghĩa và
+VLM verify xác nhận đúng, ta vẫn trượt ~88 % số mốc — vì **trong kho keyframe không tồn tại frame nằm
+trong cửa sổ đáp án**. Toàn bộ §5 bản đặc tả đang tối ưu hệ số nhân của một trần 0,12.
+
+**(2) `Final Score` biến việc xếp 100 dòng thành bài toán "hạng của cú trúng ĐẦU TIÊN".**
+
+`Final = (1/5)·Σ_{k∈{1,5,20,50,100}} R@k`, `R@k = max` trong k dòng đầu. Nếu dòng đúng duy nhất ở hạng r:
+
+| hạng r | 1 | 2–5 | 6–20 | 21–50 | 51–100 |
+|--------|---|-----|------|-------|--------|
+| Final  | **1,00** | 0,80 | 0,60 | 0,40 | 0,20 |
+
+Hệ quả: (a) chỉ cú trúng đầu tiên có giá trị — dòng thứ hai của cùng một cảnh đáng ≈ 0; đây mới là
+lý luận đúng cho Temporal NMS, không phải "tiết kiệm dung lượng 100 dòng"; (b) 50 dòng cuối cộng lại
+đáng 0,2 trong khi kéo một cú trúng từ hạng 6 lên hạng 1 đáng **+0,4** ⇒ **dòng 1–20 phải là 20 giả
+thuyết thực sự khác nhau; dòng 21–100 là vé số, không đáng tinh chỉnh**.
+
+**(3) Ngân sách tính toán lớn hơn nhiều so với giả định của bản đặc tả.**
+
+- Máy chạy có **RTX 5050 Laptop, 8151 MiB VRAM, driver 592.82** (Blackwell, sm_120) nhưng venv đang
+  cài `torch 2.13.0+cpu` ⇒ GPU chưa từng được dùng. Cần wheel `cu128`/`cu129`.
+- Mỗi gói đề chỉ có **~42–45 truy vấn** (`THUNGHIEM-bo-de-thi/bo_de_thi.csv` 42 dòng,
+  `test_eval/sotuyen1_bo_de_thi.csv` 45 dòng), và vòng sơ tuyển **chấm offline theo file nộp, không
+  giới hạn thời gian chạy**.
+
+Ước lượng khi GPU được bật: định vị dưới keyframe cho TRAKE ~20–30 s/truy vấn; cho KIS ~20 phút/gói
+đề; BGE-M3 encode 177K caption ~10–15 phút; encode lại 177K keyframe bằng 1 backbone ~40 phút.
+
+### 6.2. Sơ đồ v2 (chỉ phần khác v1)
+
+```
+query ──► [4-leg hybrid retrieval] ─────────────────────────────► pool 500
+             ├─ dense ảnh   : siglip / siglip2      (đã có)
+             ├─ dense text  : BGE-M3 trên caption   (MỚI, mức frame)
+             ├─ sparse BM25 : Objects JSON + OCR    (đã có)
+             └─ ASR         : PhoWhisper            (MỚI, mức VIDEO — mọi frame
+                                                     của video V thừa hưởng rank_asr(V))
+                              │  RRF k=60, 4 số hạng
+                              ▼
+                      rerank.py (đặt cược / trải rủi ro + temporal NMS)
+                              │
+                   ┌──────────┴───────────┐
+                   ▼                      ▼
+        vlm_rerank.py (MỚI)          [Q&A / TRAKE giữ luồng cũ, thêm 3 điểm:]
+        Gemini 2.5 Flash Vision       • câu HỎI ghép vào truy vấn retrieval
+        chấm top-50, trộn với RRF     • tái xếp hạng frame theo đáp án đã sinh
+                   │                  • biến thể đáp án phân bổ trên các dòng
+                   ▼
+        refine_frame.py (MỚI) ◄── decode .mp4 gốc ở fps thật
+        định vị DƯỚI mức keyframe
+                   │
+                   ▼
+        build_submission.py (không đổi)
+```
+
+### 6.3. Module mới
+
+| Path | Vai trò | Vì sao ở đây |
+|------|---------|--------------|
+| **`scripts/agent/tools/refine_frame.py` (mới)** | `refine(video_id, frame_idx_center, query_text, half_window) -> frame_idx`. Decode dải frame gốc từ `data/extracted/video/**/{video_id}.mp4` ở fps thật quanh keyframe đã chọn → encode SigLIP → **làm mượt đường điểm (moving average ~15 frame) rồi lấy TÂM của đoạn liên tục vượt ngưỡng, KHÔNG lấy argmax**. | Gỡ trần 0,12 của TRAKE. Chạy sau khi đã chốt video+keyframe nên chỉ tốn trên 1–3 video ứng viên. Dùng chung cho cả 3 pipeline. |
+| **`scripts/agent/tools/vlm_rerank.py` (mới)** | Chấm top-50 ứng viên KIS bằng Gemini 2.5 Flash Vision **qua `config.py:call_llm()`** ("ảnh khớp mô tả tới mức nào, 0–10"), trộn điểm với RRF. | Đòn bẩy R@1 lớn nhất còn lại cho KIS. Đi qua `call_llm()` nên không phá quy tắc §4. Không chiếm VRAM. |
+| **`scripts/agent/tools/model_registry.py` (mới)** | Nạp theo yêu cầu / giải phóng model ít dùng nhất + `torch.cuda.empty_cache()` khi thiếu VRAM. Thay pattern singleton "giữ model sống mãi" hiện có ở `retrieve.py`, `vlm_ocr_caption.py`, `ocr_read.py`. | 8 GB VRAM **không chứa nổi** SigLIP (1,7 GB) + SigLIP2 (1,7 GB) + BGE-M3 (1,1 GB) + VietOCR cùng lúc. Không có tầng này thì thêm bất kỳ model nào cũng OOM. |
+| **`scripts/agent/tools/text_index.py` (mới)** | Index BGE-M3 trên 177K caption Vintern-1B (mức frame) + trên segment ASR PhoWhisper (mức video). Cấp `rank_caption(d)` và `rank_asr(video)` cho `fusion.py`. | BGE-M3 ra cả dense + sparse từ vựng + ColBERT trong một lần chạy, tiếng Việt tốt; thay được luôn BM25 tự viết trong `sparse_index.py` nếu đo thấy hơn. |
+
+### 6.4. Quyết định kiến trúc v2
+
+- **⚠️ Lật quyết định §3 "KIS = workflow tuyến tính, không LLM".** Lý do ban đầu (kiểm soát
+  cost/latency) không còn đúng: vòng sơ tuyển chấm offline không giới hạn thời gian, và mỗi gói đề
+  chỉ ~44 truy vấn ⇒ VLM rerank top-50 = ~2.200 lượt chấm ảnh cho cả gói đề. KIS vẫn **không có
+  vòng lặp reflection** — chỉ thêm đúng một bước rerank một chiều, có công tắc tắt được.
+- **⚠️ Nới quyết định §4 "không precompute cho toàn bộ 177K keyframe".** Lệnh cấm đó nhắm vào việc
+  chạy **VLM/OCR sinh nội dung** cho 177K ảnh (vẫn giữ nguyên, vẫn cấm). Encode **văn bản đã có sẵn**
+  (caption Vintern-1B) bằng BGE-M3 tốn ~10–15 phút GPU — không thuộc phạm vi lệnh cấm. Ranh giới mới:
+  cấm **sinh** nội dung hàng loạt, cho phép **encode** nội dung đã có.
+- **`refine_frame` lấy tâm đoạn, không lấy argmax.** Điểm SigLIP trên ~120 frame gần như y hệt nhau
+  dao động ngẫu nhiên; argmax rơi vào đỉnh nhiễu ở rìa. Nếu `[s,e]` ngắn thì BTC gần như chắc chắn đặt
+  nó quanh tâm ngữ nghĩa của khoảnh khắc; nếu `[s,e]` dài cỡ shot thì tâm đoạn cũng nằm gọn bên trong.
+  **Tâm đoạn an toàn ở cả hai giả thuyết về độ dài `[s,e]` của KIS — vốn là ẩn số chưa xác định** (luật
+  BTC không định nghĩa cách dựng `[s,e]`; ví dụ minh hoạ trong luật là `[500, 510]`, tức 11 frame).
+- **ASR vào RRF như danh sách hạng thứ tư ở mức VIDEO, không phải mức frame.** Lời nói mô tả cả thứ
+  không nằm trong khung hình: ASR trả lời "video nào", SigLIP trả lời "frame nào". Xếp hạng video theo
+  độ khớp ASR rồi cho mọi frame thuộc video V thừa hưởng hạng đó — vẫn là RRF thuần, không thêm thang
+  đo mới cần chuẩn hoá.
+- **Độ dài `[s,e]` của KIS chi phối luôn quy tắc đặt cược/trải rủi ro.** Với `p` = P(đúng video),
+  `q` = P(frame trúng cửa sổ | đúng video): dồn 5 dòng vào video tốt nhất cho `p·(1−(1−q)⁵)`, rải 5
+  video khác nhau cho `Σpᵢ·q`. Cửa sổ ngắn (`q` nhỏ) ⇒ nên **dồn dòng trong video**; cửa sổ dài
+  (`q≈1`) ⇒ nên **rải sang nhiều video**. `SPREAD_MAX_PER_VIDEO=3` + NMS `Δt≥3s` hiện tại đang mặc
+  định giả thuyết "cửa sổ dài" — tức đang cược một chiều vào ẩn số. `refine_frame` nâng `q` lên, và
+  chỉ khi `q` cao thì việc rải mới đúng: **hai tham số này phải chỉnh cùng nhau, không tách rời**.
+- **PaddleOCR detection vẫn LUÔN chạy CPU, kể cả sau khi torch chuyển sang bản CUDA.** Xung đột DLL
+  `paddlepaddle-gpu` × `torch` trên Windows đã xác nhận (xem [EXPERIMENT.md](EXPERIMENT.md)); torch
+  chạy CUDA làm rủi ro này **tăng**, không giảm. VietOCR (thuần torch, dùng chung torch đã import)
+  vẫn an toàn trên GPU.
+- **Mọi bước v2 đều có công tắc bật/tắt và phải đo trước–sau** bằng Regression Guard đã dựng ở
+  Phase 9 (`run_eval.py` tầng 1, `score_pipelines.py --save-baseline` tầng 2) — giữ nguyên nguyên tắc
+  của Phase 9, không nới.

@@ -129,6 +129,180 @@ Claude Design (plan: `docs/superpowers/plans/2026-08-27-phase1-fastapi-react-fro
 Đánh dấu `[x]` cho Phase con 1 chỉ sau khi Task 11 Step 3 (walkthrough end-to-end trên trình duyệt)
 thật sự chạy qua.
 
+## Phase 9: Bản đặc tả kiểm soát chất lượng thuật toán (2026-08-28)
+
+Triển khai BẢN ĐẶC TẢ §2–§6. Mọi bước mới đều có công tắc bật/tắt để đo trước–sau.
+
+- [x] **§2 Hybrid Retrieval** — `tools/sparse_index.py` (BM25 trên Objects JSON + caption, cache
+  `data/extracted/bm25_index/`, build 1 lần ~3.5 phút: 171.819 doc / 5.539 term), `tools/fusion.py`
+  (RRF k=60, w=0.75/0.25), `retrieve.hybrid_retrieve()`. Chưa build cache → tự chạy dense-only.
+- [x] **§3 KIS** — `tools/query_expand.py` (Multi-Aspect, template tất định),
+  `tools/temporal_nms.py` (Δt ≥ 3s), `rerank.py` (+NMS, +trần 50% cho video đặt cược, tách
+  `score_key` cho xếp hạng khỏi `margin_key` cho quyết định đặt cược). Bonus OCR/caption 0.15/0.07
+  đã có sẵn từ trước.
+- [x] **§4 Q&A** — `pipeline_qa.answer_by_video_cluster()` (mỗi video trong top-3 cụm có answer
+  riêng, hết cảnh "1 đáp án của video top-1 gán cho cả 100 dòng"); `answer_qa.canonicalize_answer()`
+  + `ocr_direct_answer()` + cổng chống ảo giác (`is_non_answer`).
+- [x] **§5 TRAKE** — Multi-Event Coverage Pooling, DP tăng NGHIÊM NGẶT, cổng 2 tầng (rule miễn phí
+  cho cả 20 video → LLM chỉ khi margin #1–#2 ≤ 0.02, tối đa 3 video). Trước đây gọi LLM cho tất cả
+  candidate.
+- [x] **§6 Regression Guard** — Tầng 1: `run_eval.py --hybrid/--expand/--nms/--strict-dp/
+  --coverage-pool`. Tầng 2: `score_pipelines.py --save-baseline` + tự cảnh báo khi Final tụt > 0.01
+  (thoát code 1).
+- [ ] **Chốt baseline E2E đầy đủ** — `score_pipelines.py --save-baseline` (cả 3 loại) để các lần sau
+  có mốc so sánh.
+
+Số đo (xem DECISION.md/EXPERIMENT.md để biết vì sao chọn mặc định như hiện tại).
+
+---
+
+## Phase 10: Kiến trúc v2 — GPU, định vị dưới keyframe, hybrid 4-leg (chốt 2026-08-28)
+
+Cơ sở đo đạc và lý do → [ARCHITECTURE.md §6](ARCHITECTURE.md#6-kiến-trúc-v2-phase-10--chốt-2026-08-28).
+Xếp theo lợi ích/chi phí. Mọi hạng mục đều phải có công tắc bật/tắt và đo trước–sau bằng Regression
+Guard của Phase 9.
+
+| # | Hạng mục | Lợi ích kỳ vọng | Chi phí | File động đến |
+|---|----------|-----------------|---------|---------------|
+| 0 | torch bản CUDA | **chặn đứng mọi thứ dưới** | 1 buổi | `.venv-gpu/`, `requirements.txt` |
+| 1 | `refine_frame.py` | TRAKE 0,12 → có thể 0,5–0,7 | 1–2 ngày | tool mới, `pipeline_trake.py`, `pipeline_kis.py` |
+| 2 | Mở rộng ground truth | mọi số đo sau đó mới đáng tin | 1–2 ngày, không cần GPU | `test_eval/Eval/` |
+| 3 | `model_registry.py` | điều kiện cần của #4,#6 (8 GB VRAM) | 1 ngày | tool mới, `retrieve.py`, `ocr_read.py`, `vlm_ocr_caption.py` |
+| 4 | `vlm_rerank.py` cho KIS | đòn bẩy R@1 lớn nhất còn lại | 1 ngày | tool mới, `pipeline_kis.py` |
+| 5 | 3 cải tiến Q&A | Q&A phải đúng cả 3 yếu tố, sai sót nhân nhau | 0,5 ngày, **không cần GPU** | `pipeline_qa.py`, `answer_qa.py` |
+| 6 | `text_index.py` (BGE-M3) | leg thứ 3+4 của hybrid | 2 ngày | tool mới, `fusion.py`, `retrieve.py` |
+| 7 | Phân bổ 100 dòng theo bảng giá trị hạng | 0 chi phí, thuần xếp lại | 0,5 ngày | `rerank.py`, `temporal_nms.py` |
+| 8 | Ensemble `features_dfn` + `features_jina` | **0 GPU** — đã precompute sẵn trên đĩa | 0,5 ngày | `retrieve.py`, `fusion.py` |
+| 9 | Khử hubness (QB-Norm / Dual-Softmax) | thường +2–5 R@1, không cần train | 1 ngày | `retrieve.py` |
+
+### 10.0 — [ ] CHẶN ĐỨNG: chuyển sang torch bản CUDA
+
+Máy có **RTX 5050 Laptop 8151 MiB, driver 592.82** nhưng venv cài `torch 2.13.0+cpu` — GPU chưa từng
+được dùng. RTX 5050 là Blackwell (sm_120), **bắt buộc** wheel `cu128`/`cu129`; bản `+cpu` và các bản
+CUDA cũ đều không nhận card này.
+
+- [ ] Dựng `.venv-gpu/` **song song**, không đụng `.venv/` đang chạy được
+- [ ] `pip install torch --index-url https://download.pytorch.org/whl/cu129`
+- [ ] Xác minh `torch.cuda.is_available()` và `torch.cuda.get_device_capability()` ra `(12, 0)`
+- [ ] Xác minh SigLIP so400m chạy được fp16 trên GPU và đo throughput thật (ảnh/giây)
+- [ ] **Xác minh riêng rủi ro đã biết**: `paddlepaddle` (CPU thuần, KHÔNG `-gpu`) + VietOCR (GPU) +
+      torch-CUDA cùng một process không gây `WinError 127` — xem [EXPERIMENT.md](EXPERIMENT.md).
+      Torch chạy CUDA làm rủi ro DLL này **tăng**, không giảm.
+- [ ] Chỉ khi cả 5 mục trên xanh mới đổi `.venv/` chính
+
+### 10.1 — [ ] `tools/refine_frame.py` — định vị dưới mức keyframe
+
+Hạng mục có lợi ích lớn nhất trong toàn Phase: gỡ trần 0,12 của TRAKE (xem ARCHITECTURE.md §6.1).
+
+- [ ] `refine(video_id, frame_idx_center, query_text, half_window=None) -> frame_idx`
+- [ ] Decode dải frame gốc từ `data/extracted/video/**/{video_id}.mp4` ở fps thật (đọc fps từ
+      `map-keyframes/{video_id}.csv`, **không đoán 30fps** — dữ liệu thật có 25.0 / 26.44 / 29.97 / 30.0)
+- [ ] `half_window` mặc định = nửa gap keyframe cục bộ (trung vị 80 frame ⇒ ~±40)
+- [ ] Encode SigLIP theo batch, chấm với `query_text`
+- [ ] **Làm mượt (moving average ~15 frame) rồi lấy TÂM đoạn liên tục vượt ngưỡng — KHÔNG argmax**
+      (lý do → ARCHITECTURE.md §6.4)
+- [ ] Nối vào `pipeline_trake.py` sau DP (cho từng mốc của 1–3 video ứng viên đầu)
+- [ ] Nối vào `pipeline_kis.py` cho top-20 dòng, sau `rerank`, trước `build_submission`
+- [ ] Công tắc `AIC_REFINE=0|1` (mặc định 0 cho tới khi đo xong), theo tiền lệ `AIC_RETRIEVE_MODEL`
+- [ ] Đo trước–sau bằng `score_pipelines.py --types trake`
+
+### 10.2 — [ ] Mở rộng ground truth (33 câu là quá ít để tin bất kỳ số đo nào)
+
+Mọi tham số hiện tại (`w_dense=0,75`, `k=60`, `Δ≤0,02`, `partial_ratio≥85`, `MARGIN_THRESHOLD`,
+`SPREAD_MAX_PER_VIDEO`) đang chốt trên 33 mẫu — sai số lấy mẫu ở cỡ đó lớn hơn hầu hết mức cải thiện
+định đo. Regression Guard chạy trên 33 câu là guard giả. **Hai bộ, hai mục đích khác nhau:**
+
+- [ ] **Bộ tổng hợp (tinh chỉnh tham số, cần nhiều mẫu)** — lấy caption Vintern của một keyframe làm
+      query, chính keyframe đó là đáp án. Hàng nghìn câu miễn phí. Ghi rõ trong `EVAL_GUIDE.md` rằng
+      bộ này **lệch phân phối** so với query BTC (caption máy sinh ≠ mô tả người viết) nên chỉ dùng
+      để so sánh tương đối giữa hai cấu hình, **không** để báo cáo điểm tuyệt đối.
+- [ ] **Bộ nhãn tay (kiểm chứng cuối, cần đúng phân phối)** — dùng đề `THUNGHIEM-bo-de-thi` (42 câu) +
+      `sotuyen1_bo_de_thi.csv` (45 câu); VLM đề xuất ứng viên, người duyệt qua UI. Mục tiêu 150–300 câu.
+- [ ] Bổ sung breakdown theo loại truy vấn (KIS/QA/TRAKE) vào `run_eval.py`
+
+### 10.3 — [ ] `tools/model_registry.py` — quản lý vòng đời model cho 8 GB VRAM
+
+SigLIP (1,7 GB) + SigLIP2 (1,7 GB) + BGE-M3 (1,1 GB) + VietOCR **không cùng nằm vừa 8 GB**. Pattern
+singleton hiện tại ở `retrieve.py`/`vlm_ocr_caption.py`/`ocr_read.py` giữ model sống mãi trong process
+⇒ thêm bất kỳ model nào cũng OOM.
+
+- [ ] `acquire(name)` / `release(name)`, giải phóng model ít dùng nhất + `torch.cuda.empty_cache()`
+- [ ] Ngân sách VRAM đọc từ env, mặc định chừa ~1 GB cho phân mảnh
+- [ ] Chuyển 3 module singleton hiện có sang registry, **giữ nguyên chữ ký hàm public**
+- [ ] Chế độ kép: UI chỉ giữ SigLIP thường trú; đường sinh bài nộp chạy batch nhiều giai đoạn
+
+### 10.4 — [ ] `tools/vlm_rerank.py` — VLM rerank top-50 cho KIS
+
+Lật quyết định "KIS không LLM" (ARCHITECTURE.md §6.4). Dùng **Gemini 2.5 Flash Vision qua
+`config.py:call_llm()`** — không chiếm VRAM, không phá quy tắc "chỉ config.py gọi LLM".
+
+- [ ] Chấm từng ứng viên "ảnh khớp mô tả tới mức nào, 0–10", trộn với điểm RRF
+- [ ] ~2.200 lượt ảnh/gói đề (44 truy vấn × 50) — chạy song song có giới hạn, có retry
+- [ ] Công tắc `AIC_VLM_RERANK=0|1`, mặc định 0
+- [ ] **Không** thêm vòng lặp reflection — đúng một bước một chiều
+- [ ] Đo chi phí API thật cho 1 gói đề trước khi bật cho bài nộp
+
+### 10.5 — [ ] Ba cải tiến Q&A (rẻ nhất, không cần GPU)
+
+Q&A phải đúng **cả** video, frame **và** answer nên sai sót nhân nhau.
+
+- [ ] **Ghép câu HỎI vào truy vấn retrieval** — câu hỏi chứa thông tin thị giác ("người phụ nữ mặc
+      váy đỏ", "cầm ly") hiện đang bị vứt đi, chỉ mô tả sự kiện được dùng để tìm
+- [ ] **Tái xếp hạng frame theo đáp án đã sinh** — sinh đáp án trước, rồi xếp lại frame theo "frame
+      này có chứng minh được đáp án không", đẩy frame trúng cửa sổ đáp án lên đầu
+- [ ] **Phòng hộ biến thể đáp án trên các dòng** — cùng video, các dòng mang biến thể khác nhau
+      ("15" / "mười lăm" / "15 người"). BTC khớp **theo ngữ nghĩa** (luật §2.1.2) nên lợi ích có thể
+      nhỏ, nhưng chi phí bằng 0. Xếp biến thể tự tin nhất lên trước theo bảng giá trị hạng (#7).
+
+### 10.6 — [ ] `tools/text_index.py` — leg dense-text (caption) + leg ASR (mức video)
+
+- [ ] Encode 177K caption Vintern-1B bằng **BGE-M3** (~10–15 phút GPU) → `rank_caption(d)` mức frame
+- [ ] Encode segment ASR PhoWhisper → xếp hạng **VIDEO** → mọi frame của video V thừa hưởng
+      `rank_asr(V)` (lý do phải ở mức video, không mức frame → ARCHITECTURE.md §6.4)
+- [ ] Mở rộng `fusion.reciprocal_rank_fusion()` lên 4 số hạng, trọng số cấu hình được
+- [ ] Đo xem sparse-từ-vựng của BGE-M3 có thay được BM25 tự viết trong `sparse_index.py` không —
+      nếu hơn thì bỏ bớt một hệ thống, nếu không thì giữ cả hai
+- [ ] Cân nhắc trọng số RRF **thích ứng theo loại query** thay vì cố định 0,75/0,25: query có
+      chữ/số trong ngoặc kép → nghiêng sparse; query có tên riêng/địa danh → nghiêng ASR; query tả
+      cảnh thuần thị giác → nghiêng dense
+
+### 10.7 — [ ] Phân bổ 100 dòng theo bảng giá trị hạng
+
+Không tốn compute, chỉ là xếp lại. Bảng giá trị: hạng 1 → 1,00; 2–5 → 0,80; 6–20 → 0,60; 21–50 →
+0,40; 51–100 → 0,20 (ARCHITECTURE.md §6.1).
+
+- [ ] Dồn công sức vào dòng 1–20 (phải là 20 giả thuyết **thực sự khác nhau**); dòng 21–100 là vé số
+- [ ] **Đồng chỉnh `SPREAD_MAX_PER_VIDEO` + `MIN_TIME_GAP` của NMS cùng lúc với #10.1**: hai tham số
+      này hiện mặc định giả thuyết "cửa sổ `[s,e]` dài" — một ẩn số chưa xác định. `refine_frame` nâng
+      `q` (xác suất frame trúng cửa sổ) lên, và chỉ khi `q` cao thì việc rải rộng mới đúng.
+      **Không chỉnh riêng lẻ từng tham số.**
+
+### 10.8 — [ ] Ensemble backbone dense (0 chi phí GPU)
+
+`data/extracted/features_dfn/` và `features_jina/` **đã precompute xong** và đang nằm không.
+
+- [ ] RRF giữa siglip + dfn (+ jina) cho KIS; đo từng tổ hợp bằng `run_eval.py`
+- [ ] Chỉ giữ tổ hợp nào thật sự hơn baseline 1 model trên bộ GT đã mở rộng ở #10.2
+- [ ] Lưu ý RAM: mỗi ma trận 177K × 1152 float32 ≈ 800 MB — nạp nhiều backbone cùng lúc cần đi qua
+      `model_registry` (#10.3) hoặc dùng memmap
+
+### 10.9 — [ ] Khử hubness (QB-Norm / Dual-Softmax)
+
+Trong không gian SigLIP tồn tại ảnh "hub" gần với **mọi** query và chiếm chỗ top-k của mọi truy vấn.
+Chuẩn hoá điểm theo một querybank dựng sẵn (từ caption có sẵn) thường được +2–5 R@1, **không cần train**.
+
+- [ ] Dựng querybank từ caption Vintern (mẫu ngẫu nhiên vài nghìn câu)
+- [ ] Cài QB-Norm và/hoặc Dual-Softmax ở `retrieve.py`, công tắc riêng
+- [ ] Đo trước–sau; hạng mục này thuần thực nghiệm, bỏ nếu không thấy hơn
+
+### Việc chưa xếp lịch (đã bàn, chưa chọn làm)
+
+- **Tăng dày keyframe offline cho toàn dataset** — encode lại ở mật độ dày hơn (mỗi 5–10 frame).
+  Giải quyết cùng vấn đề với #10.1 nhưng ở tầng index, tốn ~40 phút GPU/backbone cộng chi phí decode
+  toàn bộ video. Đã chọn đi hướng tinh chỉnh runtime (#10.1) trước vì rẻ hơn nhiều lần.
+- **Ước lượng độ dài `[s,e]` thật của KIS** — ẩn số quan trọng nhất còn lại; luật BTC không định
+  nghĩa. Nếu moi được từ kết quả vòng 1 hoặc phản hồi BTC thì chốt được ngay cả #10.1 lẫn #10.7.
+
 ---
 
 ## Blockers / Risks

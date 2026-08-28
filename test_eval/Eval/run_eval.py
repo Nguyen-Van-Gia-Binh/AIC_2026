@@ -14,9 +14,16 @@ Phạm vi (đã chốt trong PLAN.md Phase 6/7 — xem đó để biết đầy 
     0), rồi R@k = max trên k ứng viên đầu. KHÔNG có LLM crosscheck (không phụ thuộc backbone).
   - Không đụng scripts/index.py / scripts/agent/tools/retrieve.py — xem test_eval/Eval/multi_index.py.
 
+Ngoài bake-off backbone, file này còn là **Tầng 1 của Regression Guard** (BẢN ĐẶC TẢ §6): các bước
+thuật toán mới (RRF hybrid, Multi-Aspect Expansion, Temporal NMS, DP tăng nghiêm ngặt, Multi-Event
+Coverage Pooling) đều có cờ bật/tắt riêng, mặc định TẮT — chạy 2 lần (tắt rồi bật) để đo đóng góp
+thật của từng bước mà không tốn 1 đồng LLM nào.
+
 Usage:
     .venv\\Scripts\\python.exe test_eval\\Eval\\run_eval.py
     .venv\\Scripts\\python.exe test_eval\\Eval\\run_eval.py --models clip_vitb32,vitl14
+    .venv\\Scripts\\python.exe test_eval\\Eval\\run_eval.py --models siglip --all-features
+    .venv\\Scripts\\python.exe test_eval\\Eval\\run_eval.py --models siglip --hybrid --nms
     .venv\\Scripts\\python.exe test_eval\\Eval\\run_eval.py --eval-set test_eval\\Eval\\eval_ground_truth.json --out docs\\eval_baseline_comparison.md
 """
 
@@ -44,6 +51,16 @@ if str(_THIS_DIR) not in sys.path:
 from multi_index import MODEL_REGISTRY, retrieve, get_index, get_encoder  # noqa: E402
 
 _REPO_ROOT = _THIS_DIR.parent.parent  # test_eval/Eval/ -> repo root
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
+# 3 module THUẦN (không nạp index/model, không gọi LLM) dùng chung với đường production — nhập ở đây
+# để KHÔNG chép lại thuật toán RRF/NMS/expansion thành phiên bản thứ 2 dễ lệch. Quy ước "eval không
+# import scripts/index.py + scripts/agent/tools/retrieve.py" (xem docstring multi_index.py) vẫn giữ
+# nguyên: multi_index.py vẫn tự nạp index/encoder riêng.
+from scripts.agent.tools.fusion import reciprocal_rank_fusion, W_DENSE, W_SPARSE  # noqa: E402
+from scripts.agent.tools.temporal_nms import temporal_nms, MIN_TIME_GAP  # noqa: E402
+from scripts.agent.tools.query_expand import expand_aspects  # noqa: E402
 _DEFAULT_EVAL_SET = _THIS_DIR / "eval_ground_truth.json"
 _DEFAULT_OUT = _REPO_ROOT / "docs" / "eval_baseline_comparison.md"
 
@@ -102,9 +119,109 @@ def _r_at_k_from_rank(rank: Optional[int]) -> dict[int, float]:
     return {k: (1.0 if rank is not None and rank <= k else 0.0) for k in K_VALUES}
 
 
-def score_kis_like(tag: str, text: str, gt_video_id: str, gt_start: int, gt_end: int) -> dict[int, float]:
+# ─── Tuỳ chọn thuật toán mới (BẢN ĐẶC TẢ §2/§3) — mặc định TẮT ────────────────────────────────
+# Tắt hết = kết quả y hệt các lần chạy trước (số trong docs/eval_baseline_comparison.md vẫn so sánh
+# được). Bật từng cờ để đo riêng đóng góp của từng bước, hoặc bật hết để xem trần của cả §2+§3.
+class EvalOptions:
+    def __init__(self, hybrid=False, expand=False, nms=False, strict_dp=False, coverage_pool=False,
+                 nms_min_gap=MIN_TIME_GAP, nms_max_per_video=3):
+        self.hybrid = hybrid
+        self.expand = expand
+        self.nms = nms
+        self.strict_dp = strict_dp
+        self.coverage_pool = coverage_pool
+        # 2 tham số của NMS tách riêng để đo được: khử trùng lặp thời gian (min_gap) và trần số dòng
+        # trên 1 video (max_per_video) là 2 tác động KHÁC NHAU, gộp lại thì không biết cái nào ăn/mất
+        # điểm. max_per_video=None (CLI: 0) = không giới hạn số dòng/video.
+        self.nms_min_gap = nms_min_gap
+        self.nms_max_per_video = nms_max_per_video
+
+    def active(self) -> list[str]:
+        return [name for name in ("hybrid", "expand", "nms", "strict_dp", "coverage_pool")
+                if getattr(self, name)]
+
+
+_POOL_SIZE = 500  # ~ rerank.RETRIEVAL_POOL_SIZE — pool thô trước khi cắt về MAX_K
+_KEY_INDEX_CACHE: dict[str, dict] = {}
+
+
+def _key_index(tag: str) -> dict:
+    """{(video_id, n): vị trí dòng} cho meta của model `tag` — để map kết quả BM25 về dòng dense."""
+    if tag not in _KEY_INDEX_CACHE:
+        _, meta = get_index(tag)
+        _KEY_INDEX_CACHE[tag] = {
+            (vid, int(n)): i for i, (vid, n) in enumerate(zip(meta["video_id"], meta["n"]))
+        }
+    return _KEY_INDEX_CACHE[tag]
+
+
+def _dense_scores(tag: str, texts: list[str]) -> np.ndarray:
+    """Điểm cosine của TOÀN BỘ keyframe cho 1 truy vấn (đã gộp nhiều cách diễn đạt nếu có)."""
+    matrix, _ = get_index(tag)
+    encoder = get_encoder(tag)
+    vecs = np.asarray(encoder(texts), dtype=np.float32)
+    q_vec = vecs.mean(axis=0)
+    norm = float(np.linalg.norm(q_vec))
+    if norm > 0:
+        q_vec = q_vec / norm
+    return matrix @ q_vec
+
+
+def retrieve_candidates(tag: str, text: str, opts: EvalOptions, top_k: int = MAX_K) -> pd.DataFrame:
+    """Dựng danh sách ứng viên có xếp hạng theo đúng các bước đã bật trong `opts`.
+
+    opts tắt hết => tương đương multi_index.retrieve(tag, text, top_k) (đường cũ, giữ nguyên số cũ).
+    """
+    if not opts.hybrid and not opts.expand and not opts.nms:
+        return retrieve(tag, text, top_k=top_k)
+
+    _, meta = get_index(tag)
+    texts = expand_aspects(text) if opts.expand else [text]
+    scores = _dense_scores(tag, texts)
+    pool = min(_POOL_SIZE, len(meta))
+    dense_rows = [int(r) for r in np.argsort(-scores)[:pool]]
+
+    ordered_rows = dense_rows
+    if opts.hybrid:
+        from scripts.agent.tools.sparse_index import search_sparse
+        key_index = _key_index(tag)
+        sparse_rows: list[int] = []
+        for h in search_sparse(text, top_k=pool):
+            row = key_index.get((h["video_id"], int(h["n"])))
+            if row is not None:
+                sparse_rows.append(row)
+        if sparse_rows:
+            ordered_rows = [
+                row for row, _ in reciprocal_rank_fusion(
+                    [(dense_rows, W_DENSE), (sparse_rows, W_SPARSE)], top_k=pool
+                )
+            ]
+
+    if opts.nms:
+        records = [
+            {"row": row, "video_id": meta.iloc[row]["video_id"],
+             "pts_time": float(meta.iloc[row]["pts_time"]), "score": -rank}
+            for rank, row in enumerate(ordered_rows)
+        ]
+        # score = -rank để temporal_nms giữ đúng thứ tự hiện tại (điểm cao = hạng tốt), không cần
+        # biết thang điểm gốc là cosine hay RRF.
+        ordered_rows = [r["row"] for r in temporal_nms(
+            records, min_gap=opts.nms_min_gap, max_per_video=opts.nms_max_per_video,
+        )]
+
+    ordered_rows = ordered_rows[:top_k]
+    out = meta.iloc[ordered_rows].copy().reset_index(drop=True)
+    out["score"] = [float(scores[r]) for r in ordered_rows]
+    out["rank"] = np.arange(1, len(out) + 1)
+    return out
+
+
+def score_kis_like(
+    tag: str, text: str, gt_video_id: str, gt_start: int, gt_end: int,
+    opts: EvalOptions | None = None,
+) -> dict[int, float]:
     """Dùng chung cho KIS và QA (QA chỉ chấm phần retrieval — xem docstring module)."""
-    hits = retrieve(tag, text, top_k=MAX_K)
+    hits = retrieve_candidates(tag, text, opts or EvalOptions(), top_k=MAX_K)
     rank = _first_hit_rank(hits, gt_video_id, int(gt_start), int(gt_end))
     return _r_at_k_from_rank(rank)
 
@@ -116,7 +233,9 @@ _TRAKE_VIDEO_CANDIDATES = MAX_K      # 100 ứng viên video → R@100 có nghĩ
 _TRAKE_FRAMES_PER_EVENT = 20         # ~ top_k_frame: số keyframe/event đưa vào DP
 
 
-def _best_increasing_chain(event_cands: list[list[tuple[int, int, float]]]) -> Optional[list[int]]:
+def _best_increasing_chain(
+    event_cands: list[list[tuple[int, int, float]]], strict: bool = False
+) -> Optional[list[int]]:
     """Chọn 1 keyframe/event sao cho frame_idx KHÔNG GIẢM qua từng event và tổng score lớn nhất
     (quy hoạch động) — sao thuật toán từ pipeline_trake._find_best_increasing_chain, KHÔNG import.
 
@@ -134,8 +253,10 @@ def _best_increasing_chain(event_cands: list[list[tuple[int, int, float]]]) -> O
     for i in range(1, n):
         for j, (fidx, _, s) in enumerate(event_cands[i]):
             for k, (pfidx, _, _) in enumerate(event_cands[i - 1]):
-                if pfidx > fidx or dp[i - 1][k] == NEG:
+                if dp[i - 1][k] == NEG:
                     continue
+                if pfidx >= fidx if strict else pfidx > fidx:
+                    continue  # strict: tăng NGHIÊM NGẶT (§5.2); ngược lại: chỉ cấm lùi về trước
                 cand = dp[i - 1][k] + s
                 if cand > dp[i][j]:
                     dp[i][j] = cand
@@ -156,18 +277,45 @@ def _best_increasing_chain(event_cands: list[list[tuple[int, int, float]]]) -> O
     return chain_fid
 
 
-def score_trake(tag: str, gt_video_id: str, events: list[dict], global_text_en: str) -> dict[int, float]:
+def score_trake(
+    tag: str, gt_video_id: str, events: list[dict], global_text_en: str,
+    opts: EvalOptions | None = None,
+) -> dict[int, float]:
     """Proxy retrieval-only bám §2.1.3: dựng danh sách ứng viên (video + N frame) có xếp hạng, áp
     cổng video, R@k = max trên k ứng viên đầu. Xem docstring module."""
+    opts = opts or EvalOptions()
     matrix, meta = get_index(tag)
     encoder = get_encoder(tag)
 
-    # Giai đoạn 1: rank video theo mean score của global query trong pool.
-    pool = retrieve(tag, global_text_en, top_k=_TRAKE_POOL)
-    video_mean = pool.groupby("video_id")["score"].mean().sort_values(ascending=False)
-    cand_videos = list(video_mean.index[:_TRAKE_VIDEO_CANDIDATES])
-
     ev_vecs = np.asarray(encoder([ev["text_en"] for ev in events]), dtype=np.float32)  # (N, dim)
+
+    # Giai đoạn 1: rank video.
+    if opts.coverage_pool:
+        # Multi-Event Coverage Pooling (§5.1): Video_Score = Sim_global + Σ_i max_{f∈V} Sim(e_i, f),
+        # ưu tiên video PHỦ được nhiều mốc nhất — mirror pipeline_trake.run_trake().
+        pool = retrieve(tag, global_text_en, top_k=_TRAKE_POOL)
+        score_by_video: dict[str, float] = pool.groupby("video_id")["score"].max().to_dict()
+        count_by_video: dict[str, int] = {}
+        for j in range(len(events)):
+            ev_scores = matrix @ ev_vecs[j]
+            top_rows = np.argsort(-ev_scores)[:_TRAKE_POOL]
+            best_per_video: dict[str, float] = {}
+            for r in top_rows:
+                vid = meta["video_id"].iloc[int(r)]
+                s = float(ev_scores[int(r)])
+                if vid not in best_per_video or s > best_per_video[vid]:
+                    best_per_video[vid] = s
+            for vid, s in best_per_video.items():
+                score_by_video[vid] = score_by_video.get(vid, 0.0) + s
+                count_by_video[vid] = count_by_video.get(vid, 0) + 1
+        cand_videos = sorted(
+            score_by_video, key=lambda v: (count_by_video.get(v, 0), score_by_video[v]), reverse=True
+        )[:_TRAKE_VIDEO_CANDIDATES]
+    else:
+        pool = retrieve(tag, global_text_en, top_k=_TRAKE_POOL)
+        video_mean = pool.groupby("video_id")["score"].mean().sort_values(ascending=False)
+        cand_videos = list(video_mean.index[:_TRAKE_VIDEO_CANDIDATES])
+
     vid_col = meta["video_id"].to_numpy()
     fidx_col = meta["frame_idx"].to_numpy()
     fid_col = meta["frame_id"].to_numpy()
@@ -184,7 +332,7 @@ def score_trake(tag: str, gt_video_id: str, events: list[dict], global_text_en: 
             event_cands.append([
                 (int(fidx_col[rows[r]]), int(fid_col[rows[r]]), float(scores[r, j])) for r in order
             ])
-        chain = _best_increasing_chain(event_cands)
+        chain = _best_increasing_chain(event_cands, strict=opts.strict_dp)
         if chain is None:
             continue
         mean_s = getattr(_best_increasing_chain, "last_mean_score", 0.0)
@@ -205,14 +353,19 @@ def score_trake(tag: str, gt_video_id: str, events: list[dict], global_text_en: 
     return {k: (max(rscores[:k]) if rscores[:k] else 0.0) for k in K_VALUES}
 
 
-def run_for_model(tag: str, eval_set: list[dict]) -> dict[str, list[dict[int, float]]]:
+def run_for_model(
+    tag: str, eval_set: list[dict], opts: EvalOptions | None = None
+) -> dict[str, list[dict[int, float]]]:
+    opts = opts or EvalOptions()
     grouped: dict[str, list[dict[int, float]]] = {"ALL": [], "KIS": [], "QA": [], "TRAKE": []}
     for q in eval_set:
         qtype = q["type"]
         if qtype in ("KIS", "QA"):
-            scores = score_kis_like(tag, q["text_en"], q["gt_video_id"], q["gt_frame_start"], q["gt_frame_end"])
+            scores = score_kis_like(
+                tag, q["text_en"], q["gt_video_id"], q["gt_frame_start"], q["gt_frame_end"], opts
+            )
         else:  # TRAKE (đã validate ở trên)
-            scores = score_trake(tag, q["gt_video_id"], q["events"], q["text_en"])
+            scores = score_trake(tag, q["gt_video_id"], q["events"], q["text_en"], opts)
         grouped["ALL"].append(scores)
         grouped[qtype].append(scores)
     return grouped
@@ -228,7 +381,10 @@ def aggregate(grouped: dict[str, list[dict[int, float]]]) -> dict[str, dict[int,
     return out
 
 
-def format_markdown_table(results: dict[str, dict[str, dict[int, float]]], eval_set: list[dict]) -> str:
+def format_markdown_table(
+    results: dict[str, dict[str, dict[int, float]]], eval_set: list[dict],
+    opts: EvalOptions | None = None,
+) -> str:
     n_by_type = {"ALL": len(eval_set), "KIS": 0, "QA": 0, "TRAKE": 0}
     for q in eval_set:
         n_by_type[q["type"]] += 1
@@ -245,6 +401,11 @@ def format_markdown_table(results: dict[str, dict[str, dict[int, float]]], eval_
         "video + max-trên-ứng-viên; KHÔNG có LLM crosscheck.\n"
         "\n(Xem PLAN.md Phase 6/7 + docstring test_eval/Eval/run_eval.py để biết đầy đủ phạm vi/lý do.)\n",
     ]
+    active = opts.active() if opts else []
+    lines.append(
+        f"\n**Tuỳ chọn thuật toán đang bật:** `{', '.join(active)}`\n" if active
+        else "\n**Tuỳ chọn thuật toán đang bật:** không (đường cơ sở — dense-only, không expansion/NMS).\n"
+    )
     header_cols = [f"R@{k}" for k in K_VALUES] + ["**Final**"]
     for group in ("ALL", "KIS", "QA", "TRAKE"):
         if n_by_type[group] == 0:
@@ -266,7 +427,33 @@ def main() -> None:
     parser.add_argument("--models", type=str, default=",".join(MODEL_REGISTRY.keys()),
                          help="Danh sách tag cách nhau bởi dấu phẩy, ví dụ clip_vitb32,vitl14")
     parser.add_argument("--out", type=Path, default=_DEFAULT_OUT)
+    # Cờ thuật toán mới (BẢN ĐẶC TẢ §2/§3/§5) — mặc định TẮT để số cũ vẫn so sánh được.
+    parser.add_argument("--hybrid", action="store_true",
+                        help="KIS/QA: dung hợp Dense + BM25 bằng RRF (cần build sparse_index trước)")
+    parser.add_argument("--expand", action="store_true",
+                        help="KIS/QA: Multi-Aspect Prompt Expansion (template tất định)")
+    parser.add_argument("--nms", action="store_true",
+                        help="KIS/QA: Temporal NMS (Δt ≥ 3s, tối đa 3 đỉnh/video)")
+    parser.add_argument("--strict-dp", action="store_true",
+                        help="TRAKE: chuỗi frame phải TĂNG NGHIÊM NGẶT (§5.2)")
+    parser.add_argument("--coverage-pool", action="store_true",
+                        help="TRAKE: Multi-Event Coverage Pooling khi lọc video (§5.1)")
+    parser.add_argument("--nms-min-gap", type=float, default=MIN_TIME_GAP,
+                        help="Khoảng cách thời gian tối thiểu (giây) giữa 2 keyframe được giữ")
+    parser.add_argument("--nms-max-per-video", type=int, default=3,
+                        help="Trần số dòng trên 1 video khi bật --nms (0 = không giới hạn)")
+    parser.add_argument("--all-features", action="store_true", help="Bật tất cả cờ ở trên")
     args = parser.parse_args()
+
+    opts = EvalOptions(
+        hybrid=args.hybrid or args.all_features,
+        expand=args.expand or args.all_features,
+        nms=args.nms or args.all_features,
+        strict_dp=args.strict_dp or args.all_features,
+        coverage_pool=args.coverage_pool or args.all_features,
+        nms_min_gap=args.nms_min_gap,
+        nms_max_per_video=args.nms_max_per_video or None,
+    )
 
     eval_set = load_eval_set(args.eval_set)
     if not eval_set:
@@ -283,13 +470,15 @@ def main() -> None:
         if t not in MODEL_REGISTRY:
             raise SystemExit(f"[run_eval] Model tag lạ: '{t}' — có sẵn: {list(MODEL_REGISTRY.keys())}")
 
+    print(f"[run_eval] Tuỳ chọn thuật toán: {opts.active() or 'không (đường cơ sở)'}")
+
     results: dict[str, dict[str, dict[int, float]]] = {}
     for tag in tags:
         print(f"\n[run_eval] === Model: {tag} ===")
-        grouped = run_for_model(tag, eval_set)
+        grouped = run_for_model(tag, eval_set, opts)
         results[tag] = aggregate(grouped)
 
-    table = format_markdown_table(results, eval_set)
+    table = format_markdown_table(results, eval_set, opts)
     print("\n" + table)
 
     args.out.parent.mkdir(parents=True, exist_ok=True)

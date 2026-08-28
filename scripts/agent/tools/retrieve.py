@@ -237,6 +237,184 @@ def fast_retrieve_qa(query_text: str, top_k: int = 100) -> list[dict]:
             "jpg_path":  row["jpg_path"] if isinstance(row["jpg_path"], str) else None,
         })
     return results
+
+
+# ─── Hybrid Retrieval: Dense (SigLIP) + Sparse (BM25) dung hop bang RRF ──────
+# BAN DAC TA §2. Dense va Sparse chay doc lap tren CUNG tap keyframe, ket qua dung hop bang
+# Reciprocal Rank Fusion (chi dung THU HANG — xem scripts/agent/tools/fusion.py ve ly do khong cong
+# thang 2 thang diem). Sparse chua build cache -> tu dong chay dense-only, khong crash.
+
+# Chi muc (video_id, n) -> vi tri dong trong _META / _QA_META, dung de map ket qua BM25 (chi co
+# video_id + n) ve dong meta dense day du. Tinh lazy 1 lan/model.
+_KEY_INDEX: Optional[dict] = None
+_QA_KEY_INDEX: Optional[dict] = None
+
+# So ung vien BM25 dua vao dung hop RRF. CO Y nho hon nhieu so voi pool dense (500): BM25 o day chay
+# tren tap tu khoa RAT THO (ten object tu Faster R-CNN + caption, ~5.5K term, doc dai ~10 token) nen
+# chi dang tin o phan DINH danh sach — cang xuong sau cang nhieu frame chi trung 1-2 tu chung chung
+# ("person", "car"). Do that tren 18 cau KIS (test_eval, 2026-08-28): dua ca 500 ung vien BM25 vao
+# lam Final tut 0.667 -> 0.656; gioi han o dinh giu duoc phan dong gop that ma khong keo rac len.
+SPARSE_TOP_K = 50
+
+
+def _row_to_hit(meta: pd.DataFrame, idx: int, score: float) -> dict:
+    """Dung 1 hit dict chuan tu 1 dong meta — dinh dang giong het fast_retrieve()."""
+    row = meta.iloc[idx]
+    frame_idx = int(row["frame_idx"])
+    return {
+        "video_id":  row["video_id"],
+        "n":         int(row["n"]),
+        "frame_idx": frame_idx,
+        "frame_id":  frame_idx + 1,   # BTC dem frame tu 1 — quy doi CHI o day (xem CLAUDE.md)
+        "pts_time":  float(row["pts_time"]),
+        "score":     float(score),
+        "jpg_path":  row["jpg_path"] if isinstance(row["jpg_path"], str) else None,
+    }
+
+
+def _get_key_index(qa: bool = False) -> dict:
+    """{(video_id, n): vi tri dong} cho model tuong ung — build 1 lan/process."""
+    global _KEY_INDEX, _QA_KEY_INDEX
+    if qa:
+        _ensure_qa_loaded()
+        if _QA_KEY_INDEX is None:
+            _QA_KEY_INDEX = {
+                (vid, int(n)): i
+                for i, (vid, n) in enumerate(zip(_QA_META["video_id"], _QA_META["n"]))
+            }
+        return _QA_KEY_INDEX
+    _ensure_loaded()
+    if _KEY_INDEX is None:
+        _KEY_INDEX = {
+            (vid, int(n)): i for i, (vid, n) in enumerate(zip(_META["video_id"], _META["n"]))
+        }
+    return _KEY_INDEX
+
+
+def _encode_mean(texts: list[str], qa: bool = False) -> np.ndarray:
+    """Encode nhieu cach dien dat cua CUNG 1 truy van roi lay trung binh + chuan hoa L2 —
+    q_final = Normalize((q_1 + ... + q_m) / m), BAN DAC TA §3.1 (Multi-Aspect Prompt Expansion).
+
+    Chuan hoa lai la BAT BUOC: ma tran embedding da chuan hoa san (xem index.py), diem so o day la
+    dot product = cosine CHI KHI vector truy van cung co norm 1 — trung binh 2 vector don vi khong
+    con norm 1.
+    """
+    encode_fn = _QA_ENCODE_FN if qa else _ENCODE_FN
+    vecs = [encode_fn(t) for t in texts if t and t.strip()]
+    if not vecs:
+        raise ValueError("[retrieve] _encode_mean: khong co text nao hop le de encode")
+    q_vec = np.mean(np.stack(vecs, axis=0), axis=0).astype(np.float32)
+    norm = float(np.linalg.norm(q_vec))
+    return q_vec / norm if norm > 0 else q_vec
+
+
+def fast_retrieve_multi(texts: list[str], top_k: int = 100, qa: bool = False) -> list[dict]:
+    """Nhu fast_retrieve() nhung nhan NHIEU cach dien dat cua cung 1 truy van (Multi-Aspect Prompt
+    Expansion — xem scripts/agent/tools/query_expand.py). texts do dai 1 => y het fast_retrieve()."""
+    if qa:
+        _ensure_qa_loaded()
+        matrix, meta = _QA_MATRIX, _QA_META
+    else:
+        _ensure_loaded()
+        matrix, meta = _MATRIX, _META
+    top_k = min(top_k, 1000)
+    scores = matrix @ _encode_mean(texts, qa=qa)
+    top_idx = np.argsort(-scores)[:top_k]
+    return [_row_to_hit(meta, int(i), float(scores[i])) for i in top_idx]
+
+
+def hybrid_retrieve(
+    query_text: str,
+    top_k: int = 500,
+    aspects: list[str] | None = None,
+    use_sparse: bool = True,
+    qa: bool = False,
+    sparse_top_k: int | None = None,
+) -> list[dict]:
+    """
+    Truy xuat lai ghep Dense + Sparse, tra ve pool ung vien da dung hop bang RRF (BAN DAC TA §2).
+
+    Args:
+        query_text: Query (tieng Anh cho ket qua tot nhat). Dung cho ca BM25 va (neu khong truyen
+                    aspects) cho nhanh dense.
+        top_k:      Kich thuoc pool tra ve (mac dinh 500 = RETRIEVAL_POOL_SIZE).
+        aspects:    Cac cach dien dat cua cung query cho nhanh dense (query_expand.expand_aspects()).
+                    None => chi dung query_text.
+        use_sparse: False => chay dense-only (dung de do truoc/sau khi bat hybrid).
+        sparse_top_k: So ung vien BM25 dua vao dung hop (None = SPARSE_TOP_K). Nho hon top_k co chu
+                    dich — xem SPARSE_TOP_K.
+        qa:         True => dung khong gian embedding siglip2 cua Q&A thay vi siglip cua KIS/TRAKE.
+
+    Returns:
+        list[dict] cung dinh dang fast_retrieve(), SAP XEP GIAM DAN THEO 'rrf_score', trong do:
+          score      — cosine similarity dense GOC (giu nguyen thang do cu cho cac buoc sau)
+          rrf_score  — diem dung hop RRF (thu tu list bam theo diem nay)
+          rank_dense / rank_sparse — thu hang trong tung he thong (None neu he thong do khong tra ve)
+    """
+    from scripts.agent.tools.fusion import reciprocal_rank_fusion, RRF_K, W_DENSE, W_SPARSE
+
+    if qa:
+        _ensure_qa_loaded()
+        matrix, meta = _QA_MATRIX, _QA_META
+    else:
+        _ensure_loaded()
+        matrix, meta = _MATRIX, _META
+
+    texts = aspects if aspects else [query_text]
+    dense_scores = matrix @ _encode_mean(texts, qa=qa)
+    dense_rows = np.argsort(-dense_scores)[: min(top_k, len(dense_scores))]
+
+    key_of_row = {}
+    dense_keys = []
+    for r in dense_rows:
+        row = meta.iloc[int(r)]
+        key = (row["video_id"], int(row["n"]))
+        key_of_row[key] = int(r)
+        dense_keys.append(key)
+
+    sparse_keys: list = []
+    if use_sparse:
+        from scripts.agent.tools.sparse_index import search_sparse
+        key_index = _get_key_index(qa=qa)
+        n_sparse = SPARSE_TOP_K if sparse_top_k is None else sparse_top_k
+        for h in search_sparse(query_text, top_k=n_sparse):
+            key = (h["video_id"], int(h["n"]))
+            row = key_index.get(key)
+            if row is None:
+                continue  # keyframe co objects/caption nhung khong co trong index dense -> bo qua
+            key_of_row.setdefault(key, row)
+            sparse_keys.append(key)
+
+    if not sparse_keys:
+        # Khong co tin hieu sparse (chua build cache / query khong co token khop) -> dense-only,
+        # giu nguyen thu tu cosine de khong khac gi fast_retrieve().
+        hits = [_row_to_hit(meta, key_of_row[k], float(dense_scores[key_of_row[k]])) for k in dense_keys]
+        for rank, h in enumerate(hits, start=1):
+            h["rrf_score"] = W_DENSE / (RRF_K + rank)
+            h["rank_dense"], h["rank_sparse"] = rank, None
+        return hits
+
+    dense_rank = {k: i for i, k in enumerate(dense_keys, start=1)}
+    sparse_rank = {k: i for i, k in enumerate(sparse_keys, start=1)}
+    fused = reciprocal_rank_fusion(
+        [(dense_keys, W_DENSE), (sparse_keys, W_SPARSE)], top_k=top_k
+    )
+
+    hits = []
+    for key, rrf in fused:
+        row = key_of_row[key]
+        hit = _row_to_hit(meta, row, float(dense_scores[row]))
+        hit["rrf_score"] = float(rrf)
+        hit["rank_dense"] = dense_rank.get(key)
+        hit["rank_sparse"] = sparse_rank.get(key)
+        hits.append(hit)
+
+    n_sparse_only = sum(1 for h in hits if h["rank_dense"] is None)
+    print(f"[retrieve] hybrid: {len(dense_keys)} dense + {len(sparse_keys)} sparse -> {len(hits)} "
+          f"ung vien sau RRF ({n_sparse_only} chi den tu BM25)")
+    return hits
+
+
 def get_neighbor_frames(video_id: str, frame_idx: int, window: int = 5) -> list[dict]:
     """Tra ve toi da 2*window+1 keyframe LIEN TIEP (theo frame_idx) trong CUNG 1 video, xung quanh
     frame_idx duoc chi dinh — dung cho man chi tiet keyframe (dai frame lan can, mockup man 1c).

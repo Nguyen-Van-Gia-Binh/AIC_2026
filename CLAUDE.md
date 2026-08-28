@@ -41,6 +41,7 @@ Daily commands — always run through the project venv's Python directly (no act
 .venv\Scripts\python.exe -m uvicorn scripts.api.main:app --reload --port 8000   # new backend API (Phase 7), http://127.0.0.1:8000/api/health
 cd frontend; npm run dev                                                        # new React/Vite frontend (Phase 7), http://localhost:5173 (proxy /api → :8000)
 .venv\Scripts\python.exe scripts\submit\validate_submission.py    # validate the newest file in submissions/
+.venv\Scripts\python.exe scripts\agent\tools\sparse_index.py --build       # build BM25 cache 1 lần (~3.5 phút) — bắt buộc trước khi hybrid retrieval có tác dụng
 .venv\Scripts\python.exe test_eval\Eval\run_eval.py               # compare embedding backbones (retrieval-only, no LLM) → docs/eval_baseline_comparison.md
 .venv\Scripts\python.exe test_eval\Test\score_pipelines.py --types kis  # true BTC Final Score through the production pipelines (needs OPENROUTER_API_KEY)
 .venv\Scripts\python.exe scripts\api\_smoke_test.py               # backend API end-to-end smoke test (KIS/QA/TRAKE/queue/export)
@@ -60,10 +61,16 @@ directly with the venv Python, not via a test framework. There is no linter/form
 - `scripts/agent/` — pipelines and LLM/tool code:
   - `config.py` — the one place that calls the LLM (`call_llm()`, via LiteLLM → Gemini).
   - `pipeline_kis.py` / `pipeline_qa.py` / `pipeline_trake.py` — one pipeline per query type.
-  - `tools/` — `retrieve.py` (CLIP search — **2 singleton**: `fast_retrieve`/`fast_retrieve_for_video`
-    dùng **siglip** cho KIS/TRAKE, `fast_retrieve_qa` dùng **siglip2** cho Q&A), `rewrite.py`
-    (VN→EN query rewrite), `ocr_lookup.py` (offline Objects JSON reader), `answer_qa.py`
-    (Q&A answer + cross-check).
+  - `tools/` — `retrieve.py` (dense search — **2 singleton**: `fast_retrieve`/`fast_retrieve_for_video`
+    dùng **siglip** cho KIS/TRAKE, `fast_retrieve_qa` dùng **siglip2** cho Q&A; `hybrid_retrieve()`
+    ghép dense + BM25 qua RRF), `sparse_index.py` (BM25 offline trên Objects JSON + caption — phải
+    build cache 1 lần, xem Quick Start), `fusion.py` (RRF thuần), `temporal_nms.py` (khử trùng lặp
+    thời gian, thuần), `query_expand.py` (Multi-Aspect Prompt Expansion, template tất định),
+    `rerank.py` (risk-aware ranking + Temporal NMS), `rewrite.py` (VN→EN query rewrite),
+    `ocr_lookup.py` (offline Objects JSON reader), `answer_qa.py` (Q&A answer + canonical extractor
+    + cross-check). `fusion.py`/`temporal_nms.py`/`query_expand.py` là module THUẦN (không nạp
+    index/model, không gọi LLM) — cố ý tách riêng để `test_eval/Eval/run_eval.py` dùng lại đúng
+    thuật toán của production mà không phải chép thành phiên bản thứ 2 dễ lệch.
 - `scripts/submit/` — `build_submission.py` (CSV/ZIP writer), `validate_submission.py` (format checker).
   This is the only place that should serialize a submission file.
 - `test_eval/` — everything for testing the system and scoring/comparing quality by the BTC formula
@@ -71,13 +78,17 @@ directly with the venv Python, not via a test framework. There is no linter/form
   - `test_eval/Eval/` — Phase 6 offline backbone bake-off: `multi_index.py` (index loader + per-model
     text encoders, self-contained — deliberately does NOT import `index.py`/`retrieve.py`),
     `run_eval.py` (compares `clip_vitb32`/`vitl14`/`siglip`/`dfn`/... by R@k, reads
-    `eval_ground_truth.json` here, writes `docs/eval_baseline_comparison.md`), `lookup_frame.py` +
+    `eval_ground_truth.json` here, writes `docs/eval_baseline_comparison.md`; cờ `--hybrid`/
+    `--expand`/`--nms`/`--strict-dp`/`--coverage-pool`/`--all-features` bật từng bước thuật toán mới
+    để đo trước-sau, mặc định TẮT nên số cũ vẫn so sánh được — **Tầng 1 của Regression Guard**), `lookup_frame.py` +
     `widen_gt_windows.py` (ground-truth labeling helpers — see `EVAL_GUIDE.md`),
     `eval_ground_truth.json` (hand-labeled eval set). Retrieval-only, no LLM, deterministic; never
     touches the KIS/QA/TRAKE production path.
   - `test_eval/Test/` — harnesses that DO run the production path (`scripts/agent/*`), need an API
     key, results may vary between runs: `test_phase{3,4,5,6}_*.py` (before/after benchmarks per
-    phase), `score_pipelines.py` (true BTC Final Score end-to-end, incl. Q&A answer match),
+    phase), `score_pipelines.py` (true BTC Final Score end-to-end, incl. Q&A answer match; **Tầng 2 của
+    Regression Guard** — `--save-baseline` chốt mốc vào `test_eval/Test/e2e_baseline.json`, lần chạy
+    sau tự so và thoát code 1 nếu Final tụt quá 0.01),
     `test_smoke_{tools,pipelines}.py` (setup sanity checks).
   - Root of `test_eval/` also holds shared query data: `sample_queries.json`,
     `sotuyen1_bo_de_thi.csv`, `thunghiem_bo_de_thi.csv` (BTC query packages).
