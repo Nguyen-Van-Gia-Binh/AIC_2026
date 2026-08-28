@@ -15,6 +15,7 @@ Usage:
 """
 from __future__ import annotations
 
+import json
 import sys
 import re
 from pathlib import Path
@@ -51,12 +52,12 @@ Detected objects in candidate frames:
 Answer (concise, in the same language as the question):"""
 
 ANSWER_FROM_IMAGES_PROMPT = """\
-You are analyzing up to 3 candidate video keyframes retrieved for the same scene to answer a question.
+You are analyzing up to 10 candidate video keyframes retrieved for the same scene to answer a question.
 They may show the same moment at slightly different times — one may be clearer than the others.
 
 Question: {question}
-{ocr_hint}
-{transcript_hint}
+Candidate evidence from OCR, captions, ASR, and object detection:
+{evidence_bundle}
 
 Look at the image(s) carefully and answer concisely:
 - If the question asks for a NUMBER, COUNT, or TEXT visible on a display/gauge/sign/banner/scoreboard/
@@ -68,6 +69,31 @@ Look at the image(s) carefully and answer concisely:
 - Keep the answer SHORT (1-5 words if possible) and factual, based only on what you can see.
 
 Answer:"""
+
+VISUAL_COUNT_PROMPT = """\
+You are answering a visual counting question about a video frame.
+
+Question: {question}
+Candidate evidence from OCR, captions, ASR, and object detection:
+{evidence_bundle}
+
+Count only the requested visual markers or objects inside the main map/image area.
+Ignore the entire legend, key, scale, labels, subtitles, and graphics outside the main map.
+If the question says not to count the legend, do not count any symbol shown in the legend.
+Return only the final integer count. Do not describe the scale, explain your reasoning, or quote text.
+
+Answer:"""
+
+VISUAL_COUNT_REPAIR_PROMPT = """\
+Extract the answer to this visual counting question from the response below.
+Return only one integer: the number of requested markers inside the main map/image area.
+Ignore the legend and ignore any scale ranges such as 4.0-4.5.
+Do not return an explanation.
+
+Question: {question}
+Previous response: {response}
+
+Integer:"""
 
 OCR_HINT_TEMPLATE = """\
 Automated OCR hint (from a text-reading model on the candidate frame(s) — may contain errors; treat \
@@ -116,6 +142,97 @@ Long answer: {answer}
 Short answer:"""
 
 MAX_ANSWER_CHARS = 100
+QA_EVIDENCE_TOP_N = 10
+
+_VISUAL_COUNT_HINTS = re.compile(
+    r"(bao nhiêu|số lượng|đếm|how many|number of|count)",
+    re.IGNORECASE,
+)
+_STANDALONE_INTEGER = re.compile(r"(?<![\d.,])\d+(?![\d.,])")
+_CAPTION_JSONL_DIR = _ROOT / "data" / "extracted" / "caption_vintern1b"
+_CAPTION_CACHE: dict[str, dict[int, str] | None] = {}
+
+
+def is_visual_count_question(question: str) -> bool:
+    """Nhận biết câu hỏi yêu cầu đếm đối tượng hoặc ký hiệu trong ảnh."""
+    return bool(question and _VISUAL_COUNT_HINTS.search(question))
+
+
+def extract_visual_count(response: str) -> str | None:
+    """Chỉ nhận một số nguyên độc lập, tránh coi khoảng số trên chú giải là đáp án."""
+    matches = _STANDALONE_INTEGER.findall(response or "")
+    return matches[0] if len(matches) == 1 else None
+
+
+def _trace_evidence(stage: str, candidates: list[dict], objects: list[str] | None = None,
+                    ocr_hint: str = "", transcript: str = "") -> None:
+    """In ra cac bang chung va nguon du lieu da duoc dung de tra loi."""
+    candidate_ids = [
+        f"{hit.get('video_id', '?')}/n={hit.get('n', '?')}/frame={hit.get('frame_id', '?')}"
+        for hit in candidates
+    ]
+    print(f"[qa] Evidence ({stage}): candidates={candidate_ids}")
+    print(f"[qa] Evidence ({stage}): objects={objects or 'not used'}")
+    print(f"[qa] Evidence ({stage}): ocr={ocr_hint or 'not used'}")
+    print(f"[qa] Evidence ({stage}): asr={transcript or 'not used'}")
+    print(f"[qa] Evidence ({stage}): caption: not used")
+
+
+def _load_captions(video_id: str) -> dict[int, str] | None:
+    """Đọc caption Vintern theo video và cache trong tiến trình."""
+    if video_id in _CAPTION_CACHE:
+        return _CAPTION_CACHE[video_id]
+    path = _CAPTION_JSONL_DIR / f"{video_id}.jsonl"
+    if not path.exists():
+        _CAPTION_CACHE[video_id] = None
+        return None
+    captions: dict[int, str] = {}
+    try:
+        with path.open(encoding="utf-8") as stream:
+            for line in stream:
+                try:
+                    record = json.loads(line)
+                    captions[int(record["n"])] = str(record.get("caption", "")).strip()
+                except (json.JSONDecodeError, KeyError, TypeError, ValueError):
+                    continue
+    except OSError:
+        _CAPTION_CACHE[video_id] = None
+        return None
+    _CAPTION_CACHE[video_id] = captions
+    return captions
+
+
+def _build_evidence_bundle(candidates: list[dict]) -> tuple[str, list[str]]:
+    """Gom moi bang chung cua top candidate va danh sach anh gui cho vision."""
+    ocr_results = read_text_from_hits(candidates, top_n=len(candidates))
+    image_paths: list[str] = []
+    blocks: list[str] = []
+    for index, hit in enumerate(candidates, start=1):
+        video_id = hit.get("video_id", "")
+        frame_n = hit.get("n")
+        image_path = hit.get("jpg_path")
+        if image_path and Path(image_path).exists():
+            image_paths.append(image_path)
+        objects = get_objects(video_id, int(frame_n)) if video_id and frame_n is not None else []
+        transcript = get_transcript(video_id, float(hit["pts_time"])) if video_id and hit.get("pts_time") is not None else ""
+        ocr_lines = ocr_results.get(index - 1, [])
+        captions = _load_captions(video_id) if video_id else None
+        caption = captions.get(int(frame_n), "") if captions is not None and frame_n is not None else ""
+        blocks.append(
+            f"Candidate {index}: video={video_id}, frame_id={hit.get('frame_id')}, "
+            f"n={frame_n}, retrieval_score={hit.get('score')}\n"
+            f"  Objects: {', '.join(objects) or 'none'}\n"
+            f"  OCR: {' | '.join(ocr_lines) or 'none'}\n"
+            f"  Vintern caption: {caption or 'none'}\n"
+            f"  ASR near frame: {transcript or 'none'}"
+        )
+    return "\n\n".join(blocks), image_paths
+
+
+def _trace_prompt(stage: str, prompt: str) -> None:
+    """In ra nguyen prompt da gui qua call_llm()."""
+    print(f"[qa] Prompt ({stage}):")
+    print(prompt)
 
 # Answer dai hon nguong nay (theo so tu) moi goi LLM rut gon — answer ngan san thi chi can lam sach
 # bang rule, khong ton them 1 luot goi API.
@@ -285,6 +402,7 @@ def answer_from_hits(
 
     candidates = hits[:top_n]
     skip_objects_tier = _needs_text_reading(question)
+    visual_count = is_visual_count_question(question)
 
     # --- Tang 1: Objects JSON (bo qua neu cau hoi can doc so/chu — xem _needs_text_reading) ---
     if not skip_objects_tier:
@@ -313,7 +431,10 @@ def answer_from_hits(
                 objects_text=obj_text,
                 transcript_hint=transcript_hint1,
             )
+            _trace_evidence("objects", candidates, unique_objects[:30], transcript=transcript1)
+            _trace_prompt("objects", prompt1)
             ans1 = call_llm(prompt1, model="text", temperature=0.1, max_tokens=80)
+            print(f"[qa] LLM response (objects): {ans1!r}")
 
             if "CANNOT_ANSWER_FROM_OBJECTS" not in ans1 and not is_non_answer(ans1):
                 # Cross-check
@@ -327,11 +448,11 @@ def answer_from_hits(
                 }
 
     # --- Tang 2: Vision (chi khi co anh) ---
-    # Gom toi da 3 anh candidate dau tien (thay vi chi anh top-1) de model doi chieu giua cac frame —
-    # frame chua so/chu can doc co the khong phai frame co score CLIP cao nhat.
-    vision_hits = [h for h in candidates if h.get("jpg_path") and Path(h["jpg_path"]).exists()][:3]
+    # --- Tang 2: Vision voi evidence bundle ---
+    # Gui top-10 candidate va moi nguon bang chung de LLM tu danh gia muc do lien quan.
+    vision_hits = [h for h in candidates if h.get("jpg_path") and Path(h["jpg_path"]).exists()][:QA_EVIDENCE_TOP_N]
     if vision_hits:
-        image_paths = [h["jpg_path"] for h in vision_hits]
+        evidence_bundle, image_paths = _build_evidence_bundle(vision_hits)
 
         # OCR that (Phase 5) — chi chay khi cau hoi thuc su can doc chu/so (dieu kien tai su dung tu
         # skip_objects_tier o tren), chi lam goi y phu cho Vision, khong thay the no.
@@ -353,13 +474,20 @@ def answer_from_hits(
                     "method":     "ocr_direct",
                 }
 
-        top_vid2, top_pts2 = vision_hits[0].get("video_id", ""), vision_hits[0].get("pts_time")
-        transcript2 = get_transcript(top_vid2, top_pts2) if top_vid2 and top_pts2 is not None else ""
-        transcript_hint2 = TRANSCRIPT_HINT_TEMPLATE.format(transcript=transcript2) if transcript2 else ""
+        if visual_count:
+            prompt2 = VISUAL_COUNT_PROMPT.format(
+                question=question, evidence_bundle=evidence_bundle,
+            )
+        else:
+            top_vid2, top_pts2 = vision_hits[0].get("video_id", ""), vision_hits[0].get("pts_time")
+            transcript2 = get_transcript(top_vid2, top_pts2) if top_vid2 and top_pts2 is not None else ""
+            transcript_hint2 = TRANSCRIPT_HINT_TEMPLATE.format(transcript=transcript2) if transcript2 else ""
+            prompt2 = ANSWER_FROM_IMAGES_PROMPT.format(
+                question=question, evidence_bundle=evidence_bundle,
+            )
+        _trace_evidence("vision", vision_hits, ocr_hint=ocr_hint or evidence_bundle)
+        _trace_prompt("vision", prompt2)
 
-        prompt2 = ANSWER_FROM_IMAGES_PROMPT.format(
-            question=question, ocr_hint=ocr_hint, transcript_hint=transcript_hint2,
-        )
         ans2 = call_llm(
             prompt2,
             image_paths=image_paths,
@@ -367,21 +495,42 @@ def answer_from_hits(
             temperature=0.1,
             max_tokens=80,
         )
+        print(f"[qa] LLM response (vision): {ans2!r}")
+        if visual_count:
+            visual_count_answer = extract_visual_count(ans2)
+            if visual_count_answer is None:
+                repair_prompt = VISUAL_COUNT_REPAIR_PROMPT.format(
+                    question=question, response=ans2,
+                )
+                repaired = call_llm(
+                    repair_prompt, model="text", temperature=0.0, max_tokens=10,
+                )
+                _trace_prompt("visual-count-repair", repair_prompt)
+                print(f"[qa] LLM response (visual-count-repair): {repaired!r}")
+                visual_count_answer = extract_visual_count(repaired)
+            if visual_count_answer is None:
+                visual_count_answer = "N/A"
+        else:
+            visual_count_answer = _normalize_answer(ans2)
         # Cross-check voi objects gom tu tat ca anh da gui cho vision
         combined_objs = []
         for h in vision_hits:
             hit_n, hit_vid = h.get("n"), h.get("video_id", "")
             if hit_n:
                 combined_objs.extend(get_objects(hit_vid, int(hit_n)))
-        crosscheck = _crosscheck_answer(question, ans2, list(dict.fromkeys(combined_objs)), transcript2)
-        conf = 0.85 if crosscheck else 0.6
-        if is_non_answer(ans2):
+        crosscheck = False if visual_count else _crosscheck_answer(
+            question, ans2, list(dict.fromkeys(combined_objs)),
+            transcript2 if not visual_count else "",
+        )
+        conf = 0.7 if visual_count else (0.85 if crosscheck else 0.6)
+        if not visual_count and is_non_answer(ans2):
             # Cong chong ao giac: VLM tu noi khong doc/nhin duoc -> KHONG nang len thanh dap an,
             # ha confidence de pipeline_qa thu vong 2 (rewrite + retrieve lai) thay vi nop chuoi nay.
             print(f"[answer_qa] Vision tra loi khong xac dinh ({ans2!r}) -> ha confidence")
             conf = min(conf, 0.3)
         return {
-            "answer":     canonicalize_answer(ans2, question),
+            "answer":     visual_count_answer if visual_count else canonicalize_answer(ans2, question),
+
             "best_hit":   vision_hits[0],
             "confidence": conf,
             "method":     "vision",
