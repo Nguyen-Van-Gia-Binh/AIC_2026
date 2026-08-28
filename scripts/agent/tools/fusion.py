@@ -57,6 +57,42 @@ def reciprocal_rank_fusion(
     return fused[:top_k] if top_k else fused
 
 
+def rrf_fuse_hits(
+    model_hits: list, top_k: int = 500, rrf_k: int = 60
+) -> list:
+    """Gop cac hit (dict) cung frame theo hang, khong cong truc tiep diem model.
+
+    Khac voi reciprocal_rank_fusion() (lam viec tren key hashable + trong so), ham nay nhan truc tiep
+    list[list[dict]] tu nhieu model va tra ve list[dict] da gop — tien cho fast_retrieve_multi_model()
+    trong retrieve.py.
+
+    Args:
+        model_hits: list cac danh sach hit (moi phan tu la list[dict] tu 1 model, da sap xep giam dan
+                    theo diem). Moi hit dict phai co 'video_id' va 'n'.
+        top_k:      So ung vien tra ve toi da.
+        rrf_k:      Hang so lam min RRF (mac dinh 60).
+
+    Returns:
+        list[dict] sap xep giam dan theo diem RRF tong hop. Truong 'score' trong dict duoc ghi de
+        bang diem RRF (khong phai cosine goc). Truong 'rrf_ranks' chua danh sach hang trong tung model.
+    """
+    if top_k <= 0 or rrf_k < 0:
+        return []
+
+    fused: dict = {}
+    for hits in model_hits:
+        for rank, hit in enumerate(hits, start=1):
+            key = (str(hit["video_id"]), int(hit["n"]))
+            if key not in fused:
+                fused[key] = dict(hit)
+                fused[key]["score"] = 0.0
+                fused[key]["rrf_ranks"] = []
+            fused[key]["score"] += 1.0 / (rrf_k + rank)
+            fused[key]["rrf_ranks"].append(rank)
+
+    return sorted(fused.values(), key=lambda hit: -hit["score"])[:top_k]
+
+
 # --- CLI self-test (repo khong dung pytest — xem CLAUDE.md) -------------------
 if __name__ == "__main__":
     # Test 1: key duoc CA HAI he thong xep cao phai thang key chi 1 he thong xep cao nhat.
