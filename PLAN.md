@@ -81,7 +81,7 @@ Claude Design (plan: `docs/superpowers/plans/2026-08-27-phase1-fastapi-react-fro
   (xem plan link ở trên). Backend bridge sang `run_kis/run_qa/run_trake` + `build_submission.py`,
   giữ 2 luật single-call-site (LLM chỉ ở `config.py:call_llm()`, ghi CSV/ZIP chỉ ở
   `build_submission.py`). Frontend 4 màn KIS/Q&A/TRAKE/Hàng đợi chạy dữ liệu thật qua proxy Vite;
-  màn Chat để nút disabled (Phase con 2). Gradio `scripts/app.py` giữ nguyên làm fallback.
+  màn Chat để nút disabled (Phase con 2). Gradio `scripts/app.py` đã chuyển vào `docs/_archive/app_gradio.py`.
 - [X] Phase con 1.5 — parity với UI Gradio + luồng xem video kiểm chứng keyframe (KIS).
   Plan: `C:\Users\admin\.claude\plans\rustling-bouncing-eclipse.md`. Sửa lỗi thiếu
   `get_keyframe_path`/`get_neighbor_frames` trong `retrieve.py` (backend không khởi động được);
@@ -307,6 +307,19 @@ Chuẩn hoá điểm theo một querybank dựng sẵn (từ caption có sẵn) 
 
 ## Blockers / Risks
 
+- **⛔ Độ dài thật của khoảng đáp án `[s,e]` cho KIS là ẩn số** — luật BTC không định nghĩa cách dựng
+  nó; ví dụ minh hoạ trong luật là `[500, 510]` (11 frame), nhưng mục TRAKE lại *lưu ý thêm* rằng
+  cửa sổ của TRAKE "rất ngắn, dưới 10 frame", ngụ ý cửa sổ KIS dài hơn. Ẩn số này chi phối trực tiếp
+  `MIN_TIME_GAP` của Temporal NMS, `SPREAD_MAX_PER_VIDEO`, và việc `refine_frame` có cần bật cho KIS
+  hay không. Hiện đang thiết kế **an toàn ở cả hai giả thuyết** (lấy tâm đoạn, không lấy argmax) —
+  nhưng nếu moi được con số thật từ kết quả vòng 1 hoặc phản hồi BTC thì chốt được ngay cả Phase 10.1
+  lẫn 10.7. **Ưu tiên tìm dữ kiện này.**
+- **⛔ Xung đột DLL `paddlepaddle` × `torch-CUDA` trên Windows chưa được kiểm chứng lại sau khi đổi
+  torch** — rủi ro đã xác nhận ở [EXPERIMENT.md](EXPERIMENT.md) (WinError 127, `cudnn_cnn64_9.dll`).
+  Chuyển torch sang bản CUDA làm rủi ro này **tăng**. Đây là lý do Phase 10.0 bắt buộc dựng
+  `.venv-gpu/` song song và xác minh trước, không nâng cấp thẳng `.venv/` đang chạy được.
+- **Mọi tham số hiện tại đang chốt trên 33 câu ground truth** — sai số lấy mẫu ở cỡ đó lớn hơn hầu
+  hết mức cải thiện định đo, nên Regression Guard của Phase 9 hiện là guard giả. Xem Phase 10.2.
 - **Single LLM provider (OpenRouter)** — lần 2 đã bỏ multi-provider fallback (Gemini/Groq/NVIDIA)
   của lần 1 để đơn giản hoá, đổi lại mất lớp dự phòng khi rate-limit đúng lúc thi (chính là nguyên
   nhân mất điểm ở đợt 1). Cân nhắc lại trước round 3 nếu còn phụ thuộc 1 provider duy nhất.

@@ -36,7 +36,7 @@ Hệ thống giải quyết **3 dạng bài** của cuộc thi AIC 2026:
 - 🔍 **CLIP retrieval** trên ma trận ~177K keyframe (873 video) — cosine similarity realtime
 - 🤖 **Agent đa phương thức** — LLM text/vision qua OpenRouter và LiteLLM
 - 🛡️ **Anti-hallucination** bắt buộc cho Q&A — cross-check answer với Objects JSON (Faster R-CNN) offline
-- 👤 **Human-in-the-loop** — Gradio UI cho phép rà soát, sửa tay kết quả trước khi nộp bài
+- 👤 **Human-in-the-loop** — React UI cho phép rà soát, xem video player / gallery, sửa tay kết quả trước khi nộp bài
 - 📦 **Submission engine** — tự sinh CSV/ZIP theo format BTC, kèm validator nội bộ
 
 Scoring: **R-Score / R@k** trung bình tại rank 1/5/20/50/100. Luật thi chi tiết trong
@@ -48,9 +48,12 @@ Scoring: **R-Score / R@k** trung bình tại rank 1/5/20/50/100. Luật thi chi 
 
 ```
 Người dùng (thí sinh)
-        │  nhập query trên UI, rà soát/sửa kết quả (human-in-the-loop)
+        │  nhập query trên UI, rà soát/sửa kết quả, xem video (human-in-the-loop)
         ▼
-scripts/app.py  (Gradio, 4 tab: KIS / Q&A / TRAKE / Export)
+frontend/  (React + Vite + TypeScript, http://localhost:5173)
+        │  REST API calls (/api/kis, /api/qa, /api/trake, /api/queue, /api/videos, /api/images)
+        ▼
+scripts/api/  (FastAPI Backend, http://127.0.0.1:8000)
         │
    ┌────┴─────────────────┬──────────────────────┐
    ▼                      ▼                       ▼
@@ -62,8 +65,8 @@ pipeline_kis.py     pipeline_qa.py          pipeline_trake.py
    └──────────┬───────────┴───────────┬───────────┘
               ▼                       ▼
    agent/tools/retrieve.py    agent/tools/rewrite.py, answer_qa.py, ocr_lookup.py
-   (CLIP cosine similarity     (agent/config.py: call_llm() → LiteLLM → PROVIDER_CHAIN)
-    trên ma trận 177K keyframe)
+   (SigLIP cosine similarity   (agent/config.py: call_llm() → LiteLLM → PROVIDER_CHAIN)
+    trên ma trận keyframe)
               │
               ▼
         submit/build_submission.py → CSV (kis/qa/trake) → validate_submission.py → ZIP
@@ -73,7 +76,7 @@ pipeline_kis.py     pipeline_qa.py          pipeline_trake.py
 
 - Không dùng 1 agent chung cho cả 3 dạng bài — chọn kiến trúc phù hợp theo độ mở của task
 - 1 nguồn cấu hình LLM duy nhất: `scripts/agent/config.py`
-- File-based, không database — toàn bộ state là file (`.npy`, `.csv`, `.json`, `.zip`)
+- File-based, không database — toàn bộ state là file (`.npy`, `.csv`, `.json`, `.zip`) + in-memory queue
 - `frame_id = frame_idx + 1` chỉ tính tại 1 điểm duy nhất (`retrieve.py`)
 
 Chi tiết đầy đủ → [`ARCHITECTURE.md`](ARCHITECTURE.md)
@@ -84,12 +87,12 @@ Chi tiết đầy đủ → [`ARCHITECTURE.md`](ARCHITECTURE.md)
 
 | Thành phần     | Công nghệ                                                                                          |
 | ---------------- | ---------------------------------------------------------------------------------------------------- |
-| Ngôn ngữ       | Python (qua`.venv`, không có Node/JS)                                                            |
-| Embedding        | `sentence-transformers` (`clip-ViT-B-32`) — image & text encoder chung 1 không gian            |
+| Backend API      | Python, `FastAPI`, `Uvicorn` (REST API phục vụ frontend)                                            |
+| Frontend UI      | `React 19`, `TypeScript`, `Vite`, `TailwindCSS` (SPA hiện đại, Video Player, Gallery)                |
+| Embedding        | `transformers` (`siglip-so400m-patch14-384`, `siglip2-so400m-patch14-384`) — image & text encoder    |
 | Framework ML     | `torch` (CPU build)                                                                                |
 | Dữ liệu        | `pandas`, `numpy` — metadata table & ma trận embedding                                         |
-| UI               | `gradio` — 4 tab KIS/Q&A/TRAKE/Export                                                             |
-| LLM              | `litellm` — route text/vision qua **OpenRouter** |
+| LLM              | `litellm` — route text/vision qua **OpenRouter** / Gemini / Groq                                    |
 | Cấu hình       | `python-dotenv` — load API key từ `.env`                                                       |
 | Object detection | Faster R-CNN — dữ liệu Objects JSON offline (không gọi API)                                     |
 
@@ -101,23 +104,20 @@ Chi tiết đầy đủ → [`ARCHITECTURE.md`](ARCHITECTURE.md)
 
 ```
 AIC2026/
-├── scripts/                        # Toàn bộ mã nguồn chính
-│   ├── app.py                      # Gradio UI — entry point chính (http://127.0.0.1:7860)
-│   ├── index.py                    # Build ma trận CLIP (N, 512) + metadata từ data/extracted/
+├── frontend/                       # React Frontend SPA (Vite + TypeScript)
+├── scripts/                        # Toàn bộ mã nguồn Python backend
+│   ├── api/                        # FastAPI routers & endpoints (/api/*)
 │   ├── agent/                      # Pipeline & agent LLM
 │   │   ├── config.py               # Cấu hình LLM tập trung (call_llm(), PROVIDER_CHAIN)
 │   │   ├── pipeline_kis.py         # Pipeline KIS — tuyến tính, không LLM
 │   │   ├── pipeline_qa.py          # Pipeline Q&A — orchestrator, 2 vòng reflection
 │   │   ├── pipeline_trake.py       # Pipeline TRAKE — 2 giai đoạn cố định
-│   │   └── tools/                  # Công cụ dùng chung
-│   │       ├── retrieve.py         # CLIP cosine similarity, singleton index
-│   │       ├── rewrite.py          # Dịch VN→EN + tối ưu query cho CLIP
-│   │       ├── answer_qa.py        # Trả lời 2 tầng (objects → vision) + cross-check
-│   │       └── ocr_lookup.py       # Đọc Objects JSON offline (Faster R-CNN)
+│   │   └── tools/                  # Công cụ dùng chung (retrieve, rewrite, answer_qa, sparse_index)
 │   ├── submit/                     # Sinh & kiểm tra bài nộp
 │   │   ├── build_submission.py     # Sinh CSV/ZIP theo format BTC
 │   │   └── validate_submission.py  # Validator nội bộ (encoding, frame≥1, ≤100 dòng)
 │   └── generate_sotuyen1_csv.py    # Gom gói đề BTC .txt → test_eval/sotuyen1_bo_de_thi.csv
+├── docs/                           # Tài liệu thiết kế, đề thi và _archive/ (lưu trữ code cũ)
 │
 ├── data/                           # [git-ignored] Dữ liệu ngoại tuyến từ BTC
 │   └── extracted/
@@ -224,16 +224,21 @@ OPENROUTER_MODEL=google/gemini-2.5-flash
 ### 3. Chạy ứng dụng
 
 ```powershell
-# Khởi động Gradio UI (entry point chính)
-.venv\Scripts\python.exe scripts\app.py
-# Mở http://127.0.0.1:7860
+# 1. Khởi động Backend API (FastAPI)
+.venv\Scripts\python.exe -m uvicorn scripts.api.main:app --reload --port 8000
+# Backend API: http://127.0.0.1:8000/api/health
+
+# 2. Khởi động Frontend React (trong terminal khác)
+cd frontend
+npm run dev
+# Frontend UI: http://localhost:5173
 ```
 
 ### Lệnh hữu ích khác
 
 ```powershell
-# Build index standalone (kiểm tra dữ liệu)
-.venv\Scripts\python.exe scripts\index.py
+# Smoke test Backend API (KIS/QA/TRAKE/Queue/Export)
+.venv\Scripts\python.exe scripts\api\_smoke_test.py
 
 # Chạy pipeline từ CLI (debug)
 .venv\Scripts\python.exe scripts\agent\pipeline_kis.py "<query>"
@@ -246,14 +251,15 @@ OPENROUTER_MODEL=google/gemini-2.5-flash
 
 ## Sử dụng
 
-### Gradio UI — 4 Tab
+### React UI — 5 Tab Hiện đại
 
 | Tab              | Chức năng                                                                                                      |
 | ---------------- | ---------------------------------------------------------------------------------------------------------------- |
-| **KIS**    | Nhập mô tả text → tìm keyframe bằng CLIP → gallery preview → sửa tay → add to queue                    |
+| **KIS**    | Nhập mô tả text → tìm keyframe bằng SigLIP/Hybrid → gallery preview, video player, kéo thả sắp xếp → add to queue |
 | **Q&A**    | Nhập câu hỏi → pipeline tự rewrite, retrieve, trả lời (2 tầng + cross-check) → sửa tay → add to queue |
 | **TRAKE**  | Nhập N mốc sự kiện → tìm top video → align frame theo thứ tự thời gian → sửa tay → add to queue     |
-| **Export** | Xem hàng đợi submission → export ZIP 1-click                                                                 |
+| **Chat**   | Giao diện hội thoại tương tác đa tác tử, phân tích chi tiết |
+| **Export** | Quản lý hàng đợi submission → đối soát và export ZIP 1-click                                                  |
 
 **Quy trình thao tác ngày thi:**
 

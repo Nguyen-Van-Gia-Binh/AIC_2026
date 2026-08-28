@@ -112,18 +112,18 @@ Hoặc chạy từ CLI:
 - ZIP: mọi CSV phải nằm trong thư mục con `submission/` bên trong ZIP
 - Không có header row (không tự động kiểm tra được — tự rà tay theo checklist BTC §4.6)
 
-## Quy trình export từ Gradio UI
+## Quy trình export từ React UI
 
 1. Chạy search ở tab KIS/Q&A/TRAKE
-2. Rà soát kết quả trên bảng, sửa tay nếu cần
-3. Bấm **Add to Queue** → kết quả vào hàng đợi (RAM, mất khi restart)
+2. Rà soát kết quả trên bảng / video player, sửa tay nếu cần
+3. Bấm **Add to Queue** → kết quả vào hàng đợi trên API backend
 4. Chuyển sang tab **Export**
-5. Bấm **Export ZIP** → file ZIP trong `submissions/`
+5. Bấm **Export ZIP** → file ZIP được tạo tự động trong `submissions/`
 6. Nộp file ZIP lên hệ thống chấm (Codabench)
 
 ## Lưu ý
 
-- Hàng đợi submission chỉ sống trong session Gradio (RAM) — restart = mất
+- Hàng đợi submission nằm trong RAM của Backend API session — restart server = reset hàng đợi
 - `submissions/*.zip` bị git-ignored, CSV được giữ để inspect
 - BTC đã công bố hướng dẫn nộp bài chính thức (2026-08-20) — xem
   [docs/Thong tin vong So tuyen AIC2026.md](../../../docs/Thong%20tin%20vong%20So%20tuyen%20AIC2026.md)
