@@ -35,7 +35,6 @@ from typing import Callable, Optional
 
 import numpy as np
 import pandas as pd
-from scripts.agent.tools.fusion import rrf_fuse_hits
 
 # Console Windows mặc định dùng code page cp1252, không encode được ký tự có dấu (vd "Đ" trong log
 # bên dưới) -> UnicodeEncodeError ngay lúc import module này. Ép stdout sang UTF-8 tại đây (điểm
