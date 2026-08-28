@@ -27,6 +27,7 @@ from scripts.agent.config import call_llm
 from scripts.agent.tools.ocr_lookup import get_objects, objects_contain_keywords
 from scripts.agent.tools.ocr_read import read_text_from_hits, format_ocr_hint
 from scripts.agent.tools.asr_lookup import get_transcript
+from scripts.agent.tools.caption_lookup import get_caption
 
 # ─── Prompts ───────────────────────────────────────────────────────────────────
 
@@ -40,13 +41,14 @@ object detector — it does NOT contain any text, digits, prices, or signage con
 If the question asks for a specific NUMBER, PRICE, or TEXT shown on screen, reply with exactly:
 CANNOT_ANSWER_FROM_OBJECTS — do not guess a number from the object list.
 
-Based on the detected objects, answer the question concisely.
-If you cannot answer from objects alone, reply with exactly: CANNOT_ANSWER_FROM_OBJECTS
+Based on the detected objects (and the scene caption below, if present), answer the question concisely.
+If you cannot answer from this evidence alone, reply with exactly: CANNOT_ANSWER_FROM_OBJECTS
 
 Question: {question}
 
 Detected objects in candidate frames:
 {objects_text}
+{caption_hint}
 {transcript_hint}
 Answer (concise, in the same language as the question):"""
 
@@ -56,6 +58,7 @@ They may show the same moment at slightly different times — one may be clearer
 
 Question: {question}
 {ocr_hint}
+{caption_hint}
 {transcript_hint}
 
 Look at the image(s) carefully and answer concisely:
@@ -81,12 +84,19 @@ treat as a hint, not a certain fact):
 {transcript}
 """
 
+CAPTION_HINT_TEMPLATE = """\
+Auto-generated scene caption (Vietnamese, from a captioning model — describes the overall scene/action, \
+may contain errors; treat as a hint, not a certain fact):
+{caption}
+"""
+
 CROSSCHECK_PROMPT = """\
 You are verifying if an answer is consistent with the evidence found in a video frame.
 
 Question: {question}
 Proposed answer: {answer}
 Detected objects: {objects}
+Scene caption: {caption}
 Spoken transcript near this moment: {transcript}
 
 Is this answer plausible given this evidence? Reply with:
@@ -182,21 +192,26 @@ def answer_from_hits(
         unique_objects = list(dict.fromkeys(all_objects))  # preserve order, deduplicate
 
         if unique_objects:
-            top_vid, top_pts = candidates[0].get("video_id", ""), candidates[0].get("pts_time")
+            top_vid, top_pts, top_n = candidates[0].get("video_id", ""), candidates[0].get("pts_time"), candidates[0].get("n")
             transcript1 = get_transcript(top_vid, top_pts) if top_vid and top_pts is not None else ""
             transcript_hint1 = TRANSCRIPT_HINT_TEMPLATE.format(transcript=transcript1) if transcript1 else ""
+            # Caption (Vintern-1B) — nguon thu 3 bo sung cho objects (chi liet ke ten vat the chung
+            # chung, khong ta hanh dong/boi canh). Fail-soft: "" neu video chua co (xem caption_lookup.py).
+            caption1 = get_caption(top_vid, int(top_n)) if top_vid and top_n is not None else ""
+            caption_hint1 = CAPTION_HINT_TEMPLATE.format(caption=caption1) if caption1 else ""
 
             obj_text = ", ".join(unique_objects[:30])  # cap 30 objects
             prompt1  = ANSWER_FROM_OBJECTS_PROMPT.format(
                 question=question,
                 objects_text=obj_text,
+                caption_hint=caption_hint1,
                 transcript_hint=transcript_hint1,
             )
             ans1 = call_llm(prompt1, model="text", temperature=0.1, max_tokens=80)
 
             if "CANNOT_ANSWER_FROM_OBJECTS" not in ans1:
                 # Cross-check
-                crosscheck = _crosscheck_answer(question, ans1, unique_objects[:15], transcript1)
+                crosscheck = _crosscheck_answer(question, ans1, unique_objects[:15], transcript1, caption1)
                 conf = 0.75 if crosscheck else 0.45
                 return {
                     "answer":     _normalize_answer(ans1),
@@ -224,9 +239,12 @@ def answer_from_hits(
         top_vid2, top_pts2 = vision_hits[0].get("video_id", ""), vision_hits[0].get("pts_time")
         transcript2 = get_transcript(top_vid2, top_pts2) if top_vid2 and top_pts2 is not None else ""
         transcript_hint2 = TRANSCRIPT_HINT_TEMPLATE.format(transcript=transcript2) if transcript2 else ""
+        top_n2 = vision_hits[0].get("n")
+        caption2 = get_caption(top_vid2, int(top_n2)) if top_vid2 and top_n2 is not None else ""
+        caption_hint2 = CAPTION_HINT_TEMPLATE.format(caption=caption2) if caption2 else ""
 
         prompt2 = ANSWER_FROM_IMAGES_PROMPT.format(
-            question=question, ocr_hint=ocr_hint, transcript_hint=transcript_hint2,
+            question=question, ocr_hint=ocr_hint, caption_hint=caption_hint2, transcript_hint=transcript_hint2,
         )
         ans2 = call_llm(
             prompt2,
@@ -241,7 +259,7 @@ def answer_from_hits(
             hit_n, hit_vid = h.get("n"), h.get("video_id", "")
             if hit_n:
                 combined_objs.extend(get_objects(hit_vid, int(hit_n)))
-        crosscheck = _crosscheck_answer(question, ans2, list(dict.fromkeys(combined_objs)), transcript2)
+        crosscheck = _crosscheck_answer(question, ans2, list(dict.fromkeys(combined_objs)), transcript2, caption2)
         conf = 0.85 if crosscheck else 0.6
         return {
             "answer":     _normalize_answer(ans2),
@@ -265,14 +283,15 @@ def answer_from_hits(
     }
 
 
-def _crosscheck_answer(question: str, answer: str, objects: list[str], transcript: str = "") -> bool:
-    """Kiem tra answer nhat quan voi objects + transcript. Tra True neu qua duoc cross-check."""
-    if (not objects and not transcript) or not answer or answer == "N/A":
+def _crosscheck_answer(question: str, answer: str, objects: list[str], transcript: str = "", caption: str = "") -> bool:
+    """Kiem tra answer nhat quan voi objects + caption + transcript. Tra True neu qua duoc cross-check."""
+    if (not objects and not transcript and not caption) or not answer or answer == "N/A":
         return False
     prompt = CROSSCHECK_PROMPT.format(
         question=question,
         answer=answer,
         objects=", ".join(objects[:15]) or "none",
+        caption=caption or "none",
         transcript=transcript or "none",
     )
     result = call_llm(prompt, model="text", temperature=0.0, max_tokens=20)
@@ -281,10 +300,12 @@ def _crosscheck_answer(question: str, answer: str, objects: list[str], transcrip
 
 # ─── CLI self-test (repo khong dung pytest — xem CLAUDE.md) ────────────────────
 def _run_self_tests() -> None:
-    """Monkeypatch call_llm/get_objects/get_transcript de test transcript duoc bom vao Tier 1
-    va crosscheck ma khong can goi API that."""
-    global call_llm, get_objects, get_transcript
-    _orig_call_llm, _orig_get_objects, _orig_get_transcript = call_llm, get_objects, get_transcript
+    """Monkeypatch call_llm/get_objects/get_transcript/get_caption de test transcript/caption duoc
+    bom vao Tier 1 va crosscheck ma khong can goi API that."""
+    global call_llm, get_objects, get_transcript, get_caption
+    _orig_call_llm, _orig_get_objects, _orig_get_transcript, _orig_get_caption = (
+        call_llm, get_objects, get_transcript, get_caption
+    )
     captured_prompts: list[str] = []
 
     def _fake_call_llm(prompt, **kwargs):
@@ -299,10 +320,11 @@ def _run_self_tests() -> None:
            "score": 0.9, "jpg_path": None}
 
     try:
-        # Test A: transcript co noi dung -> phai xuat hien trong ca prompt Tier 1 va crosscheck
+        # Test A: transcript + caption co noi dung -> phai xuat hien trong ca prompt Tier 1 va crosscheck
         call_llm = _fake_call_llm
         get_objects = lambda vid, n: ["car", "person"]
         get_transcript = lambda vid, pts, window=7.5: "a red car passes by quickly"
+        get_caption = lambda vid, n: "Một chiếc xe màu đỏ chạy trên đường."
         captured_prompts.clear()
 
         result = answer_from_hits("What color is the car?", [hit], top_n=1)
@@ -311,21 +333,26 @@ def _run_self_tests() -> None:
 
         tier1_prompt = next(p for p in captured_prompts if "Detected objects in candidate frames" in p)
         assert "a red car passes by quickly" in tier1_prompt, "Tier 1 prompt phai chua transcript hint"
+        assert "Một chiếc xe màu đỏ chạy trên đường." in tier1_prompt, "Tier 1 prompt phai chua caption hint"
 
         crosscheck_prompt = next(p for p in captured_prompts if "Is this answer plausible" in p)
         assert "a red car passes by quickly" in crosscheck_prompt, "Crosscheck prompt phai chua transcript"
-        print("[answer_qa] Test Tier 1 + crosscheck co transcript: OK")
+        assert "Một chiếc xe màu đỏ chạy trên đường." in crosscheck_prompt, "Crosscheck prompt phai chua caption"
+        print("[answer_qa] Test Tier 1 + crosscheck co transcript + caption: OK")
 
-        # Test B: transcript rong -> khong crash, template van render binh thuong
+        # Test B: transcript/caption rong -> khong crash, template van render binh thuong
         get_transcript = lambda vid, pts, window=7.5: ""
+        get_caption = lambda vid, n: ""
         captured_prompts.clear()
         result_b = answer_from_hits("What color is the car?", [hit], top_n=1)
         assert result_b["method"] == "objects", f"Phai dung Tier 1 (objects), duoc {result_b['method']}"
-        print("[answer_qa] Test transcript rong khong crash: OK")
+        print("[answer_qa] Test transcript/caption rong khong crash: OK")
 
         print("[answer_qa] Tat ca self-test PASS")
     finally:
-        call_llm, get_objects, get_transcript = _orig_call_llm, _orig_get_objects, _orig_get_transcript
+        call_llm, get_objects, get_transcript, get_caption = (
+            _orig_call_llm, _orig_get_objects, _orig_get_transcript, _orig_get_caption
+        )
 
 
 # ─── CLI demo ──────────────────────────────────────────────────────────────────

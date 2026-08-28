@@ -76,13 +76,23 @@ def main():
     # Tìm tất cả file .jsonl từ các thư mục shard — GHI NHỚ shard nào chứa video_id nào để phát
     # hiện trùng lặp (vd tải/upload nhầm shard giữa 3 tài khoản, hoặc phải chạy backup 1 shard ở
     # nơi khác vì hết giờ Colab — dễ vô tình chạy trùng hoặc gộp nhầm 2 nguồn cho cùng video_id).
+    #
+    # CHỈ quét thư mục có "caption" trong tên (giống cách merge_ocr.py chỉ quét thư mục có
+    # "ocr"+"shard") — KHÔNG quét rglob rộng toàn bộ data/, vì data/extracted/ocr_shard*/ cũng chứa
+    # file {video_id}.jsonl (schema {"n","ocr_text"} khác hẳn {"n","caption"}) và trùng tên video_id
+    # với caption_shard* ở phần lớn trường hợp (cả 2 đều round-robin trên cùng 873 video) — rglob
+    # rộng từng lấy nhầm 10 video từ ocr_shard1/ vào danh sách nguồn caption (phát hiện thật
+    # 2026-08-28 qua chính cảnh báo trùng lặp bên dưới, may mắn thứ tự quét vẫn chọn đúng file caption
+    # — nhưng không đảm bảo, phải lọc rõ theo tên thư mục thay vì trông cậy thứ tự rglob).
     jsonl_sources: dict[str, list[Path]] = {}
-    for p in DATA_DIR.rglob("*.jsonl"):
-        # Bỏ qua thư mục đích để tránh đọc lại chính nó
-        if DEST_DIR in p.parents or p.parent == DEST_DIR:
+    for d in DATA_DIR.rglob("*"):
+        if not d.is_dir() or "caption" not in d.name.lower():
             continue
-        vid_id = p.stem
-        jsonl_sources.setdefault(vid_id, []).append(p)
+        if DEST_DIR in d.parents or d == DEST_DIR:
+            continue
+        for p in d.glob("*.jsonl"):
+            vid_id = p.stem
+            jsonl_sources.setdefault(vid_id, []).append(p)
 
     print(f"[Merge] Tìm thấy {len(jsonl_sources)} video_id có file .jsonl từ các nguồn shard.")
 

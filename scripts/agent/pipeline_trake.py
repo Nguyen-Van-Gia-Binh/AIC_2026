@@ -40,6 +40,7 @@ from scripts.agent.tools.rewrite import rewrite_query
 from scripts.agent.tools.rerank import RETRIEVAL_POOL_SIZE
 from scripts.agent.tools.ocr_lookup import get_objects
 from scripts.agent.tools.asr_lookup import get_transcript
+from scripts.agent.tools.caption_lookup import get_caption
 
 
 def _find_best_increasing_chain(event_hits: list[list[dict]]) -> list[dict] | None:
@@ -115,9 +116,10 @@ Overall scene: {query}
 Events in order, with evidence found in each candidate frame:
 {events_block}
 
-Rate how well this evidence (detected objects + spoken transcript) supports that the frames truly show \
-this sequence of events, in order. Detected objects and transcript may be incomplete or noisy — judge \
-based on overall plausibility, not on requiring every event to have full evidence.
+Rate how well this evidence (detected objects + auto-generated scene caption + spoken transcript) \
+supports that the frames truly show this sequence of events, in order. This evidence may be \
+incomplete or noisy — judge based on overall plausibility, not on requiring every event to have full \
+evidence.
 
 Reply with exactly one line in the form: SCORE: <a number between 0.00 and 1.00>"""
 
@@ -131,10 +133,16 @@ def _llm_crosscheck_chain(query_en: str, event_queries_en: list[str], chain: lis
     for i, (eq, hit) in enumerate(zip(event_queries_en, chain)):
         vid, n, pts = hit.get("video_id", ""), hit.get("n"), hit.get("pts_time")
         objs = get_objects(vid, int(n)) if vid and n is not None else []
+        # Caption (Vintern-1B, tieng Viet, mo ta HANH DONG/BOI CANH — bo sung cho objects chi liet ke
+        # TEN VAT THE chung chung) — nguon THU 3 cung objects/transcript, fail-soft neu video chua co
+        # (build_caption_manifest.py chi loc tap con keyframe theo semantic similarity, khong phai
+        # toan bo nhu OCR — xem docstring caption_lookup.py).
+        caption = get_caption(vid, int(n)) if vid and n is not None else ""
         transcript = get_transcript(vid, float(pts)) if vid and pts is not None else ""
         lines.append(
             f"Event {i + 1}: {eq}\n"
             f"  Objects: {', '.join(objs[:10]) or 'none'}\n"
+            f"  Scene caption: {caption or 'none'}\n"
             f"  Transcript: {transcript or 'none'}"
         )
     prompt = TRAKE_CROSSCHECK_PROMPT.format(query=query_en, events_block="\n".join(lines))
