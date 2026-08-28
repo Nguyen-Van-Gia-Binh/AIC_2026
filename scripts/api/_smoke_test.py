@@ -58,6 +58,19 @@ def main() -> None:
         assert r.status_code == 404
         print("[smoke] videos 404 (video khong ton tai) OK")
 
+        # Dai luot toan bo keyframe cua video (man chi tiet KIS): >= so keyframe cua rieng video do,
+        # co chua dung frame_idx cua hit dang xet.
+        r = c.get(f"/api/keyframes/{h0['video_id']}/all")
+        assert r.status_code == 200, r.text
+        all_kf = r.json()
+        assert len(all_kf) >= 1 and any(f["frame_idx"] == h0["frame_idx"] for f in all_kf), (
+            f"dai keyframe thieu frame_idx={h0['frame_idx']}"
+        )
+        print(f"[smoke] keyframes/all OK ({len(all_kf)} keyframe cho {h0['video_id']})")
+        r = c.get("/api/keyframes/L99_V999/all")
+        assert r.status_code == 404
+        print("[smoke] keyframes/all 404 (video khong ton tai) OK")
+
         r = c.post("/api/queue/" + SESSION + "/add", json={
             "query_id": "smoke-kis", "query_type": "kis",
             "rows": [{"video_id": h["video_id"], "frame_id": h["frame_id"]} for h in kis_hits[:3]],

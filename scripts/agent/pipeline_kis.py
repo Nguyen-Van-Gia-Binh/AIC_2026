@@ -2,9 +2,9 @@
 pipeline_kis.py — Pipeline KIS tuyến tính (không LLM, không loop).
 
 Workflow:
-  query_text → fast_retrieve(top_k=500) → apply_risk_aware_ranking() → rerank_by_ocr() → top_k
+    query_text → SigLIP(top_k=500) → apply_risk_aware_ranking() → rerank_by_ocr() → top_k
 
-Câu hỏi tiếng Việt: kết quả sẽ thấp hơn vì CLIP-ViT-B-32 hiểu tiếng Anh tốt hơn.
+Câu hỏi tiếng Việt: kết quả sẽ thấp hơn vì các model retrieval hiểu tiếng Anh tốt hơn.
 Cố ý KHÔNG tự dịch VN→EN ở đây — quyết định kiến trúc đã chốt: KIS là workflow tuyến tính, không
 LLM (xem ARCHITECTURE.md §3). Dịch VN→EN được đặt ở tầng UI (`scripts/app.py`, checkbox
 auto-translate gọi `agent/tools/rewrite.py`), không phải trong pipeline này.
@@ -30,12 +30,17 @@ _ROOT = Path(__file__).resolve().parent.parent.parent  # repo root — cho `impo
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
-from scripts.agent.tools.retrieve import fast_retrieve
+from scripts.agent.tools.retrieve import fast_retrieve, fast_retrieve_multi_model
 from scripts.agent.tools.rerank import apply_risk_aware_ranking, RETRIEVAL_POOL_SIZE
 from scripts.agent.tools.ocr_read import query_likely_has_readable_text, rerank_by_ocr
 
 
-def run_kis(query_text: str, top_k: int = 100, use_ocr_rerank: bool = True) -> list[dict]:
+def run_kis(
+    query_text: str,
+    top_k: int = 100,
+    use_ocr_rerank: bool = True,
+    use_model_fusion: bool = False,
+) -> list[dict]:
     """
     Chạy pipeline KIS tuyến tính.
 
@@ -44,6 +49,7 @@ def run_kis(query_text: str, top_k: int = 100, use_ocr_rerank: bool = True) -> l
         top_k: Số kết quả trả về, tối đa 100.
         use_ocr_rerank: Cho phép tắt bước rerank_by_ocr() (vd để benchmark/so sánh trước-sau —
             xem test_eval/) — mặc định bật, tự nhận biết query có cần OCR hay không, không cần set thủ công.
+        use_model_fusion: Dùng RRF trên ViT-L/14, SigLIP2 và DFN trước khi rerank — mặc định tắt.
 
     Returns:
         list[dict] đã xếp hạng giảm dần theo score (đã qua risk-aware rerank — xem
@@ -51,9 +57,15 @@ def run_kis(query_text: str, top_k: int = 100, use_ocr_rerank: bool = True) -> l
         mỗi item có: video_id, frame_id, frame_idx, pts_time, score, jpg_path
     """
     pool_size = max(top_k, RETRIEVAL_POOL_SIZE)
-    results = fast_retrieve(query_text, top_k=pool_size)
+    if use_model_fusion:
+        results = fast_retrieve_multi_model(query_text, top_k=pool_size)
+        print(f"[kis] RRF fusion: {len(results)} ung vien tu 3 model")
+    else:
+        results = fast_retrieve(query_text, top_k=pool_size)
     print(f"[kis] Lay {len(results)} ung vien tho (pool={pool_size}), rerank cat ve top_k={top_k}")
-    results = apply_risk_aware_ranking(results, top_k=top_k, query_text=query_text)
+    # Không trộn hit đào sâu từ một model đơn vào điểm RRF khác thang đo.
+    rerank_query = None if use_model_fusion else query_text
+    results = apply_risk_aware_ranking(results, top_k=top_k, query_text=rerank_query)
 
     if use_ocr_rerank and query_likely_has_readable_text(query_text):
         print(f"[kis] Query co dau hieu chua chu/so cu the -> chay rerank_by_ocr() tren top ung vien")

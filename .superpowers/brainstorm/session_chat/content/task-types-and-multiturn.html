@@ -1,0 +1,161 @@
+<h2>Mô phỏng 3 Dạng Tác vụ (KIS / Q&A / TRAKE) & Luồng Phản hồi Đa Lượt (Multi-turn)</h2>
+<p class="subtitle">Trực quan hóa chi tiết từng dạng card chuyên biệt và cách Agent tiếp nhận phản hồi sửa sai của bạn</p>
+
+<div class="options" data-choice-container style="margin-bottom: 1.5rem;">
+  <div class="option selected" data-choice="all_in_one" onclick="toggleSelect(this)">
+    <div class="letter">✓</div>
+    <div class="content">
+      <h3>Bộ Card Chuyên Biệt Theo Tác Vụ</h3>
+      <p>Mỗi dạng bài (KIS / Q&A / TRAKE) có hình thái riêng biệt tối ưu cho thao tác nộp bài và kiểm chứng.</p>
+    </div>
+  </div>
+</div>
+
+<div class="mockup" style="background: #0f172a; border-radius: 12px; border: 1px solid #334155; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+  <div class="mockup-header" style="background: #1e293b; padding: 12px 18px; border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center;">
+    <span style="font-weight: 600; color: #f8fafc; font-size: 14px;">💬 Luồng Hội thoại Thực tế: Đa Tác vụ & Phản hồi Sửa sai</span>
+    <span style="font-size: 12px; color: #38bdf8;">AIC Multi-Agent Stream</span>
+  </div>
+
+  <div style="padding: 20px; background: #0b1120; display: flex; flex-direction: column; gap: 20px; max-height: 620px; overflow-y: auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+    
+    <!-- 1. KIS Message Example -->
+    <div style="border-left: 2px solid #3b82f6; padding-left: 12px;">
+      <div style="font-size: 11px; color: #94a3b8; margin-bottom: 4px;">LƯỢT 1: TÁC VỤ KIS (TÌM SỰ KIỆN ĐƠN LẺ)</div>
+      
+      <!-- User query -->
+      <div style="display: flex; justify-content: flex-end; margin-bottom: 8px;">
+        <div style="background: #2563eb; color: #fff; padding: 8px 14px; border-radius: 14px 14px 2px 14px; font-size: 13px;">
+          Tìm cảnh flycam quay toàn cảnh cầu Rồng Đà Nẵng phun lửa vào ban đêm
+        </div>
+      </div>
+
+      <!-- Assistant KIS Card -->
+      <div style="background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 12px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <div style="display: flex; gap: 6px; align-items: center;">
+            <span style="background: #3b82f6; color: white; font-weight: bold; font-size: 10px; padding: 2px 6px; border-radius: 4px;">🎯 KIS</span>
+            <span style="color: #94a3b8; font-size: 11px;">Đã tìm thấy 20 kết quả khớp</span>
+          </div>
+          <button style="background: #0284c7; color: white; border: none; padding: 4px 10px; border-radius: 4px; font-size: 11px; cursor: pointer;">📥 Chốt 20 frame vào Hàng đợi</button>
+        </div>
+
+        <!-- Horizontal scroll of KIS frames -->
+        <div style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px;">
+          <div style="width: 130px; background: #0f172a; border: 1px solid #3b82f6; border-radius: 6px; padding: 6px; flex-shrink: 0;">
+            <div style="background: #334155; height: 65px; border-radius: 4px; position: relative; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #cbd5e1;">
+              🐉 Cầu Rồng phun lửa
+              <span style="position: absolute; top: 2px; left: 2px; background: #3b82f6; color: white; font-size: 8px; font-weight: bold; padding: 1px 3px; border-radius: 2px;">#1</span>
+            </div>
+            <div style="font-size: 11px; font-weight: bold; color: #f8fafc; margin-top: 4px;">L05_V021 / 0840</div>
+            <div style="font-size: 10px; color: #60a5fa;">Score: 0.9120</div>
+          </div>
+
+          <div style="width: 130px; background: #0f172a; border: 1px solid #334155; border-radius: 6px; padding: 6px; flex-shrink: 0;">
+            <div style="background: #334155; height: 65px; border-radius: 4px; position: relative; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #cbd5e1;">
+              🐉 Cầu Rồng góc cao
+              <span style="position: absolute; top: 2px; left: 2px; background: #475569; color: white; font-size: 8px; padding: 1px 3px; border-radius: 2px;">#2</span>
+            </div>
+            <div style="font-size: 11px; font-weight: bold; color: #f8fafc; margin-top: 4px;">L05_V021 / 0865</div>
+            <div style="font-size: 10px; color: #94a3b8;">Score: 0.8840</div>
+          </div>
+
+          <div style="width: 130px; background: #0f172a; border: 1px solid #334155; border-radius: 6px; padding: 6px; flex-shrink: 0;">
+            <div style="background: #334155; height: 65px; border-radius: 4px; position: relative; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #cbd5e1;">
+              🐉 Cầu Rồng phun nước
+              <span style="position: absolute; top: 2px; left: 2px; background: #475569; color: white; font-size: 8px; padding: 1px 3px; border-radius: 2px;">#3</span>
+            </div>
+            <div style="font-size: 11px; font-weight: bold; color: #f8fafc; margin-top: 4px;">L05_V022 / 0120</div>
+            <div style="font-size: 10px; color: #94a3b8;">Score: 0.8210</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. TRAKE Message Example (Sequential Milestones) -->
+    <div style="border-left: 2px solid #8b5cf6; padding-left: 12px;">
+      <div style="font-size: 11px; color: #94a3b8; margin-bottom: 4px;">LƯỢT 2: TÁC VỤ TRAKE (CHUỖI HÀNH ĐỘNG TUẦN TỰ)</div>
+      
+      <!-- User query -->
+      <div style="display: flex; justify-content: flex-end; margin-bottom: 8px;">
+        <div style="background: #2563eb; color: #fff; padding: 8px 14px; border-radius: 14px 14px 2px 14px; font-size: 13px;">
+          Người đàn ông bước vào bếp, mở tủ lạnh lấy chai nước, sau đó đóng cửa tủ lại và đi ra ngoài.
+        </div>
+      </div>
+
+      <!-- Assistant TRAKE Card -->
+      <div style="background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 12px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+          <div style="display: flex; gap: 6px; align-items: center;">
+            <span style="background: #8b5cf6; color: white; font-weight: bold; font-size: 10px; padding: 2px 6px; border-radius: 4px;">⏱️ TRAKE DP Align</span>
+            <span style="color: #cbd5e1; font-weight: 600; font-size: 12px;">Video ứng viên tốt nhất: <code>L22_V015</code></span>
+          </div>
+          <button style="background: #8b5cf6; color: white; border: none; padding: 4px 10px; border-radius: 4px; font-size: 11px; cursor: pointer; font-weight: 600;">📥 Chốt chuỗi TRAKE (3 mốc)</button>
+        </div>
+
+        <!-- Sequential Timeline Visualization -->
+        <div style="display: flex; align-items: center; gap: 8px; background: #0f172a; padding: 10px; border-radius: 8px; border: 1px solid #334155;">
+          
+          <!-- Milestone 1 -->
+          <div style="flex: 1; background: #1e293b; padding: 6px; border-radius: 6px; border: 1px solid #6366f1;">
+            <div style="font-size: 10px; color: #a5b4fc; font-weight: bold;">MỐC 1: Bước vào bếp</div>
+            <div style="background: #334155; height: 50px; border-radius: 4px; margin: 4px 0; display: flex; align-items: center; justify-content: center; font-size: 9px; color: #cbd5e1;">
+              🚶 Vào cửa
+            </div>
+            <div style="font-size: 10px; color: #fff; font-weight: bold;">Frame 0310</div>
+            <div style="font-size: 9px; color: #94a3b8;">PTS: 12.4s</div>
+          </div>
+
+          <div style="color: #8b5cf6; font-weight: bold; font-size: 16px;">➔</div>
+
+          <!-- Milestone 2 -->
+          <div style="flex: 1; background: #1e293b; padding: 6px; border-radius: 6px; border: 1px solid #6366f1;">
+            <div style="font-size: 10px; color: #a5b4fc; font-weight: bold;">MỐC 2: Mở tủ lạnh lấy nước</div>
+            <div style="background: #334155; height: 50px; border-radius: 4px; margin: 4px 0; display: flex; align-items: center; justify-content: center; font-size: 9px; color: #cbd5e1;">
+              🧊 Lấy chai nước
+            </div>
+            <div style="font-size: 10px; color: #fff; font-weight: bold;">Frame 0520</div>
+            <div style="font-size: 9px; color: #94a3b8;">PTS: 20.8s</div>
+          </div>
+
+          <div style="color: #8b5cf6; font-weight: bold; font-size: 16px;">➔</div>
+
+          <!-- Milestone 3 -->
+          <div style="flex: 1; background: #1e293b; padding: 6px; border-radius: 6px; border: 1px solid #6366f1;">
+            <div style="font-size: 10px; color: #a5b4fc; font-weight: bold;">MỐC 3: Đóng tủ & đi ra</div>
+            <div style="background: #334155; height: 50px; border-radius: 4px; margin: 4px 0; display: flex; align-items: center; justify-content: center; font-size: 9px; color: #cbd5e1;">
+              🚪 Rời khỏi bếp
+            </div>
+            <div style="font-size: 10px; color: #fff; font-weight: bold;">Frame 0780</div>
+            <div style="font-size: 9px; color: #94a3b8;">PTS: 31.2s</div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. Multi-turn Feedback Example -->
+    <div style="border-left: 2px solid #10b981; padding-left: 12px;">
+      <div style="font-size: 11px; color: #94a3b8; margin-bottom: 4px;">LƯỢT 3: TƯƠNG TÁC ĐA LƯỢT (FEEDBACK SỬA ĐỔI)</div>
+      
+      <!-- User correction -->
+      <div style="display: flex; justify-content: flex-end; margin-bottom: 8px;">
+        <div style="background: #2563eb; color: #fff; padding: 8px 14px; border-radius: 14px 14px 2px 14px; font-size: 13px;">
+          Mốc 2 bị lệch rồi, tủ lạnh mở ở đoạn sau cơ, tìm lại mốc 2 khoảng giây thứ 25.
+        </div>
+      </div>
+
+      <!-- Assistant response reflecting feedback -->
+      <div style="background: #1e293b; border: 1px solid #10b981; border-radius: 12px; padding: 12px;">
+        <div style="display: flex; gap: 6px; align-items: center; margin-bottom: 6px;">
+          <span style="background: #059669; color: white; font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 4px;">🔄 Đã điều chỉnh theo phản hồi</span>
+          <span style="font-size: 11px; color: #a7f3d0;">Giữ nguyên Video L22_V015, căn chỉnh lại Mốc 2 quanh PTS ~25s</span>
+        </div>
+        <div style="font-size: 12px; color: #e2e8f0;">
+          Đã cập nhật <b>Mốc 2</b> thành <b>Frame 0635</b> (PTS 25.4s). Thứ tự thời gian <code>0310 ➔ 0635 ➔ 0780</code> hoàn toàn thỏa mãn chuỗi tăng dần!
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>

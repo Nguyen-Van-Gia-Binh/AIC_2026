@@ -53,7 +53,7 @@ Detected objects in candidate frames:
 Answer (concise, in the same language as the question):"""
 
 ANSWER_FROM_IMAGES_PROMPT = """\
-You are analyzing up to 3 candidate video keyframes retrieved for the same scene to answer a question.
+You are analyzing up to 10 candidate video keyframes retrieved for the same scene to answer a question.
 They may show the same moment at slightly different times — one may be clearer than the others.
 
 Question: {question}
@@ -71,6 +71,17 @@ Look at the image(s) carefully and answer concisely:
 - Keep the answer SHORT (1-5 words if possible) and factual, based only on what you can see.
 
 Answer:"""
+
+VISUAL_COUNT_REPAIR_PROMPT = """\
+Extract the answer to this visual counting question from the response below.
+Return only one integer: the number of requested markers inside the main map/image area.
+Ignore the legend and ignore any scale ranges such as 4.0-4.5.
+Do not return an explanation.
+
+Question: {question}
+Previous response: {response}
+
+Integer:"""
 
 OCR_HINT_TEMPLATE = """\
 Automated OCR hint (from a text-reading model on the candidate frame(s) — may contain errors; treat \
@@ -116,6 +127,44 @@ Question: {question}
 Answer:"""
 
 MAX_ANSWER_CHARS = 100
+QA_EVIDENCE_TOP_N = 10
+
+_VISUAL_COUNT_HINTS = re.compile(
+    r"(bao nhiêu|số lượng|đếm|how many|number of|count)",
+    re.IGNORECASE,
+)
+_STANDALONE_INTEGER = re.compile(r"(?<![\d.,])\d+(?![\d.,])")
+
+
+def is_visual_count_question(question: str) -> bool:
+    """Nhận biết câu hỏi yêu cầu đếm đối tượng hoặc ký hiệu trong ảnh."""
+    return bool(question and _VISUAL_COUNT_HINTS.search(question))
+
+
+def extract_visual_count(response: str) -> str | None:
+    """Chỉ nhận một số nguyên độc lập, tránh coi khoảng số trên chú giải là đáp án."""
+    matches = _STANDALONE_INTEGER.findall(response or "")
+    return matches[0] if len(matches) == 1 else None
+
+
+def _trace_evidence(stage: str, candidates: list[dict], objects: list[str] | None = None,
+                    ocr_hint: str = "", transcript: str = "", caption: str = "") -> None:
+    """In ra cac bang chung va nguon du lieu da duoc dung de tra loi."""
+    candidate_ids = [
+        f"{hit.get('video_id', '?')}/n={hit.get('n', '?')}/frame={hit.get('frame_id', '?')}"
+        for hit in candidates
+    ]
+    print(f"[qa] Evidence ({stage}): candidates={candidate_ids}")
+    print(f"[qa] Evidence ({stage}): objects={objects or 'not used'}")
+    print(f"[qa] Evidence ({stage}): ocr={ocr_hint or 'not used'}")
+    print(f"[qa] Evidence ({stage}): asr={transcript or 'not used'}")
+    print(f"[qa] Evidence ({stage}): caption={caption or 'not used'}")
+
+
+def _trace_prompt(stage: str, prompt: str) -> None:
+    """In ra nguyen prompt da gui qua call_llm()."""
+    print(f"[qa] Prompt ({stage}):")
+    print(prompt)
 
 # Cau hoi doi hoi doc so/chu/dem tren man hinh (bien bao, dong ho, chu giai ban do, ten dia danh...).
 # Objects JSON (Faster R-CNN/OpenImages) chi tra ve TEN OBJECT chung chung, khong doc duoc text/so, nen
@@ -174,6 +223,7 @@ def answer_from_hits(
 
     candidates = hits[:top_n]
     skip_objects_tier = _needs_text_reading(question)
+    visual_count = is_visual_count_question(question)
 
     # --- Tang 1: Objects JSON (bo qua neu cau hoi can doc so/chu — xem _needs_text_reading) ---
     if not skip_objects_tier:
@@ -207,7 +257,10 @@ def answer_from_hits(
                 caption_hint=caption_hint1,
                 transcript_hint=transcript_hint1,
             )
+            _trace_evidence("objects", candidates, unique_objects[:30], transcript=transcript1, caption=caption1)
+            _trace_prompt("objects", prompt1)
             ans1 = call_llm(prompt1, model="text", temperature=0.1, max_tokens=80)
+            print(f"[qa] LLM response (objects): {ans1!r}")
 
             if "CANNOT_ANSWER_FROM_OBJECTS" not in ans1:
                 # Cross-check
@@ -221,9 +274,8 @@ def answer_from_hits(
                 }
 
     # --- Tang 2: Vision (chi khi co anh) ---
-    # Gom toi da 3 anh candidate dau tien (thay vi chi anh top-1) de model doi chieu giua cac frame —
-    # frame chua so/chu can doc co the khong phai frame co score CLIP cao nhat.
-    vision_hits = [h for h in candidates if h.get("jpg_path") and Path(h["jpg_path"]).exists()][:3]
+    # Gui toi da QA_EVIDENCE_TOP_N candidate va moi nguon bang chung de LLM tu danh gia muc do lien quan.
+    vision_hits = [h for h in candidates if h.get("jpg_path") and Path(h["jpg_path"]).exists()][:QA_EVIDENCE_TOP_N]
     if vision_hits:
         image_paths = [h["jpg_path"] for h in vision_hits]
 
@@ -246,6 +298,8 @@ def answer_from_hits(
         prompt2 = ANSWER_FROM_IMAGES_PROMPT.format(
             question=question, ocr_hint=ocr_hint, caption_hint=caption_hint2, transcript_hint=transcript_hint2,
         )
+        _trace_evidence("vision", vision_hits, ocr_hint=ocr_hint, transcript=transcript2, caption=caption2)
+        _trace_prompt("vision", prompt2)
         ans2 = call_llm(
             prompt2,
             image_paths=image_paths,
@@ -253,6 +307,23 @@ def answer_from_hits(
             temperature=0.1,
             max_tokens=80,
         )
+        print(f"[qa] LLM response (vision): {ans2!r}")
+        if visual_count:
+            visual_count_answer = extract_visual_count(ans2)
+            if visual_count_answer is None:
+                repair_prompt = VISUAL_COUNT_REPAIR_PROMPT.format(
+                    question=question, response=ans2,
+                )
+                repaired = call_llm(
+                    repair_prompt, model="text", temperature=0.0, max_tokens=10,
+                )
+                _trace_prompt("visual-count-repair", repair_prompt)
+                print(f"[qa] LLM response (visual-count-repair): {repaired!r}")
+                visual_count_answer = extract_visual_count(repaired)
+            if visual_count_answer is None:
+                visual_count_answer = "N/A"
+        else:
+            visual_count_answer = _normalize_answer(ans2)
         # Cross-check voi objects gom tu tat ca anh da gui cho vision
         combined_objs = []
         for h in vision_hits:
@@ -262,7 +333,7 @@ def answer_from_hits(
         crosscheck = _crosscheck_answer(question, ans2, list(dict.fromkeys(combined_objs)), transcript2, caption2)
         conf = 0.85 if crosscheck else 0.6
         return {
-            "answer":     _normalize_answer(ans2),
+            "answer":     visual_count_answer,
             "best_hit":   vision_hits[0],
             "confidence": conf,
             "method":     "vision",

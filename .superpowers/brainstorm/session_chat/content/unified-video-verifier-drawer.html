@@ -1,0 +1,140 @@
+<h2>Thiết kế Đồng bộ: Unified Video Verifier Drawer</h2>
+<p class="subtitle">Mọi thao tác bấm vào ảnh keyframe (ở KIS, Q&A hay TRAKE) đều tự động mở Video Verifier để tua kiểm chứng từng frame</p>
+
+<div class="mockup" style="background: #0f172a; border-radius: 12px; border: 1px solid #334155; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+  <div class="mockup-header" style="background: #1e293b; padding: 12px 18px; border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center;">
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <span style="font-weight: 600; color: #f8fafc; font-size: 14px;">🎯 Luồng Kiểm Chứng Đồng Nhất Giữa Tất Cả Dạng Bài</span>
+    </div>
+    <div style="font-size: 12px; color: #38bdf8; background: #0b1120; padding: 4px 10px; border-radius: 6px; border: 1px solid #334155;">
+      ⚡ Bấm vào bất kỳ thumbnail nào ➔ Drawer mở ngay với đúng video_id & pts_time
+    </div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: 1fr 420px; min-height: 560px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+    
+    <!-- Left: Chat Stream showing interaction -->
+    <div style="padding: 16px; background: #0b1120; display: flex; flex-direction: column; gap: 14px; border-right: 1px solid #1e293b; overflow-y: auto;">
+      
+      <!-- Card with Active Selection Badge -->
+      <div style="background: #1e293b; border: 1px solid #3b82f6; border-radius: 10px; padding: 12px; position: relative;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <span style="background: #3b82f6; color: white; font-size: 11px; font-weight: bold; padding: 2px 6px; border-radius: 4px;">🎯 KIS Results</span>
+          <span style="color: #60a5fa; font-size: 11px;">Đang soi video: <b>L05_V021</b></span>
+        </div>
+
+        <div style="display: flex; gap: 8px;">
+          <!-- Active Card (Currently Opened in Verifier) -->
+          <div style="flex: 1; background: #0f172a; border: 2px solid #38bdf8; border-radius: 6px; padding: 6px; box-shadow: 0 0 10px rgba(56,189,248,0.3);">
+            <div style="background: #1e293b; height: 60px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #38bdf8; font-weight: bold;">
+              ▶️ Đang mở trên Verifier
+            </div>
+            <div style="font-size: 11px; font-weight: bold; color: #fff; margin-top: 4px;">#1 · L05_V021 / 0840</div>
+            <div style="font-size: 9px; color: #38bdf8;">PTS: 33.6s</div>
+          </div>
+
+          <div style="flex: 1; background: #0f172a; border: 1px solid #334155; border-radius: 6px; padding: 6px; opacity: 0.8; cursor: pointer;">
+            <div style="background: #1e293b; height: 60px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #94a3b8;">
+              🖼️ Keyframe #2
+            </div>
+            <div style="font-size: 11px; font-weight: bold; color: #cbd5e1; margin-top: 4px;">#2 · L05_V021 / 0865</div>
+            <div style="font-size: 9px; color: #94a3b8;">PTS: 34.6s</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TRAKE Card showing milestone selection -->
+      <div style="background: #1e293b; border: 1px solid #8b5cf6; border-radius: 10px; padding: 12px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <span style="background: #8b5cf6; color: white; font-size: 11px; font-weight: bold; padding: 2px 6px; border-radius: 4px;">⏱️ TRAKE Sequence</span>
+          <span style="color: #c4b5fd; font-size: 11px;">Nhấn vào mốc bất kỳ để soi video</span>
+        </div>
+
+        <div style="display: flex; gap: 6px; align-items: center;">
+          <div style="flex: 1; background: #0f172a; border: 1px solid #6366f1; border-radius: 4px; padding: 6px; text-align: center; cursor: pointer;">
+            <div style="font-size: 9px; color: #a5b4fc;">Mốc 1</div>
+            <div style="font-weight: bold; font-size: 10px; color: #fff;">0310</div>
+          </div>
+          <span style="color: #8b5cf6;">➔</span>
+          <div style="flex: 1; background: #0f172a; border: 1px solid #6366f1; border-radius: 4px; padding: 6px; text-align: center; cursor: pointer;">
+            <div style="font-size: 9px; color: #a5b4fc;">Mốc 2</div>
+            <div style="font-weight: bold; font-size: 10px; color: #fff;">0520</div>
+          </div>
+          <span style="color: #8b5cf6;">➔</span>
+          <div style="flex: 1; background: #0f172a; border: 1px solid #6366f1; border-radius: 4px; padding: 6px; text-align: center; cursor: pointer;">
+            <div style="font-size: 9px; color: #a5b4fc;">Mốc 3</div>
+            <div style="font-weight: bold; font-size: 10px; color: #fff;">0780</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Right: Unified Video Verifier Drawer -->
+    <div style="background: #0f172a; padding: 16px; display: flex; flex-direction: column; gap: 12px; border-left: 1px solid #334155;">
+      
+      <!-- Verifier Header -->
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1e293b; padding-bottom: 8px;">
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <span style="background: #0284c7; color: white; font-weight: bold; font-size: 10px; padding: 2px 6px; border-radius: 4px;">Video Verifier</span>
+          <span style="color: #f8fafc; font-weight: 600; font-size: 13px;">L05_V021.mp4</span>
+        </div>
+        <button style="background: transparent; border: 1px solid #475569; color: #94a3b8; border-radius: 4px; padding: 2px 8px; font-size: 11px; cursor: pointer;">✕ Đóng</button>
+      </div>
+
+      <!-- Real HTML5 Video Player Mock -->
+      <div style="background: #000; border-radius: 6px; height: 190px; display: flex; flex-direction: column; justify-content: space-between; padding: 8px; border: 1px solid #334155;">
+        <div style="display: flex; justify-content: space-between; font-size: 10px; color: #e2e8f0; background: rgba(0,0,0,0.6); padding: 3px 6px; border-radius: 4px;">
+          <span>Đang tua: <b>00:33.60</b> / 03:15.00</span>
+          <span>FPS: 25.0</span>
+        </div>
+
+        <div style="text-align: center; color: #64748b; font-size: 12px;">
+          🎬 [Trình chiếu Video Verifier]<br/>
+          <span style="color: #38bdf8; font-size: 11px;">Phím <b>[A]</b>: Lùi 1 frame | Phím <b>[D]</b>: Tiến 1 frame</span>
+        </div>
+
+        <!-- Track bar -->
+        <div>
+          <input type="range" style="width: 100%; accent-color: #38bdf8;" value="24" />
+        </div>
+      </div>
+
+      <!-- Live Frame & Sync Controls -->
+      <div style="background: #1e293b; border-radius: 6px; padding: 10px; border: 1px solid #334155;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 12px;">
+          <span style="color: #94a3b8;">Frame ID đang tua:</span>
+          <span style="background: #0f172a; color: #38bdf8; font-weight: bold; padding: 2px 8px; border-radius: 4px; border: 1px solid #0284c7;">
+            0843 (Lệch +3 frames)
+          </span>
+        </div>
+
+        <div style="display: flex; gap: 6px;">
+          <button style="flex: 1; background: #2563eb; color: white; border: none; padding: 8px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px;">
+            📌 Cập nhật Frame 0843 vào Vị trí #1
+          </button>
+          <button style="background: #059669; color: white; border: none; padding: 8px 12px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer;">
+            📥 Nộp
+          </button>
+        </div>
+      </div>
+
+      <!-- Keyframe Roll -->
+      <div>
+        <div style="display: flex; justify-content: space-between; font-size: 11px; color: #94a3b8; margin-bottom: 4px;">
+          <span>Toàn bộ keyframe của video:</span>
+          <span style="color: #38bdf8; cursor: pointer;">Cuộn ngang →</span>
+        </div>
+        <div style="display: flex; gap: 4px; overflow-x: auto; padding-bottom: 4px;">
+          <div style="width: 50px; height: 38px; background: #334155; border-radius: 4px; flex-shrink: 0; font-size: 8px; color: #cbd5e1; display: flex; align-items: center; justify-content: center;">0815</div>
+          <div style="width: 50px; height: 38px; background: #0284c7; border: 2px solid #38bdf8; border-radius: 4px; flex-shrink: 0; font-size: 8px; color: #fff; font-weight: bold; display: flex; align-items: center; justify-content: center;">0840 ⭐</div>
+          <div style="width: 50px; height: 38px; background: #334155; border-radius: 4px; flex-shrink: 0; font-size: 8px; color: #cbd5e1; display: flex; align-items: center; justify-content: center;">0865</div>
+          <div style="width: 50px; height: 38px; background: #334155; border-radius: 4px; flex-shrink: 0; font-size: 8px; color: #cbd5e1; display: flex; align-items: center; justify-content: center;">0890</div>
+          <div style="width: 50px; height: 38px; background: #334155; border-radius: 4px; flex-shrink: 0; font-size: 8px; color: #cbd5e1; display: flex; align-items: center; justify-content: center;">0915</div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</div>

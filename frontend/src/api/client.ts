@@ -73,6 +73,10 @@ export const api = {
       `/keyframes/${video_id}/neighbors?frame_idx=${frame_idx}&window=${window}`
     ),
 
+  // Toan bo keyframe cua 1 video — dai luot ngang o man chi tiet KIS.
+  keyframeAll: (video_id: string) =>
+    request<NeighborFrame[]>(`/keyframes/${encodeURIComponent(video_id)}/all`),
+
   qaRun: (query: string, question: string, top_k = 20, query_en?: string) =>
     request<{ hits: QaHit[]; answer: string; confidence: number; n_loops: number }>("/qa/run", {
       method: "POST",
@@ -83,6 +87,14 @@ export const api = {
     request<{ candidates: TrakeCandidate[]; n_events: number }>("/trake/run", {
       method: "POST",
       body: JSON.stringify({ query, events, top_k_video, query_en }),
+    }),
+
+  // Phase 2: man Chat se goi endpoint nay thay cho fixture tinh (src/mock/chatScenarios.ts).
+  // Contract: docs/superpowers/specs/2026-08-28-chat-screen-ui-design.md §4.1. Chua dung o Phase 1.
+  chatMessage: (sessionId: string, message: string, query_id: string) =>
+    request<Record<string, unknown>>(`/chat/${encodeURIComponent(sessionId)}/message`, {
+      method: "POST",
+      body: JSON.stringify({ message, query_id }),
     }),
 
   getQueue: (sessionId: string) => request<QueueRow[]>(`/queue/${sessionId}`),

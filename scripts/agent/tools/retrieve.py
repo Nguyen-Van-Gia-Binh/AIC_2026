@@ -2,8 +2,8 @@
 Công cụ truy xuất keyframe dùng chung cho cả 3 pipeline (KIS / Q&A / TRAKE).
 
 Bọc multi_index.py với per-task singleton pattern — 2 model load độc lập:
-  - KIS / TRAKE → siglip  (google/siglip-so400m-patch14-384, features_siglip/)
-  - Q&A         → siglip2 (google/siglip2-so400m-patch14-384, features_siglip2/)
+    - KIS / TRAKE → siglip  (google/siglip-so400m-patch14-384, features_siglip/)
+    - Q&A         → siglip  (google/siglip-so400m-patch14-384, features_siglip/)
 
 Lý do chọn: benchmark 33 query (2026-08-28):
   siglip : KIS=0.744, TRAKE=0.412, ALL=0.549
@@ -11,8 +11,8 @@ Lý do chọn: benchmark 33 query (2026-08-28):
   clip_vitb32 (baseline cũ, đã xoá): ALL=0.290
 
 Escape-hatch (dùng khi thử nghiệm, không phải production):
-  AIC_RETRIEVE_MODEL=<tag>  override model cho KIS/TRAKE  (mặc định "siglip")
-  AIC_QA_MODEL=<tag>        override model cho Q&A        (mặc định "siglip2")
+    AIC_RETRIEVE_MODEL=<tag>  override model cho KIS/TRAKE  (mặc định "siglip")
+    AIC_QA_MODEL=<tag>        override model cho Q&A        (mặc định "siglip")
   Tag hợp lệ: xem MODEL_REGISTRY trong test_eval/Eval/multi_index.py
 
 Usage:
@@ -35,6 +35,7 @@ from typing import Callable, Optional
 
 import numpy as np
 import pandas as pd
+from scripts.agent.tools.fusion import rrf_fuse_hits
 
 # Console Windows mặc định dùng code page cp1252, không encode được ký tự có dấu (vd "Đ" trong log
 # bên dưới) -> UnicodeEncodeError ngay lúc import module này. Ép stdout sang UTF-8 tại đây (điểm
@@ -54,7 +55,7 @@ _REPO_ROOT = _SCRIPTS_DIR.parent
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-# ─── Singleton KIS/TRAKE (mặc định: siglip) ─────────────────────────────────
+# ─── Singleton KIS/TRAKE (mặc định: siglip) ──────────────────────────────────
 # Đọc 1 lần lúc import module, không đổi giữa chừng trong 1 process.
 _MODEL_TAG = os.environ.get("AIC_RETRIEVE_MODEL", "").strip() or "siglip"
 
@@ -62,8 +63,8 @@ _MATRIX: Optional[np.ndarray] = None
 _META = None
 _ENCODE_FN: Optional[Callable[[str], np.ndarray]] = None
 
-# ─── Singleton Q&A (mặc định: siglip2) ──────────────────────────────────────
-_QA_MODEL_TAG = os.environ.get("AIC_QA_MODEL", "").strip() or "siglip2"
+# ─── Singleton Q&A (mặc định: siglip) ───────────────────────────────────────
+_QA_MODEL_TAG = os.environ.get("AIC_QA_MODEL", "").strip() or "siglip"
 
 _QA_MATRIX: Optional[np.ndarray] = None
 _QA_META = None
@@ -128,7 +129,7 @@ def _ensure_loaded() -> None:
 
 
 def _ensure_qa_loaded() -> None:
-    """Nạp model Q&A (siglip2) nếu chưa nạp."""
+    """Nạp model Q&A (siglip) nếu chưa nạp."""
     global _QA_MATRIX, _QA_META, _QA_ENCODE_FN
     if _QA_MATRIX is not None:
         return
@@ -138,7 +139,7 @@ def _ensure_qa_loaded() -> None:
 
 def preload() -> None:
     """Nạp sẵn index + model cho CẢ HAI task ngay bây giờ (không đợi lần gọi đầu tiên).
-    KIS/TRAKE dùng siglip; Q&A dùng siglip2. app.py gọi hàm này lúc khởi động để UI sẵn sàng
+    KIS/TRAKE và Q&A dùng siglip. app.py gọi hàm này lúc khởi động để UI sẵn sàng
     truy xuất ngay từ lần search đầu, thay vì người dùng đầu tiên phải chờ load model.
     """
     _ensure_loaded()
@@ -209,9 +210,9 @@ def fast_retrieve_for_video(query_text: str, video_id: str, top_k: int = 20) -> 
 
 def fast_retrieve_qa(query_text: str, top_k: int = 100) -> list[dict]:
     """
-    Tìm top_k keyframe bằng model siglip2 — dùng cho pipeline Q&A.
+    Tìm top_k keyframe bằng model siglip — dùng cho pipeline Q&A.
 
-    Dùng không gian embedding siglip2 (tối ưu đa ngữ cảnh + OCR/VLM reasoning),
+    Dùng không gian embedding siglip,
     khác với fast_retrieve() dùng siglip (tối ưu visual spotting cho KIS/TRAKE).
 
     Returns: cùng format với fast_retrieve() — list[dict] với các key:
@@ -237,6 +238,43 @@ def fast_retrieve_qa(query_text: str, top_k: int = 100) -> list[dict]:
             "jpg_path":  row["jpg_path"] if isinstance(row["jpg_path"], str) else None,
         })
     return results
+
+
+def fast_retrieve_multi_model(
+    query_text: str,
+    model_tags: tuple[str, ...] = ("vitl14", "siglip2", "dfn"),
+    top_k: int = 500,
+    rrf_k: int = 60,
+) -> list[dict]:
+    """Tìm ứng viên bằng nhiều model rồi gộp ở mức frame bằng RRF."""
+    if not model_tags:
+        return []
+
+    stream_hits: list[list[dict]] = []
+    per_model_top_k = min(max(top_k, 1), 1000)
+    for tag in model_tags:
+        matrix, meta, encode_fn = _load_model(tag)
+        q_vec = encode_fn(query_text)
+        scores = matrix @ q_vec
+        top_idx = np.argsort(-scores)[:per_model_top_k]
+        hits = []
+        for idx in top_idx:
+            row = meta.iloc[idx]
+            frame_idx = int(row["frame_idx"])
+            hits.append({
+                "video_id": row["video_id"],
+                "n": int(row["n"]),
+                "frame_idx": frame_idx,
+                "frame_id": frame_idx + 1,
+                "pts_time": float(row["pts_time"]),
+                "score": float(scores[idx]),
+                "jpg_path": row["jpg_path"] if isinstance(row["jpg_path"], str) else None,
+            })
+        stream_hits.append(hits)
+
+    fused = rrf_fuse_hits(stream_hits, top_k=top_k, rrf_k=rrf_k)
+    print(f"[retrieve] RRF {list(model_tags)}: {len(fused)} fused frame candidates")
+    return fused
 def get_neighbor_frames(video_id: str, frame_idx: int, window: int = 5) -> list[dict]:
     """Tra ve toi da 2*window+1 keyframe LIEN TIEP (theo frame_idx) trong CUNG 1 video, xung quanh
     frame_idx duoc chi dinh — dung cho man chi tiet keyframe (dai frame lan can, mockup man 1c).
@@ -255,6 +293,29 @@ def get_neighbor_frames(video_id: str, frame_idx: int, window: int = 5) -> list[
     hi = min(len(local_meta), center + window + 1)
     results = []
     for _, row in local_meta.iloc[lo:hi].iterrows():
+        fidx = int(row["frame_idx"])
+        results.append({
+            "video_id":  row["video_id"],
+            "frame_idx": fidx,
+            "frame_id":  fidx + 1,   # BTC dem frame tu 1 — quy doi CHI o day (xem CLAUDE.md)
+            "pts_time":  float(row["pts_time"]),
+        })
+    return results
+
+
+def get_all_frames(video_id: str) -> list[dict]:
+    """Tra ve TOAN BO keyframe cua 1 video (sap theo frame_idx tang dan) — dung cho dai luot
+    keyframe day du o man chi tiet KIS (cuon ngang tu frame dau den frame cuoi, thay cho
+    get_neighbor_frames chi lay +/- vai frame). Khong tinh score (khong phai ket qua truy van).
+    Moi phan tu: {video_id, frame_idx, frame_id, pts_time}.
+    """
+    _ensure_loaded()
+    mask = _META["video_id"] == video_id
+    if not mask.any():
+        return []
+    local_meta = _META[mask].sort_values("frame_idx")
+    results = []
+    for _, row in local_meta.iterrows():
         fidx = int(row["frame_idx"])
         results.append({
             "video_id":  row["video_id"],

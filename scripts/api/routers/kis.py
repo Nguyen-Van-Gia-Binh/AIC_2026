@@ -8,7 +8,7 @@ from fastapi import APIRouter, HTTPException
 
 from scripts.agent.pipeline_kis import run_kis
 from scripts.agent.tools.rewrite import rewrite_query_candidates
-from scripts.agent.tools.retrieve import get_neighbor_frames
+from scripts.agent.tools.retrieve import get_neighbor_frames, get_all_frames
 from scripts.api.schemas import (
     RewriteRequest, RewriteResponse, KisSearchRequest, KisSearchResponse, Hit, NeighborFrame,
 )
@@ -42,4 +42,13 @@ def kis_search(req: KisSearchRequest) -> KisSearchResponse:
 @router.get("/keyframes/{video_id}/neighbors", response_model=list[NeighborFrame])
 def keyframe_neighbors(video_id: str, frame_idx: int, window: int = 5) -> list[NeighborFrame]:
     frames = get_neighbor_frames(video_id, frame_idx, window=window)
+    return [NeighborFrame(**f) for f in frames]
+
+
+@router.get("/keyframes/{video_id}/all", response_model=list[NeighborFrame])
+def keyframe_all(video_id: str) -> list[NeighborFrame]:
+    """Toan bo keyframe cua 1 video — dai luot ngang o man chi tiet KIS."""
+    frames = get_all_frames(video_id)
+    if not frames:
+        raise HTTPException(404, f"khong co keyframe cho {video_id}")
     return [NeighborFrame(**f) for f in frames]

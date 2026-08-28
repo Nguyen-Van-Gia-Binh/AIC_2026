@@ -118,6 +118,16 @@ const VideoVerifier = forwardRef<VideoVerifierHandle, Props>(function VideoVerif
         e.preventDefault();
         seekBy(5);
         break;
+      case "a":
+      case "A":
+        e.preventDefault();
+        stepFrame(-1);
+        break;
+      case "d":
+      case "D":
+        e.preventDefault();
+        stepFrame(1);
+        break;
       case "j":
       case "J":
         e.preventDefault();
@@ -143,7 +153,7 @@ const VideoVerifier = forwardRef<VideoVerifierHandle, Props>(function VideoVerif
     }
   }
 
-  const frameNo = Math.round(current * fps);
+  const frameNo = Math.round(current * fps) + 1; // hien theo frame_id (BTC dem tu 1)
 
   return (
     <div className="video-verifier">
@@ -203,7 +213,7 @@ const VideoVerifier = forwardRef<VideoVerifierHandle, Props>(function VideoVerif
       </div>
 
       <div className="vv-legend">
-        <kbd>Space</kbd>/<kbd>K</kbd> chạy/dừng · <kbd>←</kbd><kbd>→</kbd> hoặc <kbd>,</kbd><kbd>.</kbd> ±1 frame ·{" "}
+        <kbd>Space</kbd>/<kbd>K</kbd> chạy/dừng · <kbd>A</kbd>/<kbd>D</kbd> hoặc <kbd>←</kbd><kbd>→</kbd> hoặc <kbd>,</kbd><kbd>.</kbd> ±1 frame ·{" "}
         <kbd>J</kbd>/<kbd>L</kbd> hoặc <kbd>Shift</kbd>+<kbd>←</kbd>/<kbd>→</kbd> ±5s ·{" "}
         <kbd>Shift</kbd>+<kbd>,</kbd>/<kbd>.</kbd> tốc độ · <kbd>0</kbd> về keyframe · <kbd>F</kbd> toàn màn hình
       </div>
