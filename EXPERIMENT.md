@@ -166,3 +166,25 @@ sau._
   dung từng có ở đây.
 - Bất kỳ lỗi debug nào gặp phải khi chạy Dry-run contest mode (việc còn treo — xem `PLAN.md`) nên ghi
   vào đây ngay khi phát sinh, đừng để tới lúc mất máy mới tiếc.
+
+## 2026-08-28 — Regression Guard bắt được 3 lỗi khi triển khai BẢN ĐẶC TẢ
+
+Cả 3 đều KHÔNG lộ ra qua self-test, chỉ lộ khi chấm điểm thật 18 câu KIS qua `run_kis()`.
+
+1. **Đo margin đặt cược trên thang RRF** → Final 0.656 → 0.633. Điểm RRF là `w/(k+rank)`: khoảng cách
+   giữa các hạng cực nhỏ và đều, nên ngưỡng tương đối 5% bắt "đặt cược" sai rất nhiều (R@5 tăng nhưng
+   R@20/50/100 mất). **Fix:** thêm tham số `margin_key`, mặc định vẫn là `score` (cosine).
+   *Bài học: khi đổi thang điểm xếp hạng, mọi ngưỡng đã hiệu chỉnh theo thang cũ đều phải đi cùng nó.*
+2. **Đưa cả 500 ứng viên BM25 vào RRF** → 0.667 → 0.611. Frame chỉ trùng 1–2 từ chung chung
+   ("person", "car") ở hạng sparse ~100–500 vẫn vượt được ứng viên dense hạng 150. **Fix:**
+   `SPARSE_TOP_K = 50`.
+3. **`str.replace()` âm thầm không khớp khi vá file bằng script** — đoạn nối Regression Guard vào
+   `score_pipelines.main()` không được áp dụng, nhưng script vẫn báo "patched" và chương trình vẫn
+   chạy bình thường (chỉ là không có Guard). Phát hiện vì `--save-baseline` chạy xong mà không sinh
+   file. *Bài học: vá file bằng script thì phải `assert old in s` cho TỪNG replace, hoặc dùng công cụ
+   sửa file có báo lỗi khi không khớp.*
+
+Ghi chú thêm: Temporal NMS với `min_gap=3.0s` gần như trung tính trên dữ liệu này (65% khoảng cách
+keyframe < 3s nhưng GT window đã được nới sang keyframe lân cận). Cái thật sự ăn điểm khi đo ở Tầng 1
+là **trần 3 dòng/video** của chế độ trải rủi ro (0.549 → 0.434 trên 33 câu) — đó là thiết kế có từ
+Phase 3, chưa đụng tới ở đợt này, nhưng đáng xem lại nếu còn thời gian trước vòng thi.

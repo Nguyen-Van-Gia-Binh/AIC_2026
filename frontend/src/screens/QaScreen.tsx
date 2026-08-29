@@ -25,6 +25,7 @@ export default function QaScreen({ active }: { active: boolean }) {
   const [loading, setLoading] = useState(false);
   const [queryId, setQueryId] = useState("");
   const [detailIdx, setDetailIdx] = useState<number | null>(null);
+  const [dragFrom, setDragFrom] = useState<number | null>(null);
 
   async function run() {
     if (!query.trim()) {
@@ -51,6 +52,21 @@ export default function QaScreen({ active }: { active: boolean }) {
   function setCommonAnswer(a: string) {
     setAnswer(a);
     setHits((list) => list.map((h) => ({ ...h, answer: a })));
+  }
+
+  function reorder(from: number, to: number) {
+    if (from === to) return;
+    setHits((list) => {
+      const next = list.slice();
+      const [item] = next.splice(from, 1);
+      next.splice(to, 0, item);
+      return next;
+    });
+    setDragFrom(to);
+  }
+
+  function removeAt(i: number) {
+    setHits((list) => list.filter((_, k) => k !== i));
   }
 
   function moveToFront(i: number) {
@@ -203,23 +219,48 @@ export default function QaScreen({ active }: { active: boolean }) {
           </p>
         </div>
       ) : (
-        <div className="qa-grid">
-          {hits.map((h, i) => (
-            <div key={h._key} className="qa-card" onClick={() => setDetailIdx(i)}>
-              <Thumb videoId={h.video_id} frameIdx={h.frame_idx} />
-              <span className="mono card-rank">#{i + 1}</span>
-              <span className="mono card-score">{h.score.toFixed(3)}</span>
-              <div className="card-caption">
-                <div className="cc-row">
-                  <span>
-                    {h.video_id} · {h.frame_id}
-                  </span>
+        <>
+          <p className="text-muted kis-hint">
+            Kéo thả card để đổi thứ hạng — hạng #1 là đáp án chính khi nộp. Bấm card để soi
+            video &amp; sửa frame. Nút × để loại khỏi danh sách.
+          </p>
+          <div className="qa-grid">
+            {hits.map((h, i) => (
+              <div
+                key={h._key}
+                className={`qa-card ${dragFrom === i ? "dragging" : ""}`}
+                draggable
+                onDragStart={() => setDragFrom(i)}
+                onDragEnter={() => dragFrom !== null && reorder(dragFrom, i)}
+                onDragOver={(e) => e.preventDefault()}
+                onDragEnd={() => setDragFrom(null)}
+                onClick={() => setDetailIdx(i)}
+              >
+                <Thumb videoId={h.video_id} frameIdx={h.frame_idx} />
+                <span className="mono card-rank">#{i + 1}</span>
+                <button
+                  className="card-remove"
+                  title="Loại khỏi danh sách nộp"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    removeAt(i);
+                  }}
+                >
+                  ×
+                </button>
+                <span className="mono card-score">{h.score.toFixed(3)}</span>
+                <div className="card-caption">
+                  <div className="cc-row">
+                    <span>
+                      {h.video_id} · {h.frame_id}
+                    </span>
+                  </div>
+                  <div className="cc-answer">💬 {h.answer || answer || "—"}</div>
                 </div>
-                <div className="cc-answer">💬 {h.answer || answer || "—"}</div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        </>
       )}
 
       {hits.length > 0 && (

@@ -20,27 +20,29 @@ is R-Score/R@k averaged across ranks 1/5/20/50/100 — full rules in
 
 The system has grown from a single-file CLIP search demo into: a shared retriever, three per-query-type
 pipelines (KIS/Q&A/TRAKE), an LLM agent layer for Q&A/TRAKE, and a submission CSV/ZIP builder +
-validator. The UI layer is being migrated from the original all-in-one Gradio app to a decoupled
-FastAPI backend + React/Vite frontend (see [ARCHITECTURE.md](ARCHITECTURE.md) and
-`docs/superpowers/specs/2026-08-27-multiagent-chat-architecture-design.md`); until that migration
-lands, `scripts/app.py` (Gradio) remains the operative UI for running/submitting the contest.
+validator. The UI layer is decoupled into a FastAPI backend (`scripts/api/`) and a modern React/Vite
+frontend (`frontend/`) (see [ARCHITECTURE.md](ARCHITECTURE.md)).
 
 ## Quick Start
 
 Setup (first time):
 ```
 .venv\Scripts\python.exe -m pip install -r requirements.txt
+cd frontend; npm install; cd ..
 ```
 Then copy `.env.example` to `.env` and fill in a real `OPENROUTER_API_KEY` (get one at
 [openrouter.ai/keys](https://openrouter.ai/keys)).
 
-Daily commands — always run through the project venv's Python directly (no activation needed):
+Daily commands:
 ```
-.venv\Scripts\python.exe scripts\app.py              # main entry point: Gradio UI (KIS/Q&A/TRAKE/Export tabs), http://127.0.0.1:7860
+# Chạy hệ thống sản xuất:
+.venv\Scripts\python.exe -m uvicorn scripts.api.main:app --reload --port 8000   # Backend API, http://127.0.0.1:8000/api/health
+cd frontend; npm run dev                                                        # React/Vite frontend, http://localhost:5173 (proxy /api → :8000)
+
+# Pipeline & Evaluation CLI:
 .venv\Scripts\python.exe scripts\agent\pipeline_kis.py "<query>"   # run one pipeline from the CLI, e.g. for debugging
-.venv\Scripts\python.exe -m uvicorn scripts.api.main:app --reload --port 8000   # new backend API (Phase 7), http://127.0.0.1:8000/api/health
-cd frontend; npm run dev                                                        # new React/Vite frontend (Phase 7), http://localhost:5173 (proxy /api → :8000)
 .venv\Scripts\python.exe scripts\submit\validate_submission.py    # validate the newest file in submissions/
+.venv\Scripts\python.exe scripts\agent\tools\sparse_index.py --build       # build BM25 cache 1 lần (~3.5 phút) — bắt buộc trước khi hybrid retrieval có tác dụng
 .venv\Scripts\python.exe test_eval\Eval\run_eval.py               # compare embedding backbones (retrieval-only, no LLM) → docs/eval_baseline_comparison.md
 .venv\Scripts\python.exe test_eval\Test\score_pipelines.py --types kis  # true BTC Final Score through the production pipelines (needs OPENROUTER_API_KEY)
 .venv\Scripts\python.exe scripts\api\_smoke_test.py               # backend API end-to-end smoke test (KIS/QA/TRAKE/queue/export)
@@ -52,18 +54,23 @@ directly with the venv Python, not via a test framework. There is no linter/form
 
 ## Folder Structure
 
+- `docs/_archive/app_gradio.py` — **[RETIRED 2026-08-29]** Giao diện Gradio cũ (4 tab KIS/Q&A/TRAKE/Export). Đã chuyển sang `docs/_archive/` sau khi hoàn thiện React UI (`frontend/`) và FastAPI backend (`scripts/api/`).
 - `docs/_archive/index_retired.py` — **[RETIRED 2026-08-28]** Từng build CLIP embedding matrix từ `clip-features-32/`.
   Không dùng trong production nữa sau khi `clip-features-32/` đã bị xóa (benchmark 33 query:
   `clip_vitb32` Final=0.290 vs `siglip`=0.549). Giữ nguyên để tham chiếu lịch sử.
-- `scripts/app.py` — legacy Gradio UI; still the operative entry point for running/submitting until
-  `frontend/` + `scripts/api/` replace it (see Tech Stack).
 - `scripts/agent/` — pipelines and LLM/tool code:
   - `config.py` — the one place that calls the LLM (`call_llm()`, via LiteLLM → Gemini).
   - `pipeline_kis.py` / `pipeline_qa.py` / `pipeline_trake.py` — one pipeline per query type.
-  - `tools/` — `retrieve.py` (CLIP search — **2 singleton**: `fast_retrieve`/`fast_retrieve_for_video`
-    dùng **siglip** cho KIS/TRAKE, `fast_retrieve_qa` dùng **siglip2** cho Q&A), `rewrite.py`
-    (VN→EN query rewrite), `ocr_lookup.py` (offline Objects JSON reader), `answer_qa.py`
-    (Q&A answer + cross-check).
+  - `tools/` — `retrieve.py` (dense search — **2 singleton**: `fast_retrieve`/`fast_retrieve_for_video`
+    dùng **siglip** cho KIS/TRAKE, `fast_retrieve_qa` dùng **siglip2** cho Q&A; `hybrid_retrieve()`
+    ghép dense + BM25 qua RRF), `sparse_index.py` (BM25 offline trên Objects JSON + caption — phải
+    build cache 1 lần, xem Quick Start), `fusion.py` (RRF thuần), `temporal_nms.py` (khử trùng lặp
+    thời gian, thuần), `query_expand.py` (Multi-Aspect Prompt Expansion, template tất định),
+    `rerank.py` (risk-aware ranking + Temporal NMS), `rewrite.py` (VN→EN query rewrite),
+    `ocr_lookup.py` (offline Objects JSON reader), `answer_qa.py` (Q&A answer + canonical extractor
+    + cross-check). `fusion.py`/`temporal_nms.py`/`query_expand.py` là module THUẦN (không nạp
+    index/model, không gọi LLM) — cố ý tách riêng để `test_eval/Eval/run_eval.py` dùng lại đúng
+    thuật toán của production mà không phải chép thành phiên bản thứ 2 dễ lệch.
 - `scripts/submit/` — `build_submission.py` (CSV/ZIP writer), `validate_submission.py` (format checker).
   This is the only place that should serialize a submission file.
 - `test_eval/` — everything for testing the system and scoring/comparing quality by the BTC formula
@@ -71,13 +78,17 @@ directly with the venv Python, not via a test framework. There is no linter/form
   - `test_eval/Eval/` — Phase 6 offline backbone bake-off: `multi_index.py` (index loader + per-model
     text encoders, self-contained — deliberately does NOT import `index.py`/`retrieve.py`),
     `run_eval.py` (compares `clip_vitb32`/`vitl14`/`siglip`/`dfn`/... by R@k, reads
-    `eval_ground_truth.json` here, writes `docs/eval_baseline_comparison.md`), `lookup_frame.py` +
+    `eval_ground_truth.json` here, writes `docs/eval_baseline_comparison.md`; cờ `--hybrid`/
+    `--expand`/`--nms`/`--strict-dp`/`--coverage-pool`/`--all-features` bật từng bước thuật toán mới
+    để đo trước-sau, mặc định TẮT nên số cũ vẫn so sánh được — **Tầng 1 của Regression Guard**), `lookup_frame.py` +
     `widen_gt_windows.py` (ground-truth labeling helpers — see `EVAL_GUIDE.md`),
     `eval_ground_truth.json` (hand-labeled eval set). Retrieval-only, no LLM, deterministic; never
     touches the KIS/QA/TRAKE production path.
   - `test_eval/Test/` — harnesses that DO run the production path (`scripts/agent/*`), need an API
     key, results may vary between runs: `test_phase{3,4,5,6}_*.py` (before/after benchmarks per
-    phase), `score_pipelines.py` (true BTC Final Score end-to-end, incl. Q&A answer match),
+    phase), `score_pipelines.py` (true BTC Final Score end-to-end, incl. Q&A answer match; **Tầng 2 của
+    Regression Guard** — `--save-baseline` chốt mốc vào `test_eval/Test/e2e_baseline.json`, lần chạy
+    sau tự so và thoát code 1 nếu Final tụt quá 0.01),
     `test_smoke_{tools,pipelines}.py` (setup sanity checks).
   - Root of `test_eval/` also holds shared query data: `sample_queries.json`,
     `sotuyen1_bo_de_thi.csv`, `thunghiem_bo_de_thi.csv` (BTC query packages).
@@ -135,16 +146,15 @@ code in the four buckets above.
 - `fastapi` + `uvicorn` (`scripts/api/`) — the backend API that fronts the pipelines/submission code
   for the frontend. New in the decoupled architecture; see `scripts/api/` above.
 - **Frontend is React + Vite** under `frontend/` (Node/npm toolchain, isolated to that folder) —
-  replaces the previous `gradio` UI. `gradio` is no longer the target UI; `scripts/app.py` stays only
-  as the legacy fallback until the new frontend covers its functionality, then gets removed.
+  thay thế hoàn toàn cho Gradio UI (`scripts/app.py` đã chuyển sang `docs/_archive/app_gradio.py`).
 - No database, no ORM, no message queue — everything is files under `data/`, `test_eval/`,
-  `submissions/`; the new backend keeps session/chat state in-process (RAM), not a DB (see the
+  `submissions/`; the backend keeps session/queue state in-process (RAM), not a DB (see the
   architecture spec referenced above for why).
 
 ## Code Rules
 
-- **UI text and code comments are written in Vietnamese** — this applies repo-wide now (not just
-  `app.py`/`index.py`), including new modules under `scripts/agent/` and `scripts/submit/`. Match the
+- **UI text and code comments are written in Vietnamese** — this applies repo-wide now,
+  including modules under `scripts/agent/`, `scripts/api/`, and `scripts/submit/`. Match the
   surrounding file's comment density; don't switch a Vietnamese-commented file to English mid-edit.
 - Function/variable naming: `snake_case` throughout (standard Python convention), e.g. `fast_retrieve`,
   `run_kis`, `build_kis_csv`. No camelCase.
@@ -164,9 +174,9 @@ code in the four buckets above.
   (`index.py`) to avoid drift from float16 rounding — don't skip the re-normalize step if you touch
   index-loading code.
 - Error handling: fail loud with a clear message for setup/data problems (e.g. `multi_index.py` raises
-  `FileNotFoundError` immediately if `features_siglip/` or `features_siglip2/` is empty); in the
-  Gradio UI, catch and show a short `⚠️` status message instead of letting the callback crash — don't
-  let a bad user edit (e.g. an emptied `frame_id` cell) take down the whole app.
+  `FileNotFoundError` immediately if `features_siglip/` or `features_siglip2/` is empty); in API endpoints
+  / UI, catch and return clear error statuses instead of crashing — don't let a bad user edit take
+  down the backend.
 - Logging: plain `print()` with a `[module_name]` prefix (e.g. `[retrieve]`, `[qa]`, `[trake]`) — no
   logging framework configured, keep using this convention for consistency.
 

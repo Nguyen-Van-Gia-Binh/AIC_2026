@@ -1,16 +1,22 @@
 """
 pipeline_qa.py — Pipeline Q&A: Orchestrator + Tool-use, max 2 vong verify-rewrite.
 
-Workflow:
+Workflow (BAN DAC TA §4):
   query_vi
-    -> rewrite_query()      -> query_en
-    -> fast_retrieve_qa(100)-> top-100 hits  # Model embedding: siglip (google/siglip-so400m-patch14-384)
-    -> answer_from_hits(5)  -> answer + best_hit + confidence  # Chon vi QA-retrieval Final=0.440 (x3.7 so siglip)
-    -> neu confidence < 0.5:
-         -> rewrite_query(feedback) -> query_en_v2
-        -> fast_retrieve_qa(100)   -> hits_v2
-         -> answer_from_hits(5)     -> answer_v2
-    -> build_qa_results(hits + answer)
+    -> rewrite_query()            -> query_en
+    -> hybrid_retrieve(qa=True)   -> pool 500 (dense siglip2 + BM25, dung hop RRF — §2)
+    -> apply_risk_aware_ranking() -> top-100 hits (xep theo rrf_score)
+    -> answer_by_video_cluster()  -> MOI video trong top cum co answer RIENG cua no (§4.1)
+    -> neu confidence cum tot nhat < 0.5:
+         -> rewrite_query(feedback) -> query_en_v2 -> retrieve + tra loi lai, giu ket qua tot hon
+    -> build_qa_results: dong nop bai thuoc video nao mang answer CUA CHINH video do
+
+Diem khac quan trong so voi ban truoc (§4.1): KHONG con gan cung 1 dap an cua video top-1 cho ca
+100 dong. Neu video top-1 sai nhung video dung nam o hang 7, dong cua video hang 7 van mang dap an
+dung cua chinh no -> R@20/R@50/R@100 khong bi ve 0 vi "answer sai".
+
+Model embedding Q&A: siglip2 (google/siglip2-so400m-patch14-384) — chon vi QA-retrieval Final=0.440
+(x3.7 so siglip) trong benchmark 33 query 2026-08-28.
 
 Output: list[dict] {video_id, frame_id, answer, score} da sap xep
 """
@@ -24,12 +30,61 @@ if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
 from scripts.agent.config import MAX_AGENT_LOOPS
-from scripts.agent.tools.retrieve import fast_retrieve_qa as fast_retrieve
+from scripts.agent.tools.retrieve import hybrid_retrieve
 from scripts.agent.tools.rewrite import rewrite_query
 from scripts.agent.tools.answer_qa import answer_from_hits
 from scripts.agent.tools.rerank import apply_risk_aware_ranking, RETRIEVAL_POOL_SIZE
 
 CONFIDENCE_THRESHOLD = 0.5  # Duoi nguong nay: thu lai vong 2
+
+# So cum video (top theo diem) duoc trich xuat answer RIENG (§4.1 "Top 3-5 cum video"). Moi cum ton
+# them 1-3 luot goi LLM (Tier 1/Tier 2 + crosscheck) nen day la danh doi chi phi/do phu: 3 cum bao
+# phu duoc phan lon truong hop video dung khong phai top-1, van giu chi phi o muc chap nhan duoc.
+MAX_ANSWER_CLUSTERS = 3
+
+# So keyframe tot nhat CUA MOI CUM dua vao answer_from_hits().
+CLUSTER_TOP_FRAMES = 5
+
+
+def _cluster_by_video(hits: list[dict], score_key: str = "rrf_score") -> list[tuple[str, list[dict]]]:
+    """Gom hits thanh cum theo video_id, sap xep cum theo diem tot nhat trong cum (giam dan).
+    Hits trong moi cum giu nguyen thu tu (da sap xep san tu buoc rerank)."""
+    by_video: dict[str, list[dict]] = {}
+    best: dict[str, float] = {}
+    for h in hits:
+        vid = h["video_id"]
+        by_video.setdefault(vid, []).append(h)
+        val = float(h.get(score_key, h.get("score", 0.0)))
+        if vid not in best or val > best[vid]:
+            best[vid] = val
+    return sorted(by_video.items(), key=lambda kv: -best[kv[0]])
+
+
+def answer_by_video_cluster(
+    question: str,
+    hits: list[dict],
+    max_clusters: int = MAX_ANSWER_CLUSTERS,
+) -> tuple[dict, dict]:
+    """
+    Trich xuat answer DOC LAP cho tung video trong top cum (§4.1).
+
+    Returns:
+        (answers, best): `answers` = {video_id: answer} cho cac cum da chay; `best` = ket qua
+        answer_from_hits() cua cum co confidence cao nhat (dung lam dap an mac dinh cho cac dong
+        thuoc video ngoai top cum, va lam tin hieu confidence cho vong lap).
+    """
+    clusters = _cluster_by_video(hits)[:max_clusters]
+    answers: dict[str, str] = {}
+    best: dict = {"answer": "", "best_hit": {}, "confidence": 0.0, "method": "fallback"}
+
+    for vid, cluster_hits in clusters:
+        result = answer_from_hits(question, cluster_hits, top_n=CLUSTER_TOP_FRAMES)
+        answers[vid] = result["answer"]
+        print(f"[qa]   Cum {vid}: answer={result['answer']!r} conf={result['confidence']:.2f} "
+              f"method={result['method']}")
+        if result["confidence"] > best["confidence"]:
+            best = result
+    return answers, best
 
 
 def run_qa(
@@ -37,6 +92,7 @@ def run_qa(
     question: str | None = None,
     top_k: int = 100,
     query_en: str | None = None,
+    use_hybrid: bool = True,
 ) -> dict:
     """
     Chay pipeline Q&A day du.
@@ -50,16 +106,24 @@ def run_qa(
                     vong 1 va dung thang gia tri nay de retrieve. Vong 2 (confidence thap) van tu
                     rewrite lai binh thuong tu query_text goc — day la auto-retry noi bo, khong phai
                     buoc preview thu cong.
+        use_hybrid: Bat nhanh Sparse BM25 + RRF (§2). Tat = chi dense siglip2 nhu truoc.
 
     Returns:
         dict:
-          results  (list[dict]): Top-100 {video_id, frame_id, answer, score}
-          answer   (str):        Cau tra loi tot nhat
-          best_hit (dict):       Hit co score cao nhat co answer
+          results  (list[dict]): Top-100 {video_id, frame_id, answer, score} — answer THEO TUNG VIDEO
+          answer   (str):        Cau tra loi cua cum tot nhat (dung cho UI/tom tat)
+          answers_by_video (dict): {video_id: answer} da trich xuat theo cum
+          best_hit (dict):       Hit co confidence cao nhat
           n_loops  (int):        So vong loop da chay
     """
     if question is None:
         question = query_text
+
+    pool_size = max(top_k, RETRIEVAL_POOL_SIZE)
+
+    def _retrieve_and_rank(q_en: str) -> list[dict]:
+        raw = hybrid_retrieve(q_en, top_k=pool_size, use_sparse=use_hybrid, qa=True)
+        return apply_risk_aware_ranking(raw, top_k=top_k, query_text=q_en, score_key="rrf_score")
 
     # ─── Vong 1 ────────────────────────────────────────────────────────────────
     if query_en:
@@ -69,13 +133,13 @@ def run_qa(
         query_en = rewrite_query(query_text, question=question)
         print(f"[qa]   query_en: {query_en!r}")
 
-    pool_size = max(top_k, RETRIEVAL_POOL_SIZE)
-    hits = fast_retrieve(query_en, top_k=pool_size)
-    print(f"[qa]   Retrieved: {len(hits)} hits, top score={hits[0]['score']:.4f}")
-    final_query_en = query_en
+    hits = _retrieve_and_rank(query_en)
+    print(f"[qa]   Retrieved: {len(hits)} hits, top score={hits[0]['score']:.4f}" if hits
+          else "[qa]   Retrieved: 0 hits")
 
-    qa_result = answer_from_hits(question, hits, top_n=5)
-    print(f"[qa]   Answer (vong 1): {qa_result['answer']!r}  conf={qa_result['confidence']:.2f}  method={qa_result['method']}")
+    answers, qa_result = answer_by_video_cluster(question, hits)
+    print(f"[qa]   Answer tot nhat (vong 1): {qa_result['answer']!r}  "
+          f"conf={qa_result['confidence']:.2f}  method={qa_result['method']}")
 
     n_loops = 1
 
@@ -87,24 +151,20 @@ def run_qa(
         query_en_v2 = rewrite_query(query_text, feedback=feedback, question=question)
         print(f"[qa]   query_en_v2: {query_en_v2!r}")
 
-        hits_v2 = fast_retrieve(query_en_v2, top_k=pool_size)
-
-        qa_result_v2 = answer_from_hits(question, hits_v2, top_n=5)
-        print(f"[qa]   Answer (vong 2): {qa_result_v2['answer']!r}  conf={qa_result_v2['confidence']:.2f}")
+        hits_v2 = _retrieve_and_rank(query_en_v2)
+        answers_v2, qa_result_v2 = answer_by_video_cluster(question, hits_v2)
+        print(f"[qa]   Answer tot nhat (vong 2): {qa_result_v2['answer']!r}  "
+              f"conf={qa_result_v2['confidence']:.2f}")
 
         # Chon ket qua tot hon
         if qa_result_v2["confidence"] > qa_result["confidence"]:
-            qa_result = qa_result_v2
-            hits      = hits_v2
-            final_query_en = query_en_v2
+            qa_result, hits, answers = qa_result_v2, hits_v2, answers_v2
 
         n_loops = 2
 
-    # ─── Risk-aware rerank (Phase 3 — xem agent/tools/rerank.py) ────────────────
-    hits = apply_risk_aware_ranking(hits, top_k=top_k, query_text=final_query_en)
-
     # ─── Build submission results ───────────────────────────────────────────────
-    # Gan answer cho toan bo hits (submission cho phep 100 rows)
+    # Dong thuoc video nao mang answer CUA CHINH video do (§4.1); video ngoai top cum (chua chay
+    # trich xuat rieng) dung answer cua cum tot nhat lam mac dinh — van hon la bo trong.
     best_answer = qa_result["answer"]
     results = []
     for h in hits:
@@ -114,13 +174,18 @@ def run_qa(
             "frame_idx": h["frame_idx"],
             "pts_time":  h["pts_time"],
             "score":     h["score"],
-            "answer":    best_answer,
+            "answer":    answers.get(h["video_id"], best_answer),
             "jpg_path":  h.get("jpg_path"),
         })
+
+    n_own = sum(1 for r in results if r["video_id"] in answers)
+    print(f"[qa]   {n_own}/{len(results)} dong mang answer rieng cua video minh "
+          f"({len(answers)} cum da trich xuat)")
 
     return {
         "results":  results,
         "answer":   best_answer,
+        "answers_by_video": answers,
         "best_hit": qa_result["best_hit"],
         "n_loops":  n_loops,
         "confidence": qa_result["confidence"],
@@ -138,8 +203,56 @@ def _summarize_top_objects(hits: list[dict]) -> str:
     return ", ".join(list(dict.fromkeys(all_objs))[:15]) or "none"
 
 
+# ─── CLI self-test (repo khong dung pytest — xem CLAUDE.md) ────────────────────
+def _run_self_tests() -> None:
+    """Test gom cum + gan answer theo video, khong goi LLM/index that."""
+    def _hit(vid: str, i: int, rrf: float) -> dict:
+        return {"video_id": vid, "n": i, "frame_idx": i, "frame_id": i + 1, "pts_time": float(i),
+                "score": 0.1, "rrf_score": rrf, "jpg_path": None}
+
+    hits = [_hit("A", 0, 0.016), _hit("B", 1, 0.015), _hit("A", 2, 0.014), _hit("C", 3, 0.010)]
+    clusters = _cluster_by_video(hits)
+    assert [vid for vid, _ in clusters] == ["A", "B", "C"], f"Cum phai xep theo diem: {clusters}"
+    assert len(clusters[0][1]) == 2, "Cum A phai gom ca 2 hit cua A"
+    print("[qa] Test gom cum theo video: OK")
+
+    # answer_by_video_cluster: moi cum goi answer_from_hits 1 lan, moi video co answer rieng.
+    global answer_from_hits
+    _orig = answer_from_hits
+    try:
+        calls: list = []
+
+        def _fake_answer(question, cluster_hits, top_n=5):
+            vid = cluster_hits[0]["video_id"]
+            calls.append(vid)
+            conf = {"A": 0.4, "B": 0.9, "C": 0.2}[vid]
+            return {"answer": f"answer-{vid}", "best_hit": cluster_hits[0],
+                    "confidence": conf, "method": "objects"}
+
+        answer_from_hits = _fake_answer
+        answers, best = answer_by_video_cluster("q?", hits, max_clusters=3)
+        assert calls == ["A", "B", "C"], f"Phai chay trich xuat cho tung cum: {calls}"
+        assert answers == {"A": "answer-A", "B": "answer-B", "C": "answer-C"}
+        assert best["answer"] == "answer-B", "Cum co confidence cao nhat phai duoc chon lam best"
+        print("[qa] Test answer theo tung cum video: OK")
+
+        # max_clusters gioi han so cum duoc chay (kiem soat chi phi LLM).
+        calls.clear()
+        answers2, _ = answer_by_video_cluster("q?", hits, max_clusters=2)
+        assert calls == ["A", "B"] and set(answers2) == {"A", "B"}, f"max_clusters=2: {calls}"
+        print("[qa] Test max_clusters gioi han chi phi: OK")
+    finally:
+        answer_from_hits = _orig
+
+    print("[qa] Tat ca self-test PASS")
+
+
 # ─── CLI Demo ──────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
+    if "--self-test" in sys.argv:
+        _run_self_tests()
+        sys.exit(0)
+
     query = "Mot nguoi dang phat bieu truoc dam dong, mac ao trang"
     question = "What color is the speaker's shirt?"
 
@@ -152,6 +265,7 @@ if __name__ == "__main__":
     print(f"  Answer:     {out['answer']!r}")
     print(f"  Confidence: {out['confidence']:.2f}")
     print(f"  N_loops:    {out['n_loops']}")
+    print(f"  Answer/video: {out['answers_by_video']}")
     print(f"  Best hit:   {out['best_hit'].get('video_id')} frame_id={out['best_hit'].get('frame_id')}")
     print(f"\n  Top-5 submission rows:")
     for r in out["results"][:5]:

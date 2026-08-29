@@ -103,3 +103,98 @@ thay vì `Test & Eval` — dấu cách và `&` làm vỡ lệnh shell/PowerShell
 - Các quyết định kiến trúc round-1 (`ARCHITECTURE.md` dòng 97 nói "kể cả các quyết định của
   round-1" từng nằm ở đây) — chưa dựng lại được, có thể tham khảo thêm
   [docs/_archive/ARCHITECTURE_Lan1.md](docs/_archive/ARCHITECTURE_Lan1.md) nếu cần.
+
+## 2026-08-28 — Mặc định của Hybrid/Multi-Aspect sau BẢN ĐẶC TẢ §2–§6
+
+**Quyết định:** triển khai đủ §2–§6, nhưng 2 mặc định KHÔNG theo nguyên văn đặc tả, vì số đo thật
+(18 câu KIS, đường production, `test_eval`) nói ngược lại:
+
+1. **`SPARSE_TOP_K = 50`** (không đưa cả 500 ứng viên BM25 vào RRF). BM25 ở đây chạy trên tập từ khóa
+   rất thô (tên object Faster R-CNN + caption, ~5.5K term, doc ~10 token) nên chỉ đáng tin ở đỉnh:
+   `sparse_top_k` 0/20/50/100 → Final 0.656; 200/500 → 0.611. Với 50, hybrid trung tính trên bộ eval
+   hiện tại mà vẫn giữ được khả năng "cứu" query nêu tên vật thể cụ thể.
+2. **Multi-Aspect Prompt Expansion mặc định TẮT** (`run_kis(use_expansion=False)`). Bật lên làm
+   Final tụt 0.667 → 0.644 (và 0.667 → 0.611 khi đi cùng hybrid). SigLIP được huấn luyện trên caption
+   ảnh thật nên câu query gốc thường đã là caption tốt; 2 biến thể template chỉ kéo vector về trung
+   bình. Cơ chế giữ nguyên, bật bằng cờ (`use_expansion=True` / `run_eval.py --expand`) để đo lại khi
+   có bộ eval lớn hơn.
+
+**Quyết định thứ 3 (thuộc về thiết kế, không phải tắt/bật):** tách `score_key` (xếp hạng) khỏi
+`margin_key` (quyết định đặt cược/trải rủi ro) trong `rerank.py`. Xếp hạng theo RRF nhưng margin vẫn
+đo trên cosine — vì `MARGIN_THRESHOLD=0.012` được hiệu chỉnh bằng benchmark thật trên thang cosine.
+
+**Đánh đổi:** đặc tả yêu cầu hybrid + expansion là nền tảng cho cả 3 pipeline; ở đây expansion không
+chạy mặc định nên phần "3 góc nhìn" của §3.1 chỉ tồn tại dưới dạng tuỳ chọn cho tới khi có số ủng hộ.
+
+---
+
+## 2026-08-28 — Kiến trúc v2 (Phase 10): vì sao lật 2 quyết định đã chốt
+
+Chi tiết kỹ thuật → [ARCHITECTURE.md §6](ARCHITECTURE.md). Việc cần làm → [PLAN.md](PLAN.md) Phase 10.
+
+### Lật "KIS = workflow tuyến tính, không LLM"
+
+Quyết định gốc dựa trên giả định kiểm soát cost/latency. Hai dữ kiện tra được từ luật thi và dữ liệu
+thật cho thấy giả định đó không đúng với vòng sơ tuyển:
+
+- Vòng sơ tuyển **chấm offline theo file nộp, không giới hạn thời gian chạy**.
+- Mỗi gói đề chỉ có **~42–45 truy vấn** (`THUNGHIEM-bo-de-thi/bo_de_thi.csv` 42 dòng,
+  `test_eval/sotuyen1_bo_de_thi.csv` 45 dòng).
+
+⇒ VLM rerank top-50 tốn ~2.200 lượt chấm ảnh cho **cả gói đề**, không phải cho mỗi truy vấn. Đây là
+chi phí nhỏ so với đòn bẩy R@1. Phần thực sự đáng giữ của quyết định gốc — **không có vòng lặp
+reflection trong KIS** — được giữ nguyên: `vlm_rerank.py` là đúng một bước một chiều, có công tắc tắt.
+
+Chọn **Gemini 2.5 Flash Vision qua `config.py:call_llm()`** thay vì Qwen2.5-VL local vì: (a) không
+chiếm VRAM — máy chỉ có 8 GB và SigLIP/SigLIP2/BGE-M3/VietOCR đã tranh nhau chỗ; (b) ~10–15 phút cho
+cả gói đề thay vì 1–2 giờ; (c) đi qua `call_llm()` nên không phá quy tắc "chỉ `config.py` gọi LLM".
+
+### Làm rõ ranh giới của "không precompute cho toàn bộ 177K keyframe"
+
+Lệnh cấm gốc nhắm vào chi phí **SINH** nội dung bằng VLM/OCR cho 177K ảnh — vẫn giữ nguyên, vẫn cấm
+(Qwen2.5-VL-3B trên 177K ảnh ≈ 74 giờ ngay cả khi có GPU). Nhưng **ENCODE văn bản đã có sẵn** là bài
+toán khác hẳn: caption Vintern-1B đã nằm trên đĩa, encode bằng BGE-M3 tốn ~10–15 phút GPU.
+
+Ranh giới mới, phát biểu tường minh để lần sau không phải tranh luận lại: **cấm sinh nội dung hàng
+loạt, cho phép encode nội dung đã có.**
+
+### Vì sao ưu tiên `refine_frame.py` lên trên tất cả
+
+Đây không phải một cải tiến gia tăng mà là gỡ một **trần điểm**. Luật BTC quy định cửa sổ đáp án mỗi
+mốc TRAKE "thường dưới 10 frame"; đo trên 400 video / 90.519 gap thì khoảng cách keyframe có trung vị
+80 frame, trung bình 85,3. ⇒ P(một keyframe rơi vào cửa sổ 10 frame) ≈ 12 %.
+
+Nghĩa là toàn bộ §5 của bản đặc tả (Coverage Pooling + DP đơn điệu + Gated VLM Verification) đang tối
+ưu **hệ số nhân của một trần 0,12**. Không có hạng mục nào khác trong Phase 10 có biên độ tương đương.
+
+### Vì sao `refine_frame` lấy tâm đoạn chứ không lấy argmax
+
+Độ dài thật của khoảng đáp án `[s,e]` cho KIS là **ẩn số chưa xác định** — luật BTC không định nghĩa
+cách dựng nó, ví dụ minh hoạ là `[500, 510]`. Lấy argmax của điểm SigLIP trên ~120 frame gần như y hệt
+nhau là lấy một đỉnh nhiễu, thường nằm ở rìa đoạn. Lấy **tâm của đoạn liên tục vượt ngưỡng sau khi
+làm mượt** thì đúng ở cả hai giả thuyết: nếu `[s,e]` ngắn, BTC gần như chắc chắn đặt nó quanh tâm ngữ
+nghĩa của khoảnh khắc; nếu `[s,e]` dài cỡ shot, tâm đoạn cũng nằm gọn bên trong. Chọn phương án an
+toàn với ẩn số thay vì cược một chiều vào một giả thuyết.
+
+### Vì sao ASR vào RRF ở mức video chứ không mức frame
+
+Lời nói trong video mô tả cả những thứ **không nằm trong khung hình đang chiếu**. Gán điểm ASR cho
+từng frame sẽ tạo tín hiệu sai ở mức frame. Phân công đúng: **ASR trả lời "video nào", SigLIP trả lời
+"frame nào"**. Cài đặt: xếp hạng video theo độ khớp ASR rồi cho mọi frame thuộc video V thừa hưởng
+hạng đó — vẫn là RRF thuần trên thứ hạng, không thêm thang đo mới cần chuẩn hoá.
+
+### Vì sao giữ heuristic đặt cược/trải rủi ro thay vì tối ưu danh mục 100 dòng
+
+Đã cân nhắc thay `MARGIN_THRESHOLD`/`SPREAD_MAX_PER_VIDEO` bằng cực đại hoá hàm submodular
+`E[Final] = (1/5)·Σ_k P(có ≥1 dòng đúng trong top-k)` — cách đó tự sinh ra cả hành vi đặt cược, trải
+rủi ro lẫn NMS mà không cần ngưỡng ma thuật nào. **Chưa làm**, vì nó đòi hỏi hiệu chỉnh điểm số thành
+xác suất (calibration), mà calibration trên 33 câu ground truth thì vô nghĩa. Hạng mục này mở lại được
+sau khi #10.2 mở rộng bộ eval. Trước mắt chỉ dùng **bảng giá trị theo hạng** (hạng 1 → 1,00; 2–5 →
+0,80; 6–20 → 0,60; 21–50 → 0,40; 51–100 → 0,20) làm kim chỉ nam phân bổ dòng bằng tay.
+
+### Vì sao cần `model_registry.py` — ràng buộc phần cứng, không phải sở thích thiết kế
+
+Máy chạy có **8151 MiB VRAM**. SigLIP (1,7 GB) + SigLIP2 (1,7 GB) + BGE-M3 (1,1 GB) + VietOCR không
+cùng nằm vừa. Pattern singleton hiện tại (`retrieve.py`, `vlm_ocr_caption.py`, `ocr_read.py`) giữ model
+sống mãi trong process — trên CPU thì chỉ tốn RAM, trên GPU thì **OOM chắc chắn** ngay khi thêm model
+thứ tư. Đây là lý do hạng mục này chặn #10.4 và #10.6, không phải dọn dẹp code.

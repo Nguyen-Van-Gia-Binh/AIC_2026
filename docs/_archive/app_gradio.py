@@ -31,13 +31,7 @@ if str(_ROOT) not in sys.path:
 import gradio as gr
 import pandas as pd
 
-from scripts.agent.tools.retrieve import (
-    fast_retrieve,
-    fast_retrieve_for_video,
-    fast_retrieve_qa,
-    preload,
-)
-from scripts.agent.tools.rerank import apply_risk_aware_ranking, RETRIEVAL_POOL_SIZE
+from scripts.agent.tools.retrieve import preload
 
 print("[app] Nạp index + model (siglip cho KIS/TRAKE, siglip2 cho Q&A)...")
 preload()  # nap san ca 2 model -- khong doi lan search dau tien cua nguoi dung
@@ -121,8 +115,11 @@ def kis_search(query_final: str, top_k: int) -> tuple:
     if not query_final.strip():
         return [], pd.DataFrame(), "⚠️ Chưa có câu query để search — bấm Rewrite rồi chọn/sửa, hoặc gõ thẳng vào ô câu cuối cùng."
 
-    hits = fast_retrieve(query_final, top_k=max(int(top_k), RETRIEVAL_POOL_SIZE))
-    hits = apply_risk_aware_ranking(hits, top_k=int(top_k), query_text=query_final)
+    # Gọi thẳng pipeline KIS (hybrid dense+BM25 → RRF → risk-aware rerank + Temporal NMS → bonus
+    # OCR/caption) thay vì tự ghép fast_retrieve + rerank ở đây — để UI và API/eval chạy CÙNG một
+    # đường thuật toán, không có 2 phiên bản KIS lệch nhau.
+    from scripts.agent.pipeline_kis import run_kis
+    hits = run_kis(query_final, top_k=int(top_k))
     gallery = _hits_to_gallery(hits)
     df = _hits_to_df(hits)
     status = f"✅ Tìm thấy **{len(hits)}** kết quả | điểm cao nhất = {hits[0]['score']:.4f}"

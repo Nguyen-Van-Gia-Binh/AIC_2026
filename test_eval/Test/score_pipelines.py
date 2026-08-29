@@ -42,8 +42,14 @@ if str(_ROOT) not in sys.path:
 
 _EVAL_SET_PATH = _ROOT / "test_eval" / "Eval" / "eval_ground_truth.json"
 _DEFAULT_OUT = _ROOT / "docs" / "eval_e2e_scores.md"
+_DEFAULT_BASELINE = _ROOT / "test_eval" / "Test" / "e2e_baseline.json"
 
 K_VALUES = [1, 5, 20, 50, 100]
+
+# Nguong canh bao suy thoai diem (BAN DAC TA §6): Final moi thap hon baseline qua muc nay => bao dong.
+# 0.01 tren thang Final (= trung binh 5 moc R@k) tuong duong ~1/3 cau tren bo 33 cau — du nho de bat
+# duoc suy thoai that, du lon de khong bao dong vi dao dong LLM giua 2 lan chay.
+REGRESSION_TOLERANCE = 0.01
 
 
 # ─── So khớp answer ───────────────────────────────────────────────────────────
@@ -153,6 +159,75 @@ def format_markdown(by_type: dict[str, list[dict[int, float]]]) -> str:
     return "\n".join(lines) + "\n"
 
 
+# ─── Regression Guard (BAN DAC TA §6, Tang 2) ────────────────────────────────
+def summarize_finals(by_type: dict[str, list[dict[int, float]]]) -> dict[str, float]:
+    """{nhom: Final} cho ALL/KIS/QA/TRAKE — dang gon de luu baseline va so sanh giua cac lan chay."""
+    finals: dict[str, float] = {}
+    all_rows = [d for t in ("KIS", "QA", "TRAKE") for d in by_type.get(t, [])]
+    if all_rows:
+        finals["ALL"] = _final(_mean_dict(all_rows))
+    for t in ("KIS", "QA", "TRAKE"):
+        if by_type.get(t):
+            finals[t] = _final(_mean_dict(by_type[t]))
+    return finals
+
+
+def check_regression(
+    finals: dict[str, float], baseline_path: Path, tolerance: float = REGRESSION_TOLERANCE
+) -> bool:
+    """So Final moi voi baseline da luu. Tra ve True neu CO suy thoai (de main() thoat code 1).
+
+    Chua co file baseline => khong coi la loi, chi nhac cach tao (lan chay dau tien).
+    """
+    if not baseline_path.exists():
+        print(f"[score_pipelines] Chua co baseline ({baseline_path.name}) — chay lai voi "
+              f"--save-baseline de chot moc so sanh cho cac lan sau.")
+        return False
+
+    try:
+        baseline = json.loads(baseline_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as error:
+        print(f"[score_pipelines] Khong doc duoc baseline ({type(error).__name__}: {error}) — bo qua so sanh.")
+        return False
+
+    base_finals = baseline.get("finals", {})
+    print(f"\n[score_pipelines] === Regression Guard (baseline {baseline.get('saved_at', '?')}) ===")
+    regressed = False
+    for group, value in finals.items():
+        if group not in base_finals:
+            print(f"  {group:5s}: {value:.3f}  (baseline chua co nhom nay)")
+            continue
+        delta = value - base_finals[group]
+        if delta < -tolerance:
+            regressed = True
+            flag = f"CANH BAO: thap hon baseline qua {tolerance}"
+        elif delta > tolerance:
+            flag = "tot hon baseline"
+        else:
+            flag = "trong nguong dao dong"
+        print(f"  {group:5s}: {value:.3f}  (baseline {base_finals[group]:.3f}, "
+              f"delta {delta:+.3f}) — {flag}")
+
+    if regressed:
+        print("[score_pipelines] CO SUY THOAI DIEM so voi baseline — khong nop ban nay truoc khi "
+              "tim ra nguyen nhan (xem EXPERIMENT.md).")
+    return regressed
+
+
+def save_baseline(finals: dict[str, float], by_type: dict, baseline_path: Path, note: str = "") -> None:
+    """Ghi Final hien tai lam moc so sanh cho cac lan chay sau."""
+    import time
+    payload = {
+        "saved_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "note": note,
+        "n_by_type": {t: len(rows) for t, rows in by_type.items() if rows},
+        "finals": finals,
+    }
+    baseline_path.parent.mkdir(parents=True, exist_ok=True)
+    baseline_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    print(f"[score_pipelines] Da luu baseline -> {baseline_path}")
+
+
 # ─── Self-test ───────────────────────────────────────────────────────────────
 def _run_self_tests() -> None:
     assert answer_matches("Có 15 giải khuyến khích", ["15"]) is True
@@ -163,6 +238,17 @@ def _run_self_tests() -> None:
     assert answer_matches("Phú Sĩ.", ["Phú Sĩ", "Phu Si"]) is True
     assert _r_at_k([0.0, 0.5, 0.0, 1.0]) == {1: 0.0, 5: 1.0, 20: 1.0, 50: 1.0, 100: 1.0}
     assert abs(_final({1: 0.5, 5: 0.8, 20: 0.8, 50: 0.8, 100: 0.8}) - 0.74) < 1e-9
+    # Regression Guard: phat hien tut qua nguong, bo qua dao dong nho, khong co baseline thi khong loi.
+    import tempfile
+    with tempfile.TemporaryDirectory() as tmp:
+        base_path = Path(tmp) / "baseline.json"
+        assert check_regression({"ALL": 0.5}, base_path) is False, "Chua co baseline -> khong bao loi"
+        by_type_fake = {"KIS": [{k: 1.0 for k in K_VALUES}]}
+        save_baseline({"ALL": 0.500, "KIS": 0.600}, by_type_fake, base_path)
+        assert check_regression({"ALL": 0.495, "KIS": 0.600}, base_path) is False, "Tut 0.005 < nguong -> khong bao"
+        assert check_regression({"ALL": 0.480, "KIS": 0.600}, base_path) is True, "Tut 0.02 > nguong -> phai bao"
+        assert check_regression({"ALL": 0.600, "KIS": 0.700}, base_path) is False, "Tot hon -> khong bao"
+    assert summarize_finals({"KIS": [{k: 1.0 for k in K_VALUES}]}) == {"ALL": 1.0, "KIS": 1.0}
     print("[score_pipelines] self-test PASS")
 
 
@@ -177,6 +263,12 @@ def main() -> None:
     parser.add_argument("--eval-set", type=Path, default=_EVAL_SET_PATH)
     parser.add_argument("--out", type=Path, default=_DEFAULT_OUT)
     parser.add_argument("--self-test", action="store_true")
+    parser.add_argument("--baseline", type=Path, default=_DEFAULT_BASELINE,
+                        help="File baseline de so sanh chong suy thoai diem (BAN DAC TA §6)")
+    parser.add_argument("--save-baseline", action="store_true",
+                        help="Ghi ket qua lan chay nay lam baseline moi (chi lam khi da hai long)")
+    parser.add_argument("--no-guard", action="store_true",
+                        help="Bo qua Regression Guard (chi in bang diem)")
     args = parser.parse_args()
 
     if args.self_test:
@@ -232,6 +324,13 @@ def main() -> None:
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(table, encoding="utf-8")
     print(f"[score_pipelines] Đã ghi {args.out}")
+
+    # ─── Regression Guard (BẢN ĐẶC TẢ §6, Tầng 2) ────────────────────────────
+    finals = summarize_finals(by_type)
+    if args.save_baseline:
+        save_baseline(finals, by_type, args.baseline, note=f"types={args.types} limit={args.limit}")
+    if not args.no_guard and check_regression(finals, args.baseline):
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":

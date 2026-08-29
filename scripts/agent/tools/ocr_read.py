@@ -327,6 +327,7 @@ def rerank_by_ocr(
     query_text: str,
     top_n_ocr: int = 20,
     match_threshold: float = 85.0,
+    score_key: str = "score",
 ) -> list[dict]:
     """
     Sau khi da co hits tu fast_retrieve() (matching xong bang CLIP/SigLIP), cong THEM 1 khoan bonus
@@ -355,6 +356,9 @@ def rerank_by_ocr(
                           cho phan chua co offline — xem docstring dau file).
         match_threshold:  Nguong rapidfuzz.partial_ratio (0-100) de coi la "khop" — 85 cho phep sai
                           lech nho do OCR khong hoan hao 100% nhung van chan duoc match ngau nhien.
+        score_key:        Truong diem dung de sap xep va tinh bonus. "score" (mac dinh) = cosine;
+                          "rrf_score" khi hits den tu retrieve.hybrid_retrieve. Bonus luon tinh theo
+                          TI LE cua diem cao nhat cua chinh truong do nen dung duoc voi moi thang do.
 
     Returns:
         list[dict] cung dinh dang voi hits dau vao, cung do dai. Truong 'score' GIU NGUYEN gia tri
@@ -376,7 +380,7 @@ def rerank_by_ocr(
 
     candidates = hits[:top_n_ocr]
     rest = hits[top_n_ocr:]
-    top_score = max((h["score"] for h in hits), default=0.0)
+    top_score = max((float(h.get(score_key, 0.0)) for h in hits), default=0.0)
 
     def _any_token_matches(text: str) -> bool:
         return bool(text) and any(
@@ -420,7 +424,7 @@ def rerank_by_ocr(
         if match_source:
             hit_out["ocr_bonus"] = bonus
             hit_out["ocr_match_source"] = match_source
-        scored.append((hit["score"] + bonus, hit_out))
+        scored.append((float(hit.get(score_key, 0.0)) + bonus, hit_out))
 
     if n_ocr_match or n_caption_match:
         print(f"[ocr_read] rerank_by_ocr: {n_ocr_match} khop OCR (+{OCR_BONUS_FRACTION*top_score:.4f}), "

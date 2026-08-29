@@ -13,9 +13,12 @@ description: >-
 
 ```
 Người dùng (thí sinh)
-        │  nhập query trên UI, rà soát/sửa kết quả (human-in-the-loop)
+        │  nhập query trên UI, rà soát/sửa kết quả, xem video (human-in-the-loop)
         ▼
-scripts/app.py  (Gradio, 4 tab: KIS / Q&A / TRAKE / Export)
+frontend/  (React + Vite + TypeScript, http://localhost:5173)
+        │  REST API calls (/api/kis, /api/qa, /api/trake, /api/queue, /api/videos, /api/images)
+        ▼
+scripts/api/  (FastAPI Backend, http://127.0.0.1:8000)
         │
    ┌────┴─────────────────┬──────────────────────┐
    ▼                      ▼                       ▼
@@ -27,8 +30,8 @@ pipeline_kis.py     pipeline_qa.py          pipeline_trake.py
    └──────────┬───────────┴───────────┬───────────┘
               ▼                       ▼
    agent/tools/retrieve.py    agent/tools/rewrite.py, answer_qa.py, ocr_lookup.py
-   (CLIP cosine similarity     (agent/config.py: call_llm() → LiteLLM → PROVIDER_CHAIN)
-    trên ma trận 177K keyframe)
+   (SigLIP cosine similarity   (agent/config.py: call_llm() → LiteLLM → PROVIDER_CHAIN)
+    trên ma trận keyframe)
               │
               ▼
         submit/build_submission.py → CSV (kis/qa/trake) → validate_submission.py → ZIP
@@ -38,7 +41,8 @@ pipeline_kis.py     pipeline_qa.py          pipeline_trake.py
 
 | Path | Vai trò | Vì sao ở đây |
 |------|---------|---------------|
-| `scripts/index.py` | Build ma trận CLIP `(N,512)` + metadata từ `data/extracted/` | Layer dữ liệu gốc |
+| `frontend/` | React UI SPA (Vite + TS) — 5 tab KIS/Q&A/TRAKE/Chat/Export | Giao diện tương tác người dùng |
+| `scripts/api/` | FastAPI Backend — router KIS, QA, TRAKE, Queue, Videos, Images | Cung cấp REST API cho frontend |
 | `scripts/agent/tools/retrieve.py` | Singleton nạp index 1 lần/process; `fast_retrieve()`, `fast_retrieve_for_video()` | Điểm truy cập duy nhất tới ma trận vector |
 | `scripts/agent/config.py` | `call_llm(prompt, image_paths, model, temperature, max_tokens)` — bọc LiteLLM, tự fallback qua `PROVIDER_CHAIN` | Nguồn cấu hình LLM duy nhất |
 | `scripts/agent/tools/rewrite.py` | `rewrite_query(query, feedback=None)` — dịch VN→EN + tối ưu cho CLIP | Dùng chung cho Q&A và TRAKE |
@@ -49,14 +53,13 @@ pipeline_kis.py     pipeline_qa.py          pipeline_trake.py
 | `scripts/agent/pipeline_trake.py` | `run_trake()` — giai đoạn 1 chọn top-video, giai đoạn 2 align N event tuần tự | Pipeline cố định |
 | `scripts/submit/build_submission.py` | `build_kis_csv/build_qa_csv/build_trake_csv/build_zip_submission` | Điểm duy nhất sinh format nộp bài |
 | `scripts/submit/validate_submission.py` | `validate_csv_file()`, `validate_zip()` | Lưới an toàn cuối trước nộp |
-| `scripts/app.py` | Gradio UI — 4 tab, hàng đợi submission, human-in-the-loop | UI gọi pipeline, không chứa logic riêng |
 
 ## 3. Quyết định kiến trúc đã chốt
 
 - **Không dùng 1 agent chung** — chọn theo độ mở: KIS = workflow, Q&A = orchestrator-workers, TRAKE = pipeline cố định.
 - **1 nguồn LLM duy nhất**: `scripts/agent/config.py`. Mọi lời gọi LLM đi qua `call_llm()`.
 - **Anti-hallucination bắt buộc cho Q&A**: mọi answer qua `_crosscheck_answer()` đối chiếu Objects JSON.
-- **File-based, không DB**: state là file (`.npy`/`.csv`/`.json`/`.zip`). Hàng đợi submission chỉ sống trong session Gradio (RAM).
+- **File-based, không DB**: state là file (`.npy`/`.csv`/`.json`/`.zip`). Hàng đợi submission nằm trong API memory state.
 - **`frame_id = frame_idx + 1`** tại `retrieve.py` (điểm duy nhất).
 - **Human-in-the-loop là thiết kế chính thức**, không phải fallback.
 
