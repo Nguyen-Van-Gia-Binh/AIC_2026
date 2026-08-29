@@ -1,0 +1,59 @@
+{
+  "_comment": "TEMPLATE ONLY — not loaded by run_eval.py. Copy an entry below into eval_ground_truth_v2.json (or append to eval_ground_truth.json), replace query_text/gt_* with the real query and answer from watching the video. Schema/rules: EVAL_GUIDE.md (note: production ground truth there still uses separate text_vi/text_en; this v2 template merges them into one query_text field). Suggested difficulty_tags vocabulary already in use: easy_sanity_check, small_object, multi_similar_object, counting, temporal_order — add new tags freely for niche/hard cases (e.g. negation, local_slang, mirror_reflection, screen_in_frame, ambiguous_order).",
+  "entries": [
+    {
+      "query_id": "kis-001",
+      "type": "KIS",
+      "query_text": "A red cargo ship docks at a container port at dusk, cranes loading containers in the background.",
+      "difficulty_tags": [
+        "small_object"
+      ],
+      "gt_video_id": "L24_V015",
+      "gt_frame_start": 4210,
+      "gt_frame_end": 4235
+    },
+    {
+      "query_id": "qa-001",
+      "type": "QA",
+      "query_text": "In the press conference scene with three speakers seated at the table, how many microphones are visible?",
+      "question": "How many microphones are visible on the table?",
+      "difficulty_tags": [
+        "counting"
+      ],
+      "gt_video_id": "L22_V008",
+      "gt_frame_start": 1500,
+      "gt_frame_end": 1540,
+      "gt_answers": [
+        "3",
+        "ba",
+        "three"
+      ]
+    },
+    {
+      "query_id": "trake-001",
+      "type": "TRAKE",
+      "query_text": "A high jump athlete sprints in, launches over the bar, and lands on the mat.",
+      "difficulty_tags": [
+        "temporal_order"
+      ],
+      "gt_video_id": "L25_V003",
+      "events": [
+        {
+          "text_en": "athlete takes off from the ground",
+          "gt_frame_start": 95,
+          "gt_frame_end": 105
+        },
+        {
+          "text_en": "athlete clears over the bar at peak height",
+          "gt_frame_start": 145,
+          "gt_frame_end": 155
+        },
+        {
+          "text_en": "athlete lands on the mat",
+          "gt_frame_start": 195,
+          "gt_frame_end": 205
+        }
+      ]
+    }
+  ]
+}
