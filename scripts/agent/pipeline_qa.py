@@ -30,7 +30,7 @@ if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
 from scripts.agent.config import MAX_AGENT_LOOPS
-from scripts.agent.tools.retrieve import hybrid_retrieve
+from scripts.agent.tools.hybrid import hybrid_retrieve
 from scripts.agent.tools.rewrite import rewrite_query
 from scripts.agent.tools.answer_qa import answer_from_hits
 from scripts.agent.tools.rerank import apply_risk_aware_ranking, RETRIEVAL_POOL_SIZE

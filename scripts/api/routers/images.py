@@ -10,7 +10,7 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
 
-from scripts.agent.tools.retrieve import get_keyframe_path
+from scripts.agent.tools.frames import get_keyframe_path
 
 router = APIRouter(prefix="/api", tags=["images"])
 

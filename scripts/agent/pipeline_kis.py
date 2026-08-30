@@ -40,7 +40,7 @@ _ROOT = Path(__file__).resolve().parent.parent.parent  # repo root — cho `impo
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
-from scripts.agent.tools.retrieve import hybrid_retrieve
+from scripts.agent.tools.hybrid import hybrid_retrieve
 from scripts.agent.tools.rerank import apply_risk_aware_ranking, RETRIEVAL_POOL_SIZE
 from scripts.agent.tools.query_expand import expand_aspects
 from scripts.agent.tools.ocr_read import query_likely_has_readable_text, rerank_by_ocr

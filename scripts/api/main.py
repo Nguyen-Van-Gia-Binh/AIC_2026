@@ -19,7 +19,7 @@ if str(_ROOT) not in sys.path:
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from scripts.agent.tools.retrieve import preload
+from scripts.agent.tools.index_store import preload
 
 app = FastAPI(title="AIC2026 Backend API")
 
