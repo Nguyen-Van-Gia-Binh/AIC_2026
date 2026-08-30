@@ -435,66 +435,38 @@ def rerank_by_ocr(
 
 
 # CLI test
+
+
+# ─── CLI demo: đọc OCR trên ảnh thật, kiểm tra bằng mắt ────────────────────────
+# Các test có hard-assert đã chuyển sang tests/unit/test_ocr_read.py. Phần dưới CỐ Ý không assert:
+# OCR không đảm bảo chính xác 100% nên chỉ in ra để người chạy tự đối chiếu với GT ghi ở comment.
 if __name__ == "__main__":
     _ROOT_DIR = Path(__file__).resolve().parent.parent.parent.parent
 
-    def _fake_hit(jpg_rel_path: str, video_id: str = "", n: int = 0, score: float = 1.0) -> dict:
+    def _demo_hit(jpg_rel_path: str, video_id: str = "", n: int = 0, score: float = 1.0) -> dict:
         return {"video_id": video_id, "n": n, "frame_idx": n, "frame_id": n + 1,
-                 "pts_time": 0.0, "score": score, "jpg_path": str(_ROOT_DIR / jpg_rel_path)}
+                "pts_time": 0.0, "score": score, "jpg_path": str(_ROOT_DIR / jpg_rel_path)}
 
-    print("[ocr_read] === Self-test 1: hits rong / jpg_path None khong crash ===")
-    assert read_text_from_hits([]) == {}
-    assert read_text_from_hits([{"jpg_path": None}]) == {}
-    assert read_text_from_hits([{"jpg_path": "khong_ton_tai.jpg"}]) == {}
-    print("[ocr_read] Self-test 1: PASS")
-
-    print("\n[ocr_read] === Self-test 2: OCR anh that co chu (kiem tra bang mat) ===")
+    print("[ocr_read] === Demo 1: OCR ảnh thật có chữ ===")
     known_hits = [
-        _fake_hit("data/extracted/keyframes/L22/L22_V001/120.jpg"),   # GT: "DIANA 1961 1997"
-        _fake_hit("data/extracted/keyframes/L28/L28_V003/190.jpg"),   # GT: "AG-09399" / "AG-12627"
-        _fake_hit("data/extracted/keyframes/L27/L27_V001/110.jpg"),   # GT: "CHÚA XỨ THÁNH MẪU"
+        _demo_hit("data/extracted/keyframes/L22/L22_V001/120.jpg"),   # GT: "DIANA 1961 1997"
+        _demo_hit("data/extracted/keyframes/L28/L28_V003/190.jpg"),   # GT: "AG-09399" / "AG-12627"
+        _demo_hit("data/extracted/keyframes/L27/L27_V001/110.jpg"),   # GT: "CHÚA XỨ THÁNH MẪU"
     ]
     ocr_out = read_text_from_hits(known_hits, top_n=3)
     for i, hit in enumerate(known_hits):
-        lines = ocr_out.get(i, [])
-        print(f"  candidate #{i+1} ({Path(hit['jpg_path']).name}): {lines}")
-    print(f"\n  format_ocr_hint():\n{format_ocr_hint(ocr_out)}")
-    print("\n[ocr_read] Self-test 2 xong — tu kiem tra bang mat: co doc duoc it nhat 1 phan chu/so "
-          "gan dung so voi GT ghi trong comment o tren khong? (khong hard-assert vi OCR khong dam bao "
-          "chinh xac 100%).")
+        print(f"  candidate #{i+1} ({Path(hit['jpg_path']).name}): {ocr_out.get(i, [])}")
+    print("  format_ocr_hint():")
+    print(format_ocr_hint(ocr_out))
 
-    print("\n[ocr_read] === Self-test 3: query_likely_has_readable_text() / _extract_literal_tokens() ===")
-    assert query_likely_has_readable_text("a person walking on the street") is False
-    assert query_likely_has_readable_text('biển số xe ghi "AG-09399"') is True
-    assert query_likely_has_readable_text("năm 1997 trên tấm bia") is True
-    assert _extract_literal_tokens('biển số xe ghi "AG-09399"') == ["AG-09399"]
-    assert _extract_literal_tokens("năm 1997 trên tấm bia") == ["1997"]
-    assert _extract_literal_tokens("a person walking") == []
-    print("[ocr_read] Self-test 3: PASS")
-
-    print("\n[ocr_read] === Self-test 4: rerank_by_ocr — cong bonus theo score, khong day len dau "
-          "vo dieu kien; khong co token thi tra ve score y nguyen ===")
-    hits4 = [
-        _fake_hit("data/extracted/keyframes/L27/L27_V001/110.jpg", "L27_V001", 110, score=0.30),
-        _fake_hit("data/extracted/keyframes/L22/L22_V001/120.jpg", "L22_V001", 120, score=0.29),  # GT chua "1997"
-        _fake_hit("data/extracted/keyframes/L28/L28_V003/190.jpg", "L28_V003", 190, score=0.28),
+    print("[ocr_read] === Demo 2: rerank_by_ocr trên ảnh thật ===")
+    hits_demo = [
+        _demo_hit("data/extracted/keyframes/L27/L27_V001/110.jpg", "L27_V001", 110, score=0.30),
+        _demo_hit("data/extracted/keyframes/L22/L22_V001/120.jpg", "L22_V001", 120, score=0.29),
+        _demo_hit("data/extracted/keyframes/L28/L28_V003/190.jpg", "L28_V003", 190, score=0.28),
     ]
-    out_no_token = rerank_by_ocr(hits4, "a person walking on the street")
-    assert out_no_token == hits4, "Khong co token van ban -> phai giu nguyen thu tu"
-    assert all(h.get("ocr_bonus", 0.0) == 0.0 for h in out_no_token)
-    print("[ocr_read] Self-test 4a (khong token -> giu nguyen, bonus=0): PASS")
-
-    out_token = rerank_by_ocr(hits4, 'a plaque with the year "1997" on it', top_n_ocr=3)
-    print(f"  Thu tu sau rerank (query co token '1997'): "
-          f"{[(h['video_id'] + '/' + str(h['n']), round(h['score'], 4), h.get('ocr_bonus', 0.0), h.get('ocr_match_source')) for h in out_token]}")
-    # score GOC phai duoc giu nguyen (khong bi ghi de boi score+bonus) — chi thu tu list thay doi.
-    original_scores = {h["video_id"] + "/" + str(h["n"]): h["score"] for h in hits4}
-    for h in out_token:
-        key = h["video_id"] + "/" + str(h["n"])
-        assert h["score"] == original_scores[key], f"score goc bi ghi de o {key}"
-    print("[ocr_read] Self-test 4b xong — score goc giu nguyen, tu kiem tra bang mat: candidate "
-          "L22_V001/120 (chua '1997' theo GT) co duoc day len dau (ocr_match_source='ocr') khong.")
-
-    print("\n[ocr_read] === Self-test 5: offline JSON lookup (fallback realtime khi video chua co) ===")
-    assert _load_offline_text_map("__video_khong_ton_tai__", _OCR_JSONL_DIR, _OFFLINE_OCR_CACHE, "ocr_text") is None
-    print("[ocr_read] Self-test 5: video chua co file offline -> None (dung de trigger fallback realtime): PASS")
+    out = rerank_by_ocr(hits_demo, 'a plaque with the year "1997" on it', top_n_ocr=3)
+    print("  Thứ tự sau rerank: " + str(
+        [(h["video_id"] + "/" + str(h["n"]), round(h["score"], 4),
+          h.get("ocr_bonus", 0.0), h.get("ocr_match_source")) for h in out]))
+    print("  Tự kiểm tra bằng mắt: L22_V001/120 (chứa '1997' theo GT) có được đẩy lên đầu không?")

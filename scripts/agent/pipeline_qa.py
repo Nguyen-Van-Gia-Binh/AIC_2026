@@ -202,57 +202,10 @@ def _summarize_top_objects(hits: list[dict]) -> str:
             all_objs.extend(get_objects(h["video_id"], int(n))[:5])
     return ", ".join(list(dict.fromkeys(all_objs))[:15]) or "none"
 
-
-# ─── CLI self-test (repo khong dung pytest — xem CLAUDE.md) ────────────────────
-def _run_self_tests() -> None:
-    """Test gom cum + gan answer theo video, khong goi LLM/index that."""
-    def _hit(vid: str, i: int, rrf: float) -> dict:
-        return {"video_id": vid, "n": i, "frame_idx": i, "frame_id": i + 1, "pts_time": float(i),
-                "score": 0.1, "rrf_score": rrf, "jpg_path": None}
-
-    hits = [_hit("A", 0, 0.016), _hit("B", 1, 0.015), _hit("A", 2, 0.014), _hit("C", 3, 0.010)]
-    clusters = _cluster_by_video(hits)
-    assert [vid for vid, _ in clusters] == ["A", "B", "C"], f"Cum phai xep theo diem: {clusters}"
-    assert len(clusters[0][1]) == 2, "Cum A phai gom ca 2 hit cua A"
-    print("[qa] Test gom cum theo video: OK")
-
-    # answer_by_video_cluster: moi cum goi answer_from_hits 1 lan, moi video co answer rieng.
-    global answer_from_hits
-    _orig = answer_from_hits
-    try:
-        calls: list = []
-
-        def _fake_answer(question, cluster_hits, top_n=5):
-            vid = cluster_hits[0]["video_id"]
-            calls.append(vid)
-            conf = {"A": 0.4, "B": 0.9, "C": 0.2}[vid]
-            return {"answer": f"answer-{vid}", "best_hit": cluster_hits[0],
-                    "confidence": conf, "method": "objects"}
-
-        answer_from_hits = _fake_answer
-        answers, best = answer_by_video_cluster("q?", hits, max_clusters=3)
-        assert calls == ["A", "B", "C"], f"Phai chay trich xuat cho tung cum: {calls}"
-        assert answers == {"A": "answer-A", "B": "answer-B", "C": "answer-C"}
-        assert best["answer"] == "answer-B", "Cum co confidence cao nhat phai duoc chon lam best"
-        print("[qa] Test answer theo tung cum video: OK")
-
-        # max_clusters gioi han so cum duoc chay (kiem soat chi phi LLM).
-        calls.clear()
-        answers2, _ = answer_by_video_cluster("q?", hits, max_clusters=2)
-        assert calls == ["A", "B"] and set(answers2) == {"A", "B"}, f"max_clusters=2: {calls}"
-        print("[qa] Test max_clusters gioi han chi phi: OK")
-    finally:
-        answer_from_hits = _orig
-
-    print("[qa] Tat ca self-test PASS")
-
+# Bo test: tests/unit/test_pipeline_qa.py
 
 # ─── CLI Demo ──────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
-    if "--self-test" in sys.argv:
-        _run_self_tests()
-        sys.exit(0)
-
     query = "Mot nguoi dang phat bieu truoc dam dong, mac ao trang"
     question = "What color is the speaker's shirt?"
 

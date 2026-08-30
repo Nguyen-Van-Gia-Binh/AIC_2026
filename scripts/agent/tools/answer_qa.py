@@ -330,107 +330,10 @@ def _crosscheck_answer(question: str, answer: str, objects: list[str], transcrip
     result = call_llm(prompt, model="text", temperature=0.0, max_tokens=20)
     return result.strip().upper().startswith("YES")
 
-
-# ─── CLI self-test (repo khong dung pytest — xem CLAUDE.md) ────────────────────
-def _run_self_tests() -> None:
-    """Monkeypatch call_llm/get_objects/get_transcript de test transcript duoc bom vao Tier 1
-    va crosscheck ma khong can goi API that."""
-    global call_llm, get_objects, get_transcript
-    from scripts.agent.tools import qa_normalize   # canonicalize_answer da chuyen sang day
-    _orig_call_llm, _orig_get_objects, _orig_get_transcript = call_llm, get_objects, get_transcript
-    _orig_norm_call_llm = qa_normalize.call_llm
-    captured_prompts: list[str] = []
-
-    def _fake_call_llm(prompt, **kwargs):
-        captured_prompts.append(prompt)
-        if "Detected objects in candidate frames" in prompt:
-            return "a red car"
-        if "Is this answer plausible" in prompt:
-            return "YES"
-        return "unexpected prompt"
-
-    hit = {"video_id": "V", "n": 1, "frame_idx": 0, "frame_id": 1, "pts_time": 10.0,
-           "score": 0.9, "jpg_path": None}
-
-    try:
-        # Test A: transcript co noi dung -> phai xuat hien trong ca prompt Tier 1 va crosscheck
-        call_llm = qa_normalize.call_llm = _fake_call_llm
-        get_objects = lambda vid, n: ["car", "person"]
-        get_transcript = lambda vid, pts, window=7.5: "a red car passes by quickly"
-        captured_prompts.clear()
-
-        result = answer_from_hits("What color is the car?", [hit], top_n=1)
-        assert result["method"] == "objects", f"Phai dung Tier 1 (objects), duoc {result['method']}"
-        assert result["answer"] == "a red car", f"Answer sai: {result['answer']!r}"
-
-        tier1_prompt = next(p for p in captured_prompts if "Detected objects in candidate frames" in p)
-        assert "a red car passes by quickly" in tier1_prompt, "Tier 1 prompt phai chua transcript hint"
-
-        crosscheck_prompt = next(p for p in captured_prompts if "Is this answer plausible" in p)
-        assert "a red car passes by quickly" in crosscheck_prompt, "Crosscheck prompt phai chua transcript"
-        print("[answer_qa] Test Tier 1 + crosscheck co transcript: OK")
-
-        # Test B: transcript rong -> khong crash, template van render binh thuong
-        get_transcript = lambda vid, pts, window=7.5: ""
-        captured_prompts.clear()
-        result_b = answer_from_hits("What color is the car?", [hit], top_n=1)
-        assert result_b["method"] == "objects", f"Phai dung Tier 1 (objects), duoc {result_b['method']}"
-        print("[answer_qa] Test transcript rong khong crash: OK")
-
-        # Test C: Canonical Extractor (§4.2) — bo van phong giao tiep bang rule, khong goi LLM khi
-        # answer da ngan.
-        assert canonicalize_answer("The answer is: màu trắng") == "màu trắng"
-        assert canonicalize_answer("Trong hình có một chiếc xe") == "một chiếc xe"
-        assert canonicalize_answer("There are 15 people") == "15 people"
-        assert canonicalize_answer("15") == "15", "Answer da chuan phai giu nguyen"
-        print("[answer_qa] Test canonical rule-based: OK")
-
-        # Test D: answer dai -> goi LLM rut gon; LLM tra ve dai hon thi GIU ban rule (khong lam te di).
-        def _fake_canonical(prompt, **kwargs):
-            captured_prompts.append(prompt)
-            if "Compress the following answer" in prompt:
-                return "Phú Sĩ"
-            return "unexpected prompt"
-        call_llm = qa_normalize.call_llm = _fake_canonical
-        long_answer = "Ngọn núi xuất hiện trong khung hình này chính là núi Phú Sĩ ở Nhật Bản"
-        assert canonicalize_answer(long_answer, "Núi gì?") == "Phú Sĩ"
-        call_llm = qa_normalize.call_llm = (
-            lambda *a, **k: "Đây là một lời giải thích rất dài hơn cả câu trả lời gốc ban đầu")
-        assert canonicalize_answer(long_answer, "Núi gì?") == long_answer, (
-            "LLM tra ve dai hon -> phai giu ban rule-based"
-        )
-        print("[answer_qa] Test canonical qua LLM + tu choi ban dai hon: OK")
-
-        # Test E: cong chong ao giac — chuoi "khong doc duoc" khong duoc coi la dap an.
-        assert is_non_answer("The text is not legible in any frame") is True
-        assert is_non_answer("Không nhìn rõ biển số") is True
-        assert is_non_answer("") is True
-        assert is_non_answer("màu trắng") is False
-        print("[answer_qa] Test cong chong ao giac: OK")
-
-        # Test F: OCR Direct Overwrite — chi kich hoat voi cau hoi ve SO HIEN THI va OCR doc duy
-        # nhat 1 chuoi so.
-        assert ocr_direct_answer("Biển số xe là gì?", {0: ["AG 09399"], 1: ["AG 09399"]}) == "09399"
-        assert ocr_direct_answer("Biển số xe là gì?", {0: ["09399"], 1: ["12627"]}) is None, (
-            "Nhieu chuoi so khac nhau -> khong ghi de, de VLM quyet dinh"
-        )
-        assert ocr_direct_answer("Có bao nhiêu người trong hình?", {0: ["15"]}) is None, (
-            "Cau hoi DEM vat the khong duoc de OCR ghi de"
-        )
-        assert ocr_direct_answer("Biển số xe là gì?", {}) is None
-        print("[answer_qa] Test OCR direct overwrite: OK")
-
-        print("[answer_qa] Tat ca self-test PASS")
-    finally:
-        call_llm, get_objects, get_transcript = _orig_call_llm, _orig_get_objects, _orig_get_transcript
-        qa_normalize.call_llm = _orig_norm_call_llm
-
+# Bo test: tests/unit/test_answer_qa.py (+ test_qa_answer_contract.py)
 
 # ─── CLI demo ──────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
-    _run_self_tests()
-    print()
-
     from scripts.agent.tools.retrieve import fast_retrieve
 
     question = "What objects can be seen in the background of this scene?"

@@ -350,46 +350,17 @@ def is_available() -> bool:
     """True neu cache BM25 da build va nap duoc — dung de log/bao cao trang thai, khong bat buoc goi."""
     return _ensure_loaded()
 
+# Bo test: tests/unit/test_sparse_index.py
 
-def _self_test() -> None:
-    """Test tokenize + cong thuc BM25 tren index gia (khong dung cache that, khong doc data/)."""
-    global _MATRIX_CSC, _DOC_LEN, _AVG_DL, _IDF, _DOC_VIDEO, _DOC_N, _VOCAB
-    assert tokenize("A red Double-Decker BUS") == ["red", "double", "decker", "bus"]
-    assert tokenize("") == []
-    assert tokenize("a of the in") == []
-    print("[sparse_index] Self-test tokenize: OK")
-
-    from scipy import sparse as _sp
-    _VOCAB = {"bus": 0, "person": 1}
-    _MATRIX_CSC = _sp.csc_matrix(np.array([[1, 1], [0, 1], [0, 1]], dtype=np.float32))
-    _DOC_LEN = np.array([2, 1, 1], dtype=np.float32)
-    _AVG_DL = 4.0 / 3.0
-    df_t = np.array([1, 3], dtype=np.float32)
-    _IDF = np.log(1.0 + (3 - df_t + 0.5) / (df_t + 0.5)).astype(np.float32)
-    _DOC_VIDEO = np.array(["V1", "V2", "V3"])
-    _DOC_N = np.array([1, 2, 3], dtype=np.int32)
-
-    out = search_sparse("bus person", top_k=3)
-    assert out[0]["video_id"] == "V1", f"Doc chua term hiem 'bus' phai dung dau: {out}"
-    assert len(out) == 3, f"Ca 3 doc deu chua 'person' -> phai co diem: {out}"
-    assert search_sparse("giraffe") == [], "Term ngoai vocab -> rong"
-    print(f"[sparse_index] Self-test BM25: OK ({[(o['video_id'], round(o['score'], 3)) for o in out]})")
-    print("[sparse_index] Tat ca self-test PASS")
-
-
-# --- CLI: build + self-test --------------------------------------------------
+# --- CLI: build index --------------------------------------------------
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--build", action="store_true", help="Build (hoac rebuild voi --force) cache BM25")
     parser.add_argument("--force", action="store_true", help="Ghi de cache da co")
     parser.add_argument("--workers", type=int, default=0, help="So process khi build (0 = CPU-1)")
     parser.add_argument("--query", type=str, default="", help="Thu tim 1 query tren cache da build")
-    parser.add_argument("--self-test", action="store_true", help="Test tokenize/BM25 tren du lieu gia")
     args = parser.parse_args()
 
-    if args.self_test:
-        _self_test()
-        sys.exit(0)
     if args.build:
         build_index(workers=args.workers, force=args.force)
     if args.query:

@@ -107,48 +107,4 @@ def expand_aspects_llm(query_text: str, max_aspects: int = 3) -> list:
         return expand_aspects(q, max_aspects)
     return [q] + lines[: max_aspects - 1]
 
-
-# --- CLI self-test (repo khong dung pytest — xem CLAUDE.md) -------------------
-if __name__ == "__main__":
-    out = expand_aspects("a cyclist racing on a mountain road")
-    assert len(out) == 3, f"Phai sinh 3 goc nhin, duoc {len(out)}"
-    assert out[0] == "a cyclist racing on a mountain road", "Goc nhin dau phai la query goc nguyen van"
-    assert all("cyclist" in a for a in out), "Moi goc nhin phai giu noi dung goc"
-    print(f"[query_expand] Test 3 goc nhin: OK")
-    for i, a in enumerate(out, 1):
-        print(f"  v{i}: {a}")
-
-    assert expand_aspects("a red car", max_aspects=1) == ["a red car"], "max_aspects=1 -> tat expansion"
-    assert expand_aspects("") == []
-    assert expand_aspects("   ") == []
-    print("[query_expand] Test truong hop bien: OK")
-
-    long_q = " ".join(["word"] * 30)
-    assert len(expand_aspects(long_q)) == 2, "Query dai -> chi giu 2 goc nhin (v1 + v3)"
-    print("[query_expand] Test query dai: OK")
-
-    # Nhanh LLM: khong goi API that — bom module gia vao sys.modules de mo phong ca 2 nhanh.
-    import sys as _sys
-    import types as _types
-
-    _fake_config = _types.ModuleType("scripts.agent.config")
-    _fake_config.call_llm = lambda *a, **k: (  # type: ignore[attr-defined]
-        "a mountain road in daylight\na cyclist in the center of the frame\na cyclist in red pedalling fast"
-    )
-    _sys.modules["scripts.agent.config"] = _fake_config
-    llm_out = expand_aspects_llm("a cyclist racing on a mountain road")
-    assert llm_out[0] == "a cyclist racing on a mountain road", "Goc nhin dau van phai la query goc"
-    assert len(llm_out) == 3, f"Phai co 3 goc nhin, duoc {llm_out}"
-    print(f"[query_expand] Test nhanh LLM parse dung: OK ({llm_out[1:]})")
-
-    def _raise(*a, **k):
-        raise RuntimeError("simulated failure")
-    _fake_config.call_llm = _raise  # type: ignore[attr-defined]
-    fallback = expand_aspects_llm("a cyclist racing on a mountain road")
-    assert fallback == expand_aspects("a cyclist racing on a mountain road"), (
-        "LLM loi phai rot ve template tat dinh"
-    )
-    print("[query_expand] Test nhanh LLM loi -> rot ve template: OK")
-    _sys.modules.pop("scripts.agent.config", None)
-
-    print("[query_expand] Tat ca self-test PASS")
+# Bo test: tests/unit/test_query_expand.py

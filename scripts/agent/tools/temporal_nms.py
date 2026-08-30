@@ -72,40 +72,4 @@ def temporal_nms(
 
     return kept
 
-
-# --- CLI self-test (repo khong dung pytest — xem CLAUDE.md) -------------------
-if __name__ == "__main__":
-    def _hit(vid: str, pts: float, score: float) -> dict:
-        return {"video_id": vid, "pts_time": pts, "frame_idx": int(pts * 30), "score": score}
-
-    # Test 1: 3 keyframe sat nhau (cach 1s) trong 1 video -> chi giu dinh diem cao nhat.
-    hits1 = [_hit("A", 10.0, 0.9), _hit("A", 11.0, 0.88), _hit("A", 12.0, 0.87), _hit("A", 30.0, 0.5)]
-    out1 = temporal_nms(hits1, min_gap=3.0)
-    assert [h["pts_time"] for h in out1] == [10.0, 30.0], f"Phai giu 10.0 va 30.0, duoc {out1}"
-    print("[temporal_nms] Test loai keyframe sat nhau: OK")
-
-    # Test 2: video khac nhau khong anh huong lan nhau du trung thoi diem.
-    hits2 = [_hit("A", 10.0, 0.9), _hit("B", 10.5, 0.8), _hit("C", 11.0, 0.7)]
-    assert len(temporal_nms(hits2, min_gap=3.0)) == 3, "NMS chi ap dung TRONG cung 1 video"
-    print("[temporal_nms] Test doc lap giua cac video: OK")
-
-    # Test 3: max_per_video cat dung so dinh.
-    hits3 = [_hit("A", float(i * 10), 0.9 - i * 0.01) for i in range(6)]
-    out3 = temporal_nms(hits3, min_gap=3.0, max_per_video=3)
-    assert len(out3) == 3, f"max_per_video=3 phai giu dung 3 dinh, duoc {len(out3)}"
-    assert [h["pts_time"] for h in out3] == [0.0, 10.0, 20.0], "Phai giu 3 dinh diem cao nhat"
-    print("[temporal_nms] Test max_per_video: OK")
-
-    # Test 4: giu dinh DIEM CAO NHAT chu khong phai dinh gap dau tien theo thu tu dau vao.
-    hits4 = [_hit("A", 11.0, 0.5), _hit("A", 10.0, 0.9)]
-    out4 = temporal_nms(hits4, min_gap=3.0)
-    assert len(out4) == 1 and out4[0]["score"] == 0.9, f"Phai giu dinh 0.9, duoc {out4}"
-    print("[temporal_nms] Test giu dinh diem cao nhat: OK")
-
-    # Test 5: hits rong / thieu pts_time khong crash, khong loai nham.
-    assert temporal_nms([]) == []
-    no_pts = [{"video_id": "A", "score": 0.5}, {"video_id": "A", "score": 0.4}]
-    assert len(temporal_nms(no_pts, min_gap=3.0)) == 2, "Thieu pts_time -> giu nguyen, khong doan"
-    print("[temporal_nms] Test dau vao thieu/rong: OK")
-
-    print("[temporal_nms] Tat ca self-test PASS")
+# Bo test: tests/unit/test_temporal_nms.py

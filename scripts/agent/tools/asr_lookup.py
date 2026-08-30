@@ -114,6 +114,4 @@ def _run_self_tests() -> None:
 
     print("[asr_lookup] Tat ca self-test PASS")
 
-
-if __name__ == "__main__":
-    _run_self_tests()
+# Bo test: tests/unit/test_asr_lookup.py

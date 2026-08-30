@@ -92,38 +92,4 @@ def rrf_fuse_hits(
 
     return sorted(fused.values(), key=lambda hit: -hit["score"])[:top_k]
 
-
-# --- CLI self-test (repo khong dung pytest — xem CLAUDE.md) -------------------
-if __name__ == "__main__":
-    # Test 1: key duoc CA HAI he thong xep cao phai thang key chi 1 he thong xep cao nhat.
-    dense = ["A", "B", "C"]
-    sparse = ["B", "D", "E"]
-    fused = reciprocal_rank_fusion([(dense, W_DENSE), (sparse, W_SPARSE)])
-    keys = [key for key, _ in fused]
-    assert keys[0] == "B", (
-        f"B (dense #2 + sparse #1 — CA HAI he thong dong y) phai vuot A (chi dense #1): {fused}"
-    )
-    assert keys[1] == "A", f"A (dense #1, w=0.75) phai dung ngay sau B: {fused}"
-    assert keys.index("C") < keys.index("D"), "Dense #3 (w=0.75) phai tren sparse #2 (w=0.25)"
-    assert set(keys) == {"A", "B", "C", "D", "E"}, "RRF phai giu ca key chi co o 1 he thong"
-    print(f"[fusion] Test dung hop co ban: OK ({[(k, round(s, 5)) for k, s in fused]})")
-
-    # Test 2: trong so 0 / danh sach rong khong lam hong ket qua.
-    only_dense = reciprocal_rank_fusion([(dense, W_DENSE), ([], W_SPARSE)])
-    assert [k for k, _ in only_dense] == dense, "Sparse rong -> giu nguyen thu tu dense"
-    assert reciprocal_rank_fusion([]) == []
-    print("[fusion] Test danh sach rong: OK")
-
-    # Test 3: top_k cat dung so luong.
-    assert len(reciprocal_rank_fusion([(dense, W_DENSE), (sparse, W_SPARSE)], top_k=2)) == 2
-    print("[fusion] Test top_k: OK")
-
-    # Test 4: RRF chi phu thuoc THU HANG, khong phu thuoc gia tri diem goc (tinh chat cot loi —
-    # neu ai do doi module nay sang cong diem tho, test nay se hong).
-    fused_a = reciprocal_rank_fusion([(["X", "Y"], 1.0)])
-    fused_b = reciprocal_rank_fusion([(["X", "Y"], 1.0)])
-    assert fused_a == fused_b
-    assert abs(fused_a[0][1] - 1.0 / (RRF_K + 1)) < 1e-12, "Diem RRF phai la w/(k+rank)"
-    print("[fusion] Test cong thuc w/(k+rank): OK")
-
-    print("[fusion] Tat ca self-test PASS")
+# Bo test: tests/unit/test_fusion.py + tests/unit/test_rrf_fusion.py
