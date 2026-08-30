@@ -138,6 +138,16 @@ vào `row_to_hit()`, luật đúng trở lại theo đúng nghĩa đen, và CLAU
 | `tools/ocr_lookup.py` | `tools/objects_lookup.py` | Nó đọc Objects JSON (Faster R-CNN), **không làm OCR**. 4 call site. Tên hiện tại khiến người đọc tưởng đã đọc được chữ trên khung hình. |
 | `rank.py` (chỉ có trong tài liệu) | `rerank.py` | Tài liệu gọi một tên, file thật tên khác. |
 
+### 4.3 Ngôn ngữ comment
+
+Hiện trộn: `pipeline_kis.py` tiếng Việt **có dấu**, `rerank.py`/`fusion.py`/`pipeline_qa.py`
+**không dấu**, `answer_qa.py` trộn cả hai trong cùng một file. Thống nhất về **có dấu** cho toàn
+bộ `scripts/agent/`, `scripts/api/`, `scripts/submit/`.
+
+Làm **sau** mọi bước tách/di chuyển file, để không phải sửa cùng một dòng hai lần. Không đụng
+vào: tên biến/hàm, và **nội dung prompt LLM trong `qa_prompts.py`** (tiếng Anh — sửa một ký tự
+là đổi hành vi mô hình).
+
 ## 5. Import và sys.path
 
 **Quy tắc dứt khoát:** giữ khối `sys.path.insert` ở file **có khối `__main__` chạy trực tiếp**;
