@@ -234,13 +234,40 @@ ngân sách thời gian trước giải eo hẹp, và bộ test này chạy dư�
 
 Đây là phần khiến Pha 1 có nghĩa. Làm **trước** khi đụng file nào:
 
-1. **Chốt mốc.** Chạy `run_eval.py` trên bộ 33 query (tất định, không LLM) → lưu toàn bộ bảng
-   R@k. Chạy `scripts/api/_smoke_test.py`. Ghi lại.
+### 8.0 Vì sao `run_eval.py` một mình KHÔNG đủ
+
+`run_eval.py` chạy trên `multi_index.py`, mà module đó **cố ý không import** `retrieve.py` (ghi rõ
+trong docstring của nó). Nghĩa là nó không chạm `retrieve.py`, `rerank.py`, hay bất kỳ pipeline
+nào — dùng nó làm tiêu chí cứng cho một đợt refactor mà việc chính là *tách `retrieve.py` và
+`answer_qa.py`* thì gần như không chứng minh được gì.
+
+**Mốc chuẩn thật là golden snapshot của đường KIS production.** `run_kis()` không gọi LLM
+(`expand_aspects` là template tất định, `rerank_by_ocr` là PaddleOCR cục bộ) nên nó **tất định** —
+chạy hai lần ra đúng một kết quả. Một lượt `run_kis()` phủ: `index_store` → `retrieve` → `hybrid`
+→ `sparse_index` → `fusion` → `rerank` → `temporal_nms` → `ocr_read`. Đó chính xác là tập module
+bị đụng nhiều nhất trong Pha 1.
+
+`tests/e2e/golden_kis_snapshot.py` (thêm mới, thành lưới regression lâu dài):
+chạy `run_kis(text_en, top_k=100)` cho 18 câu KIS của `eval_ground_truth.json`, ghi danh sách
+`video_id:frame_id` **theo đúng thứ tự** + một mã băm. So sánh trước/sau phải khớp **từng dòng**.
+
+Ba nhánh còn lại và cách phủ:
+
+| Đường | Tất định? | Cách phủ trong Pha 1 |
+|---|---|---|
+| KIS production | có | golden snapshot (tiêu chí cứng) |
+| Q&A retrieval | có | golden snapshot nhánh `qa=True` (bỏ bước answer) |
+| Q&A answer, TRAKE | không (gọi LLM) | `pytest tests/unit` — phần logic thuần đã có sẵn assert |
+| `fusion`/`temporal_nms`/`query_expand` | có | `run_eval.py --all-features` (chúng dùng chung) |
+
+1. **Chốt mốc.** Chạy `tests/e2e/golden_kis_snapshot.py` (tiêu chí cứng) và
+   `run_eval.py --models siglip --all-features`. Chạy `scripts/api/_smoke_test.py`. Lưu lại tất cả.
 2. **Commit theo nhóm nhỏ, không trộn:** (a) dọn rác + `.gitignore`, (b) move thư mục,
    (c) rename module, (d) tách file, (e) sys.path + smoke test, (f) pytest, (g) tài liệu.
 3. **Nghiệm thu:**
-   - `run_eval.py` ra số **khớp tuyệt đối** với mốc. Nó tất định — mọi sai lệch dù 0.001 đều là
-     bug vừa tạo ra, không phải nhiễu. Đây là tiêu chí cứng.
+   - **Golden snapshot KIS khớp từng dòng** với mốc — tiêu chí cứng. Nó tất định, nên mọi sai
+     lệch dù một dòng đều là bug vừa tạo ra, không phải nhiễu.
+   - `run_eval.py --models siglip --all-features` ra số khớp tuyệt đối.
    - `pytest tests/unit` xanh, và **số lượng assert không giảm** so với các khối `__main__` cũ.
    - `scripts/api/_smoke_test.py` xanh.
    - Grep chứng minh không còn tham chiếu tới `scripts/index.py`, `scripts/app.py`,
