@@ -56,7 +56,7 @@ CAPTION_DIR = _DATA_DIR / "caption_vintern1b" / "caption_vintern1b"
 OCR_DIR = _DATA_DIR / "ocr_text_paddleocr"
 CACHE_DIR = _DATA_DIR / "bm25_index"
 
-# Nguong confidence object — dung CHUNG gia tri voi ocr_lookup.DEFAULT_SCORE_THRESHOLD de 2 duong
+# Nguong confidence object — dung CHUNG gia tri voi objects_lookup.DEFAULT_SCORE_THRESHOLD de 2 duong
 # doc objects (BM25 offline vs tra cuu truc tiep) khong "thay" 2 tap object khac nhau cho cung 1 frame.
 OBJECT_SCORE_THRESHOLD = 0.3
 

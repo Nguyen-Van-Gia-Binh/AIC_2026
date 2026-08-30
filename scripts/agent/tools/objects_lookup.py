@@ -1,8 +1,12 @@
 """
-ocr_lookup.py — Doc Objects JSON cua BTC (Faster R-CNN, OpenImages V4).
+objects_lookup.py — Đọc Objects JSON của BTC (Faster R-CNN, OpenImages V4), offline.
 
-Khong can goi API. Tra ve danh sach object detect duoc trong 1 keyframe.
-Dung de cross-check answer Q&A va rerank KIS.
+ĐÂY KHÔNG PHẢI OCR: module chỉ trả về TÊN OBJECT chung chung ("person", "car", "fish"), không
+đọc được chữ, số, giá hay biển hiệu trên khung hình. Muốn đọc chữ thật → agent/tools/ocr_read.py.
+(Tên cũ `ocr_lookup.py` đã bỏ 2026-08-31 vì gây hiểu nhầm đúng điều trên.)
+
+Không cần gọi API. Trả về danh sách object detect được trong 1 keyframe.
+Dùng để cross-check answer Q&A và rerank KIS.
 
 Data path: data/extracted/objects/{video_id}/{n:03d}.json
   n: so thu tu keyframe (cot "n" trong map-keyframes CSV, bat dau tu 1)
@@ -108,7 +112,7 @@ if __name__ == "__main__":
     import os, sys
     # Test voi L21_V001, keyframe n=1
     objs = get_objects("L21_V001", 1)
-    print(f"[ocr_lookup] L21_V001 keyframe 001: {len(objs)} objects")
+    print(f"[objects_lookup] L21_V001 keyframe 001: {len(objs)} objects")
     print(f"  {objs[:10]}")
 
     # Test voi vai video khac

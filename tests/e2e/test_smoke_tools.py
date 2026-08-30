@@ -6,7 +6,7 @@ duoc du lieu / goi duoc API sau khi setup moi hoac doi dependency — KHONG cham
 
 Bao gom:
   1. retrieve.fast_retrieve      — can data/extracted/ (index + model), KHONG can API key
-  2. ocr_lookup.get_objects      — can data/extracted/objects-*, KHONG can API key
+  2. objects_lookup.get_objects      — can data/extracted/objects-*, KHONG can API key
   3. config.call_llm             — can OPENROUTER_API_KEY
   4. rewrite.rewrite_query       — can OPENROUTER_API_KEY
 
@@ -36,8 +36,8 @@ def main() -> None:
               f"score={h['score']:.4f}{img}")
     print()
 
-    print("=== Test 2: ocr_lookup.get_objects (khong can API) ===")
-    from scripts.agent.tools.ocr_lookup import get_objects, objects_contain_keywords
+    print("=== Test 2: objects_lookup.get_objects (khong can API) ===")
+    from scripts.agent.tools.objects_lookup import get_objects, objects_contain_keywords
     objs = get_objects("L21_V001", 1)
     print(f"  L21_V001/001: {len(objs)} objects: {objs[:8]}")
     objs2 = get_objects("L23_V001", 1)

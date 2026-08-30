@@ -25,7 +25,7 @@ if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
 from scripts.agent.config import call_llm
-from scripts.agent.tools.ocr_lookup import get_objects, objects_contain_keywords
+from scripts.agent.tools.objects_lookup import get_objects, objects_contain_keywords
 from scripts.agent.tools.ocr_read import read_text_from_hits, format_ocr_hint
 from scripts.agent.tools.asr_lookup import get_transcript
 

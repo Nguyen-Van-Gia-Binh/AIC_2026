@@ -152,7 +152,7 @@ def fast_retrieve(query_text: str, top_k: int = 100) -> list[dict]:
 
     Returns list of dict:
       video_id  (str):   "L21_V001" (không .mp4)
-      n         (int):   keyframe sequence no trong map-keyframes (dùng cho ocr_lookup)
+      n         (int):   keyframe sequence no trong map-keyframes (dùng cho objects_lookup)
       frame_idx (int):   index gốc từ 0
       frame_id  (int):   frame_idx + 1  — dùng trong submission (BTC tính từ 1)
       pts_time  (float): timestamp giây
@@ -170,7 +170,7 @@ def fast_retrieve(query_text: str, top_k: int = 100) -> list[dict]:
         frame_idx = int(row["frame_idx"])
         results.append({
             "video_id":  row["video_id"],
-            "n":         int(row["n"]),        # keyframe sequence no (for ocr_lookup)
+            "n":         int(row["n"]),        # keyframe sequence no (for objects_lookup)
             "frame_idx": frame_idx,
             "frame_id":  frame_idx + 1,
             "pts_time":  float(row["pts_time"]),
@@ -197,7 +197,7 @@ def fast_retrieve_for_video(query_text: str, video_id: str, top_k: int = 20) -> 
         frame_idx = int(row["frame_idx"])
         results.append({
             "video_id":  row["video_id"],
-            "n":         int(row["n"]),        # keyframe sequence no (for ocr_lookup)
+            "n":         int(row["n"]),        # keyframe sequence no (for objects_lookup)
             "frame_idx": frame_idx,
             "frame_id":  frame_idx + 1,
             "pts_time":  float(row["pts_time"]),

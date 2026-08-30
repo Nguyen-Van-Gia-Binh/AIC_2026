@@ -194,7 +194,7 @@ def run_qa(
 
 def _summarize_top_objects(hits: list[dict]) -> str:
     """Tom tat objects cua top hits thanh chuoi ngan."""
-    from scripts.agent.tools.ocr_lookup import get_objects
+    from scripts.agent.tools.objects_lookup import get_objects
     all_objs = []
     for h in hits:
         n = h.get("n")

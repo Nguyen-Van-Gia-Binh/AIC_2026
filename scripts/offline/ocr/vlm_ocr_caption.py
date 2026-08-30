@@ -2,11 +2,11 @@
 vlm_ocr_caption.py — OCR (trích xuất văn bản) + captioning (mô tả ngữ cảnh) cho 1 keyframe,
 dùng chung Qwen2.5-VL-3B-Instruct qua transformers (chạy local, không gọi API trả phí).
 
-Bối cảnh: ocr_lookup.py hiện có KHÔNG phải OCR thật — nó đọc Objects JSON (nhãn object closed-set
+Bối cảnh: objects_lookup.py hiện có KHÔNG phải OCR thật — nó đọc Objects JSON (nhãn object closed-set
 từ Faster R-CNN/OpenImages V4 do BTC cung cấp), không đọc được chữ trong ảnh (biển hiệu, phụ đề,
 văn bản trên màn hình...). Module này là hệ thống OCR THẬT đầu tiên trong repo, dùng 1 model
 Vision-Language để vừa đọc chữ (OCR) vừa sinh mô tả cảnh (caption) trong 1 lần gọi model — tách
-riêng khỏi ocr_lookup.py, KHÔNG thay thế nó (quyết định giữ nguyên ocr_lookup.py, xem PLAN.md).
+riêng khỏi objects_lookup.py, KHÔNG thay thế nó (quyết định giữ nguyên objects_lookup.py, xem PLAN.md).
 
 Singleton pattern giống agent/tools/retrieve.py và agent/tools/detect_objects.py — model chỉ load
 1 lần/process. Đây là VLM chạy local qua transformers, KHÔNG đi qua agent/config.py:call_llm() —

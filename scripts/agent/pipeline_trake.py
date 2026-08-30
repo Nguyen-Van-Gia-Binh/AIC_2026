@@ -42,7 +42,7 @@ from scripts.agent.config import call_llm
 from scripts.agent.tools.retrieve import fast_retrieve, fast_retrieve_for_video
 from scripts.agent.tools.rewrite import rewrite_query
 from scripts.agent.tools.rerank import RETRIEVAL_POOL_SIZE
-from scripts.agent.tools.ocr_lookup import get_objects
+from scripts.agent.tools.objects_lookup import get_objects
 from scripts.agent.tools.asr_lookup import get_transcript
 
 
