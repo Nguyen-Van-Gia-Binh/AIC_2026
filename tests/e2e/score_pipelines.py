@@ -1,9 +1,9 @@
 """
 score_pipelines.py — Final Score BTC THẬT của cả hệ thống: chạy trọn pipeline production
-(run_kis / run_qa / run_trake) trên test_eval/Eval/eval_ground_truth.json rồi chấm đúng công thức
+(run_kis / run_qa / run_trake) trên tests/eval/eval_ground_truth.json rồi chấm đúng công thức
 docs/Thong tin vong So tuyen AIC2026.md §2.1–2.2.
 
-Khác test_eval/Eval/run_eval.py (bake-off backbone, retrieval-only, không LLM): file này đi qua
+Khác tests/eval/run_eval.py (bake-off backbone, retrieval-only, không LLM): file này đi qua
 retrieve + rerank + DP + LLM answer + OCR + crosscheck — tức là đúng cái sẽ được nộp. Đánh đổi:
 chậm, cần OPENROUTER_API_KEY (hoặc GEMINI_API_KEY ở AIC_MODE=test), và QA/TRAKE có biến thiên LLM
 giữa các lần chạy (nên chạy 2–3 lần).
@@ -18,10 +18,10 @@ Chấm điểm:
     answer sinh ra TRÙNG / CHỨA / là CON của bất kỳ phần tử gt_answers nào (substring 2 chiều).
 
 Usage:
-    .venv\\Scripts\\python.exe test_eval\\Test\\score_pipelines.py                     # cả 3 loại
-    .venv\\Scripts\\python.exe test_eval\\Test\\score_pipelines.py --types kis --limit 5
-    .venv\\Scripts\\python.exe test_eval\\Test\\score_pipelines.py --no-rewrite         # bỏ LLM rewrite cho ổn định/nhanh
-    .venv\\Scripts\\python.exe test_eval\\Test\\score_pipelines.py --self-test          # chỉ test answer_matches, không cần data/API
+    .venv\\Scripts\\python.exe tests\\Test\\score_pipelines.py                     # cả 3 loại
+    .venv\\Scripts\\python.exe tests\\Test\\score_pipelines.py --types kis --limit 5
+    .venv\\Scripts\\python.exe tests\\Test\\score_pipelines.py --no-rewrite         # bỏ LLM rewrite cho ổn định/nhanh
+    .venv\\Scripts\\python.exe tests\\Test\\score_pipelines.py --self-test          # chỉ test answer_matches, không cần data/API
 """
 from __future__ import annotations
 
@@ -36,13 +36,13 @@ try:
 except Exception:
     pass
 
-_ROOT = Path(__file__).resolve().parents[2]  # test_eval/Test/ -> repo root
+_ROOT = Path(__file__).resolve().parents[2]  # tests/e2e/ -> repo root
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
-_EVAL_SET_PATH = _ROOT / "test_eval" / "Eval" / "eval_ground_truth.json"
-_DEFAULT_OUT = _ROOT / "docs" / "eval_e2e_scores.md"
-_DEFAULT_BASELINE = _ROOT / "test_eval" / "Test" / "e2e_baseline.json"
+_EVAL_SET_PATH = _ROOT / "tests" / "eval" / "eval_ground_truth.json"
+_DEFAULT_OUT = _ROOT / "docs" / "reports" / "eval_e2e_scores.md"
+_DEFAULT_BASELINE = _ROOT / "tests" / "e2e" / "e2e_baseline.json"
 
 K_VALUES = [1, 5, 20, 50, 100]
 
@@ -138,7 +138,7 @@ def _mean_dict(dicts: list[dict[int, float]]) -> dict[int, float]:
 
 def format_markdown(by_type: dict[str, list[dict[int, float]]]) -> str:
     lines = [
-        "# Final Score BTC end-to-end — test_eval/Test/score_pipelines.py\n",
+        "# Final Score BTC end-to-end — tests/e2e/score_pipelines.py\n",
         "Chạy trọn pipeline production (retrieve + rerank + DP + LLM answer/crosscheck) rồi chấm "
         "đúng §2.1–2.2. `Final` = (1/5)·Σ R@k. **Cảnh báo:** QA đi qua vision LLM nên điểm dao động "
         "giữa các lần chạy (chạy 2–3 lần lấy khoảng); `run_trake` mặc định `top_k_video=20` nên "

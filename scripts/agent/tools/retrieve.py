@@ -13,7 +13,7 @@ Lý do chọn: benchmark 33 query (2026-08-28):
 Escape-hatch (dùng khi thử nghiệm, không phải production):
     AIC_RETRIEVE_MODEL=<tag>  override model cho KIS/TRAKE  (mặc định "siglip")
     AIC_QA_MODEL=<tag>        override model cho Q&A        (mặc định "siglip")
-  Tag hợp lệ: xem MODEL_REGISTRY trong test_eval/Eval/multi_index.py
+  Tag hợp lệ: xem MODEL_REGISTRY trong tests/eval/multi_index.py
 
 Usage:
     from scripts.agent.tools.retrieve import fast_retrieve, fast_retrieve_qa
@@ -98,7 +98,7 @@ def _load_model(tag: str) -> tuple[np.ndarray, object, Callable[[str], np.ndarra
     """Nạp index + encoder cho 1 model tag qua multi_index.py.
     Trả về (matrix, meta_with_jpg_paths, encode_fn).
     """
-    _eval_dir = _REPO_ROOT / "test_eval" / "Eval"
+    _eval_dir = _REPO_ROOT / "tests" / "Eval"
     if str(_eval_dir) not in sys.path:
         sys.path.insert(0, str(_eval_dir))
     from multi_index import get_index, get_encoder, MODEL_REGISTRY  # noqa: E402
@@ -252,7 +252,7 @@ _QA_KEY_INDEX: Optional[dict] = None
 # So ung vien BM25 dua vao dung hop RRF. CO Y nho hon nhieu so voi pool dense (500): BM25 o day chay
 # tren tap tu khoa RAT THO (ten object tu Faster R-CNN + caption, ~5.5K term, doc dai ~10 token) nen
 # chi dang tin o phan DINH danh sach — cang xuong sau cang nhieu frame chi trung 1-2 tu chung chung
-# ("person", "car"). Do that tren 18 cau KIS (test_eval, 2026-08-28): dua ca 500 ung vien BM25 vao
+# ("person", "car"). Do that tren 18 cau KIS (tests, 2026-08-28): dua ca 500 ung vien BM25 vao
 # lam Final tut 0.667 -> 0.656; gioi han o dinh giu duoc phan dong gop that ma khong keo rac len.
 SPARSE_TOP_K = 50
 

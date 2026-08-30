@@ -1,6 +1,6 @@
 """
 Load embedding index + text encoder cho NHIỀU model khác nhau (clip_vitb32 / vitl14 / siglip /
-dfn / ...), phục vụ test_eval/Eval/run_eval.py (Phase 6 — so baseline retrieval).
+dfn / ...), phục vụ tests/eval/run_eval.py (Phase 6 — so baseline retrieval).
 
 Cố ý KHÔNG import/sửa scripts/index.py hay scripts/agent/tools/retrieve.py (đường dẫn production
 KIS/QA/TRAKE, đang được dùng tập dượt thật trong Vòng thử nghiệm) — chấp nhận trùng ~20 dòng logic
@@ -11,7 +11,7 @@ Mỗi model cần 2 thứ, tách riêng theo `MODEL_REGISTRY`:
   - build_encoder: hàm trả về encode(texts) -> vector, DÙNG CHUNG không gian với ảnh đã encode
 
 Usage (smoke-test, không cần eval set):
-    .venv\\Scripts\\python.exe test_eval\\Eval\\multi_index.py clip_vitb32 vitl14
+    .venv\\Scripts\\python.exe tests\\Eval\\multi_index.py clip_vitb32 vitl14
 """
 
 from __future__ import annotations

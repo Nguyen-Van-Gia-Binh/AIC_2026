@@ -1,18 +1,18 @@
 """
 So sánh baseline embedding (clip_vitb32 hiện tại vs vitl14/siglip/dfn/...) bằng công thức thi
 R@{1,5,20,50,100} (docs/Thong tin vong So tuyen AIC2026.md §2.1), chạy trên bộ eval ground-truth tự
-ghi (test_eval/Eval/eval_ground_truth.json — xem test_eval/Eval/EVAL_GUIDE.md để biết cách ghi tay).
+ghi (tests/eval/eval_ground_truth.json — xem tests/eval/EVAL_GUIDE.md để biết cách ghi tay).
 
 Phạm vi (đã chốt trong PLAN.md Phase 6/7 — xem đó để biết đầy đủ lý do, không lặp lại ở đây):
   - CHỈ đo chất lượng RETRIEVAL, KHÔNG gọi LLM, deterministic (bake-off backbone embedding).
   - KIS: đúng công thức §2.1.1 — R@k = max_{i≤k} I(video khớp ∧ frame ∈ [s,e]).
   - QA: dùng lại đúng cách chấm KIS — KHÔNG chấm answer text (a_i = GT_a của §2.1.2). Cột QA ở đây
     là "trần retrieval", KHÔNG phải R-Score QA. Muốn Final Score QA thật (có chấm answer) → chạy
-    test_eval/Test/score_pipelines.py.
+    tests/e2e/score_pipelines.py.
   - TRAKE: proxy retrieval-only bám §2.1.3 — dựng danh sách ỨNG VIÊN có xếp hạng (mỗi ứng viên = 1
     video_id + N frame_id, chuỗi frame_idx không giảm bằng DP), áp CỔNG VIDEO (video sai → R-Score
     0), rồi R@k = max trên k ứng viên đầu. KHÔNG có LLM crosscheck (không phụ thuộc backbone).
-  - Không đụng scripts/index.py / scripts/agent/tools/retrieve.py — xem test_eval/Eval/multi_index.py.
+  - Không đụng scripts/index.py / scripts/agent/tools/retrieve.py — xem tests/eval/multi_index.py.
 
 Ngoài bake-off backbone, file này còn là **Tầng 1 của Regression Guard** (BẢN ĐẶC TẢ §6): các bước
 thuật toán mới (RRF hybrid, Multi-Aspect Expansion, Temporal NMS, DP tăng nghiêm ngặt, Multi-Event
@@ -20,11 +20,11 @@ Coverage Pooling) đều có cờ bật/tắt riêng, mặc định TẮT — ch
 thật của từng bước mà không tốn 1 đồng LLM nào.
 
 Usage:
-    .venv\\Scripts\\python.exe test_eval\\Eval\\run_eval.py
-    .venv\\Scripts\\python.exe test_eval\\Eval\\run_eval.py --models clip_vitb32,vitl14
-    .venv\\Scripts\\python.exe test_eval\\Eval\\run_eval.py --models siglip --all-features
-    .venv\\Scripts\\python.exe test_eval\\Eval\\run_eval.py --models siglip --hybrid --nms
-    .venv\\Scripts\\python.exe test_eval\\Eval\\run_eval.py --eval-set test_eval\\Eval\\eval_ground_truth.json --out docs\\eval_baseline_comparison.md
+    .venv\\Scripts\\python.exe tests\\Eval\\run_eval.py
+    .venv\\Scripts\\python.exe tests\\Eval\\run_eval.py --models clip_vitb32,vitl14
+    .venv\\Scripts\\python.exe tests\\Eval\\run_eval.py --models siglip --all-features
+    .venv\\Scripts\\python.exe tests\\Eval\\run_eval.py --models siglip --hybrid --nms
+    .venv\\Scripts\\python.exe tests\\Eval\\run_eval.py --eval-set tests\\Eval\\eval_ground_truth.json --out docs\\eval_baseline_comparison.md
 """
 
 from __future__ import annotations
@@ -50,7 +50,7 @@ if str(_THIS_DIR) not in sys.path:
     sys.path.insert(0, str(_THIS_DIR))
 from multi_index import MODEL_REGISTRY, retrieve, get_index, get_encoder  # noqa: E402
 
-_REPO_ROOT = _THIS_DIR.parent.parent  # test_eval/Eval/ -> repo root
+_REPO_ROOT = _THIS_DIR.parent.parent  # tests/eval/ -> repo root
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
@@ -62,7 +62,7 @@ from scripts.agent.tools.fusion import reciprocal_rank_fusion, W_DENSE, W_SPARSE
 from scripts.agent.tools.temporal_nms import temporal_nms, MIN_TIME_GAP  # noqa: E402
 from scripts.agent.tools.query_expand import expand_aspects  # noqa: E402
 _DEFAULT_EVAL_SET = _THIS_DIR / "eval_ground_truth.json"
-_DEFAULT_OUT = _REPO_ROOT / "docs" / "eval_baseline_comparison.md"
+_DEFAULT_OUT = _REPO_ROOT / "docs" / "reports" / "eval_baseline_comparison.md"
 
 K_VALUES = [1, 5, 20, 50, 100]
 MAX_K = max(K_VALUES)
@@ -93,7 +93,7 @@ def _validate_query(q: dict) -> None:
     missing = [f for f in _REQUIRED_FIELDS[qtype] if f not in q]
     if missing:
         raise SystemExit(
-            f"[run_eval] query_id={qid} ({qtype}): thiếu field {missing} — xem test_eval/Eval/EVAL_GUIDE.md"
+            f"[run_eval] query_id={qid} ({qtype}): thiếu field {missing} — xem tests/eval/EVAL_GUIDE.md"
         )
     if qtype == "TRAKE":
         if not q["events"]:
@@ -396,10 +396,10 @@ def format_markdown_table(
         "docs/Thong tin vong So tuyen AIC2026.md §2.2). **Bake-off retrieval-only, KHÔNG LLM:**\n"
         "- **KIS** — đúng công thức §2.1.1.\n"
         "- **QA** — CHỈ retrieval, KHÔNG chấm answer (a_i = GT_a của §2.1.2); cột QA là trần "
-        "retrieval, không phải R-Score QA. Final Score QA thật → test_eval/Test/score_pipelines.py.\n"
+        "retrieval, không phải R-Score QA. Final Score QA thật → tests/e2e/score_pipelines.py.\n"
         "- **TRAKE** — proxy §2.1.3: ứng viên (video + N frame, chuỗi tăng dần) có xếp hạng + cổng "
         "video + max-trên-ứng-viên; KHÔNG có LLM crosscheck.\n"
-        "\n(Xem PLAN.md Phase 6/7 + docstring test_eval/Eval/run_eval.py để biết đầy đủ phạm vi/lý do.)\n",
+        "\n(Xem PLAN.md Phase 6/7 + docstring tests/eval/run_eval.py để biết đầy đủ phạm vi/lý do.)\n",
     ]
     active = opts.active() if opts else []
     lines.append(
@@ -459,7 +459,7 @@ def main() -> None:
     if not eval_set:
         raise SystemExit(
             f"[run_eval] {args.eval_set} đang rỗng — chưa có ground truth để chấm. "
-            "Xem test_eval/Eval/EVAL_GUIDE.md."
+            "Xem tests/eval/EVAL_GUIDE.md."
         )
     for q in eval_set:
         _validate_query(q)

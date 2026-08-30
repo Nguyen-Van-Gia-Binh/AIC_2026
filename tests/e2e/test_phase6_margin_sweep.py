@@ -7,15 +7,15 @@ gia tri cuoi cung cho TRAKE_CROSSCHECK_MARGIN trong scripts/agent/pipeline_trake
 neu muon doi.
 
 Tai dung dung logic tinh diem (_run_pass/_rank_of_video) va cach khu nhieu rewrite_query (monkeypatch
-thanh identity) da co san o test_eval/Test/test_phase4_trake.py — khong viet lai (DRY).
+thanh identity) da co san o tests/e2e/test_phase4_trake.py — khong viet lai (DRY).
 
 Usage (chay that, can data/extracted/ + LLM key hop le vi run_trake() con goi rewrite_query cho tung
 event — da bi patch thanh identity o day, nhung fast_retrieve van can index/model that):
-    .venv\\Scripts\\python.exe test_eval\\Test\\test_phase6_margin_sweep.py
-    .venv\\Scripts\\python.exe test_eval\\Test\\test_phase6_margin_sweep.py --margins -1.0,0.006,0.012,0.018,0.024,0.030
+    .venv\\Scripts\\python.exe tests\\Test\\test_phase6_margin_sweep.py
+    .venv\\Scripts\\python.exe tests\\Test\\test_phase6_margin_sweep.py --margins -1.0,0.006,0.012,0.018,0.024,0.030
 
 Self-test (khong can data/extracted/, khong goi model that):
-    .venv\\Scripts\\python.exe test_eval\\Test\\test_phase6_margin_sweep.py --self-test
+    .venv\\Scripts\\python.exe tests\\Test\\test_phase6_margin_sweep.py --self-test
 """
 from __future__ import annotations
 
@@ -25,7 +25,7 @@ import sys
 from pathlib import Path
 from unittest.mock import patch
 
-_ROOT = Path(__file__).resolve().parents[2]  # test_eval/Test/ -> repo root
+_ROOT = Path(__file__).resolve().parents[2]  # tests/e2e/ -> repo root
 _TEST_DIR = Path(__file__).resolve().parent   # de import test_phase4_trake (sibling)
 for _p in (str(_ROOT), str(_TEST_DIR)):
     if _p not in sys.path:

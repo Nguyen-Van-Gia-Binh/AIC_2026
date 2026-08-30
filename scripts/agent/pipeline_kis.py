@@ -23,7 +23,7 @@ ngữ nghĩa nhưng không đọc được text cụ thể trên khung hình. An
 về nguyên thứ tự cũ, không có rủi ro regression.
 
 Mọi bước mới đều có công tắc riêng (`use_hybrid`/`use_expansion`/`use_nms`) để đo trước-sau bằng
-test_eval/Test/score_pipelines.py — xem Regression Guard trong BẢN ĐẶC TẢ §6.
+tests/e2e/score_pipelines.py — xem Regression Guard trong BẢN ĐẶC TẢ §6.
 
 Usage:
     from scripts.agent.pipeline_kis import run_kis
@@ -61,11 +61,11 @@ def run_kis(
         query_text: Mô tả cảnh cần tìm (tiếng Anh cho kết quả tốt nhất).
         top_k: Số kết quả trả về, tối đa 100.
         use_ocr_rerank: Cho phép tắt bước rerank_by_ocr() (vd để benchmark/so sánh trước-sau —
-            xem test_eval/) — mặc định bật, tự nhận biết query có cần OCR hay không, không cần set thủ công.
+            xem tests/) — mặc định bật, tự nhận biết query có cần OCR hay không, không cần set thủ công.
         use_hybrid: Bật nhánh Sparse BM25 + dung hợp RRF (§2). Tắt = chỉ dense như trước.
             Chưa build cache BM25 thì tự động chạy dense-only (xem agent/tools/sparse_index.py).
         use_expansion: Bật Multi-Aspect Prompt Expansion (§3.1). Tắt = encode đúng 1 câu query gốc.
-            **Mặc định TẮT** vì đo thật trên 18 câu KIS của test_eval (2026-08-28) cho thấy nó làm
+            **Mặc định TẮT** vì đo thật trên 18 câu KIS của tests (2026-08-28) cho thấy nó làm
             Final tụt 0.667 → 0.644: SigLIP đã được huấn luyện trên caption ảnh thật nên câu query
             gốc thường đã là "caption tốt", còn 2 biến thể template thêm vào chỉ kéo vector truy vấn
             về phía trung bình. Cơ chế vẫn giữ nguyên và bật được bằng cờ này (hoặc

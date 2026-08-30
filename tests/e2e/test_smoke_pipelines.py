@@ -3,22 +3,25 @@ test_smoke_pipelines.py — Smoke test end-to-end cho ca 3 pipeline + duong xuat
 
 Gop tu test_day1.py (nhanh KIS + build/validate) + test_day2_full.py (QA + TRAKE). Muc dich: xac
 nhan pipeline_kis/qa/trake chay tron, build_submission ghi CSV/ZIP dung dinh dang, validate PASS —
-KHONG cham diem dung/sai (viec do la cua test_eval/Test/score_pipelines.py + test_phase*.py).
+KHONG cham diem dung/sai (viec do la cua tests/e2e/score_pipelines.py + test_phase*.py).
 
 Can: data/extracted/ (index + model) va OPENROUTER_API_KEY (qa/trake goi LLM; kis khong).
 CSV/ZIP test ghi vao submissions/ voi tien to "smoke_".
 
 Usage:
-    .venv\\Scripts\\python.exe test_eval\\Test\\test_smoke_pipelines.py
+    .venv\\Scripts\\python.exe tests\\Test\\test_smoke_pipelines.py
 """
 from __future__ import annotations
 
 import sys
 from pathlib import Path
 
-_SCRIPTS = Path(__file__).resolve().parents[2] / "scripts"  # test_eval/Test/ -> repo root -> scripts
-if str(_SCRIPTS) not in sys.path:
-    sys.path.insert(0, str(_SCRIPTS))
+# Chi dat REPO ROOT len sys.path — khong bao gio dat scripts/ (dat scripts/ khien Python nap cung
+# mot module duoi hai ten `agent.tools.retrieve` va `scripts.agent.tools.retrieve`, tuc la nap
+# index + SigLIP HAI BAN). Xem docs/decisions-log.md.
+_ROOT = Path(__file__).resolve().parents[2]   # tests/e2e/ -> repo root
+if str(_ROOT) not in sys.path:
+    sys.path.insert(0, str(_ROOT))
 
 _OUT_DIR = Path(__file__).resolve().parents[2] / "submissions"
 
@@ -34,7 +37,7 @@ def main() -> None:
     # ─── [1] KIS ──────────────────────────────────────────────────────────────
     print("=" * 60)
     print("[1] pipeline_kis - KIS end-to-end")
-    from agent.pipeline_kis import run_kis
+    from scripts.agent.pipeline_kis import run_kis
     kis_rows = run_kis("children playing soccer on a green field", top_k=5)
     for h in kis_rows:
         print(f"    {h['video_id']}, {h['frame_id']}  (score={h['score']:.4f})")
@@ -44,7 +47,7 @@ def main() -> None:
 
     # ─── [2] Q&A ──────────────────────────────────────────────────────────────
     print("\n[2] pipeline_qa - Q&A end-to-end")
-    from agent.pipeline_qa import run_qa
+    from scripts.agent.pipeline_qa import run_qa
     out_qa = run_qa(
         query_text="Mot nguoi dang phat bieu tai cuoc hop bao ngoai troi",
         question="What is happening in this scene?",
@@ -60,7 +63,7 @@ def main() -> None:
 
     # ─── [3] TRAKE ────────────────────────────────────────────────────────────
     print("\n[3] pipeline_trake - TRAKE end-to-end")
-    from agent.pipeline_trake import run_trake
+    from scripts.agent.pipeline_trake import run_trake
     out_t = run_trake(
         query_text="A sports competition with athletes performing jumping events",
         events=[

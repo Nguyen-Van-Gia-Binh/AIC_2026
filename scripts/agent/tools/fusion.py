@@ -12,8 +12,8 @@ k = 60 la gia tri chuan trong bai goc (Cormack et al. 2009) — du lon de 1 vai 
 dao toan bo, du nho de rank 1-100 van tach biet ro.
 
 Module THUAN (pure): khong doc index, khong goi model, khong I/O — nen dung duoc ca o duong
-production (scripts/agent/tools/retrieve.py) lan o nhanh eval (test_eval/Eval/run_eval.py) ma khong
-keo theo viec nap SigLIP/index (test_eval/Eval/multi_index.py van tu nap index rieng nhu cu).
+production (scripts/agent/tools/retrieve.py) lan o nhanh eval (tests/eval/run_eval.py) ma khong
+keo theo viec nap SigLIP/index (tests/eval/multi_index.py van tu nap index rieng nhu cu).
 
 Usage:
     from scripts.agent.tools.fusion import reciprocal_rank_fusion

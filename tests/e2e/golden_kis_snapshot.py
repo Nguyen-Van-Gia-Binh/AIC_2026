@@ -11,10 +11,10 @@ chạy cục bộ) nên nó tất định — chạy hai lần ra đúng một k
 
 Cách dùng:
     # Chốt mốc TRƯỚC khi sửa:
-    .venv\\Scripts\\python.exe test_eval\\Test\\golden_kis_snapshot.py --save
+    .venv\\Scripts\\python.exe tests\\Test\\golden_kis_snapshot.py --save
 
     # Sau khi sửa — so từng dòng, thoát code 1 nếu lệch:
-    .venv\\Scripts\\python.exe test_eval\\Test\\golden_kis_snapshot.py --check
+    .venv\\Scripts\\python.exe tests\\Test\\golden_kis_snapshot.py --check
 
 KHÔNG cần API key. Cần data/extracted/ (index + keyframe) như mọi thứ khác trong repo.
 """
@@ -35,7 +35,7 @@ try:
 except Exception:
     pass
 
-_EVAL_SET = _ROOT / "test_eval" / "Eval" / "eval_ground_truth.json"
+_EVAL_SET = _ROOT / "tests" / "eval" / "eval_ground_truth.json"
 _SNAPSHOT = Path(__file__).resolve().parent / "golden_kis_snapshot.json"
 
 TOP_K = 100

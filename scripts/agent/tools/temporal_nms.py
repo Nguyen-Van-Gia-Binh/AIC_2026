@@ -11,7 +11,7 @@ Nguyen ly (BAN DAC TA §3.2): duyet hits theo diem giam dan, giu 1 keyframe lam 
 MAX_PEAKS_PER_VIDEO dinh cho 1 video.
 
 Module THUAN (pure): khong doc index/model/file — dung chung duoc cho ca duong production
-(rerank.py) lan nhanh eval (test_eval/Eval/run_eval.py), khong keo theo viec nap SigLIP.
+(rerank.py) lan nhanh eval (tests/eval/run_eval.py), khong keo theo viec nap SigLIP.
 
 Usage:
     from scripts.agent.tools.temporal_nms import temporal_nms

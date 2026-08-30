@@ -13,8 +13,8 @@ Tai dung logic doc map-keyframes cua lookup_frame.py (frame_id = frame_idx + 1).
 start == end — entry da co khoang that giu nguyen. In bang before -> after de doi chieu.
 
 Usage:
-    .venv\\Scripts\\python.exe test_eval\\Eval\\widen_gt_windows.py
-    .venv\\Scripts\\python.exe test_eval\\Eval\\widen_gt_windows.py --dry-run   # chi in, khong ghi file
+    .venv\\Scripts\\python.exe tests\\Eval\\widen_gt_windows.py
+    .venv\\Scripts\\python.exe tests\\Eval\\widen_gt_windows.py --dry-run   # chi in, khong ghi file
 """
 from __future__ import annotations
 
@@ -31,7 +31,7 @@ except Exception:
 import pandas as pd
 
 _THIS_DIR = Path(__file__).resolve().parent
-_REPO_ROOT = _THIS_DIR.parent.parent  # test_eval/Eval/ -> repo root
+_REPO_ROOT = _THIS_DIR.parent.parent  # tests/eval/ -> repo root
 _MAPKF_DIR = _REPO_ROOT / "data" / "extracted" / "map-keyframes"
 _EVAL_SET = _THIS_DIR / "eval_ground_truth.json"
 
