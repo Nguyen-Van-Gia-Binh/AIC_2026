@@ -22,6 +22,14 @@ class RewriteResponse(BaseModel):
     candidates: list[str]
 
 
+class TranslateRawRequest(BaseModel):
+    query: str
+
+
+class TranslateRawResponse(BaseModel):
+    translation: str
+
+
 class Hit(BaseModel):
     video_id: str
     frame_id: int

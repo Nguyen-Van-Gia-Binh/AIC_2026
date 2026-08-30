@@ -8,6 +8,7 @@ sentence-transformers==5.7.0
 torch==2.13.0+cpu
 litellm==1.97.0
 python-dotenv==1.2.3
+deep-translator==1.11.4   # dich tho VN->EN khong qua LLM (scripts/agent/tools/translate_raw.py)
 
 # Archived UI (Gradio - docs/_archive/app_gradio.py):
 # gradio==6.24.0
