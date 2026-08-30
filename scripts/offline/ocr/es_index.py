@@ -21,7 +21,7 @@ agent/tools/retrieve.py, không được suy ra lại ở nơi khác). Nơi nào
 search_ocr() thì tự cộng thêm 1 tại đúng điểm dùng (vd lúc ghép vào submission), không làm sẵn ở đây.
 
 Usage:
-    from agent.tools.es_index import ensure_index, index_frame, search_ocr
+    from scripts.offline.ocr.es_index import ensure_index, index_frame, search_ocr
     ensure_index()
     index_frame(video_id="L21_V001", n=1, frame_idx=0, pts_time=0.5,
                 ocr_text="EXIT", caption="A man walks through a doorway.")

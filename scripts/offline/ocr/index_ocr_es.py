@@ -1,8 +1,8 @@
 """
-index_ocr_es.py — Đẩy dữ liệu OCR + caption vào Elasticsearch (agent/tools/es_index.py) để phục vụ
+index_ocr_es.py — Đẩy dữ liệu OCR + caption vào Elasticsearch (scripts/offline/ocr/es_index.py) để phục vụ
 tìm kiếm/lọc metadata. Có 3 chế độ:
 
-  1. LIVE (mặc định): tự gọi Qwen2.5-VL (agent/tools/vlm_ocr_caption.py) trên từng keyframe local —
+  1. LIVE (mặc định): tự gọi Qwen2.5-VL (scripts/offline/ocr/vlm_ocr_caption.py) trên từng keyframe local —
      dùng để test nhanh vài ảnh, KHÔNG dùng cho full corpus (xem cảnh báo hiệu năng bên dưới).
   2. --from-jsonl-dir <thư mục>: đọc kết quả .jsonl ĐÃ GHÉP SẴN ocr_text+caption (vd tải về từ
      kaggle_jobs/05_qwen_vl_ocr_caption/ — job cũ, 1 model VLM ra cả 2 trường cùng lúc) rồi index
@@ -22,7 +22,7 @@ embedding CLIP, chỉ cần metadata keyframe (video_id/n/frame_idx/pts_time/đ�
 quét map-keyframes/ + keyframes/ trực tiếp để tránh tải thừa .npy nặng.
 
 CẢNH BÁO HIỆU NĂNG (chế độ LIVE): Qwen2.5-VL-3B trên CPU khá chậm (xem cảnh báo "CHƯA KIỂM CHỨNG"
-trong agent/tools/vlm_ocr_caption.py) — chạy hết 177.321 keyframe trên máy không có GPU nhiều khả
+trong scripts/offline/ocr/vlm_ocr_caption.py) — chạy hết 177.321 keyframe trên máy không có GPU nhiều khả
 năng mất rất nhiều giờ/ngày. Dùng --video-id/--limit để test trước. Cho full corpus, dùng chế độ 3
 (--ocr-jsonl-dir/--caption-jsonl-dir, đường dùng thật hiện tại) hoặc chế độ 2 cũ.
 
@@ -54,11 +54,13 @@ from pathlib import Path
 
 import pandas as pd
 
-_SCRIPTS_DIR = Path(__file__).resolve().parent.parent.parent.parent / "scripts"
-if str(_SCRIPTS_DIR) not in sys.path:
-    sys.path.insert(0, str(_SCRIPTS_DIR))
+# Chi dat REPO ROOT len sys.path — khong bao gio dat scripts/ (se nap module duoi hai ten,
+# nap index/model hai ban). Xem docs/decisions-log.md.
+_ROOT = Path(__file__).resolve().parent.parent.parent.parent
+if str(_ROOT) not in sys.path:
+    sys.path.insert(0, str(_ROOT))
 
-DATA_DIR = _SCRIPTS_DIR.parent / "data" / "extracted"
+DATA_DIR = _ROOT / "data" / "extracted"
 MAPKF_DIR = DATA_DIR / "map-keyframes"
 KEYFRAMES_DIR = DATA_DIR / "keyframes"
 
@@ -111,8 +113,8 @@ def _load_meta_map(video_id: str) -> dict[int, dict]:
 def run_live(args) -> None:
     """Chế độ LIVE — tự gọi Qwen2.5-VL cho từng keyframe (test nhỏ, xem cảnh báo hiệu năng ở
     docstring đầu file)."""
-    from agent.tools.vlm_ocr_caption import describe_frame
-    from agent.tools.es_index import ensure_index, index_frame, frame_exists
+    from scripts.offline.ocr.vlm_ocr_caption import describe_frame
+    from scripts.offline.ocr.es_index import ensure_index, index_frame, frame_exists
 
     ensure_index()
 
@@ -158,7 +160,7 @@ def run_from_jsonl(args) -> None:
     """Chế độ --from-jsonl-dir — đọc .jsonl đã sinh sẵn (vd từ kaggle_jobs/05_qwen_vl_ocr_caption/,
     xem docstring đầu file), KHÔNG load Qwen2.5-VL, chỉ tra cứu metadata + gọi es_index.index_frame().
     Đây là đường DÙNG THẬT cho full corpus."""
-    from agent.tools.es_index import ensure_index, index_frame, frame_exists
+    from scripts.offline.ocr.es_index import ensure_index, index_frame, frame_exists
 
     ensure_index()
 
@@ -277,7 +279,7 @@ def run_from_split_jsonl(args) -> None:
     """Chế độ 3 (--ocr-jsonl-dir/--caption-jsonl-dir) — đường dùng THẬT hiện tại, xem docstring đầu
     file. OCR là nguồn CHÍNH (danh sách video_id lấy từ đây, vì OCR phủ toàn bộ 177K keyframe);
     caption chỉ bổ sung nếu có file {video_id}.jsonl trùng tên bên caption-jsonl-dir."""
-    from agent.tools.es_index import ensure_index, index_frame, frame_exists
+    from scripts.offline.ocr.es_index import ensure_index, index_frame, frame_exists
 
     ensure_index()
 

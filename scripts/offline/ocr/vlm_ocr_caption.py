@@ -28,7 +28,7 @@ chạy thật, kiểm tra lại theo đúng tinh thần "dựa vào lỗi thật
 kaggle_jobs/README.md.
 
 Usage:
-    from agent.tools.vlm_ocr_caption import describe_frame
+    from scripts.offline.ocr.vlm_ocr_caption import describe_frame
     result = describe_frame("data/extracted/keyframes/L21/L21_V001/001.jpg")
     # {"ocr_text": "...", "caption": "..."}
 """
