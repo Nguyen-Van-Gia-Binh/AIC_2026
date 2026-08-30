@@ -32,7 +32,7 @@ import sys
 import re
 from pathlib import Path
 from collections import defaultdict
-from typing import Optional
+
 
 _ROOT = Path(__file__).resolve().parent.parent.parent  # repo root — cho `import scripts.*`
 if str(_ROOT) not in sys.path:
@@ -43,70 +43,8 @@ from scripts.agent.tools.retrieve import fast_retrieve, fast_retrieve_for_video
 from scripts.agent.tools.rewrite import rewrite_query
 from scripts.agent.tools.rerank import RETRIEVAL_POOL_SIZE
 from scripts.agent.tools.objects_lookup import get_objects
+from scripts.agent.tools.trake_align import find_best_increasing_chain, rule_plausibility
 from scripts.agent.tools.asr_lookup import get_transcript
-
-
-def _find_best_increasing_chain(
-    event_hits: list[list[dict]], strict: bool = True
-) -> list[dict] | None:
-    """Tim chuoi 1 frame/event sao cho frame_idx TANG DAN qua tung event va TONG score la lon nhat,
-    bang quy hoach dong — thay vi greedy cu (chon diem cao nhat cho event dau tien roi khoa cung, co
-    the chan mat lua chon tot hon o cac event sau, xem "Ly do thiet ke" trong plan
-    docs/superpowers/plans/2026-08-24-phase4-trake-dp-crosscheck.md).
-
-    Args:
-        event_hits: event_hits[i] = list ung vien (tu fast_retrieve_for_video, da sap xep giam dan
-                    theo score) cho event thu i.
-        strict:     True (mac dinh, BAN DAC TA §5.2 "Strict Monotonic") = frame_idx phai TANG NGHIEM
-                    NGAT (f_1 < f_2 < ... < f_N) — 2 moc khac nhau khong duoc tro ve cung 1 frame.
-                    False = cho phep bang nhau (hanh vi cu tu Phase 4; giu lai vi du lieu that co
-                    truong hop 2 event lien tiep roi vao cung 1 keyframe khi keyframe thua).
-
-    Returns:
-        list[dict] do dai == len(event_hits), 1 hit/event, frame_idx tang dan, tong score lon nhat
-        co the; None neu KHONG TON TAI chuoi hop le nao (video nay bi loai hoan toan).
-    """
-    n = len(event_hits)
-    if n == 0 or any(not candidates for candidates in event_hits):
-        return None
-
-    NEG_INF = float("-inf")
-    # dp[i][j] = tong score lon nhat cua chuoi ket thuc bang ung vien j cua event i
-    dp: list[list[float]] = [[NEG_INF] * len(candidates) for candidates in event_hits]
-    back: list[list[Optional[int]]] = [[None] * len(candidates) for candidates in event_hits]
-
-    for j, hit in enumerate(event_hits[0]):
-        dp[0][j] = hit["score"]
-
-    for i in range(1, n):
-        for j, hit in enumerate(event_hits[i]):
-            for k, prev_hit in enumerate(event_hits[i - 1]):
-                if strict:
-                    if prev_hit["frame_idx"] >= hit["frame_idx"]:
-                        continue  # phai TANG NGHIEM NGAT — 2 moc khong duoc trung 1 frame
-                elif prev_hit["frame_idx"] > hit["frame_idx"]:
-                    continue  # che do noi long: chi cam lui ve truoc
-                if dp[i - 1][k] == NEG_INF:
-                    continue
-                candidate_score = dp[i - 1][k] + hit["score"]
-                if candidate_score > dp[i][j]:
-                    dp[i][j] = candidate_score
-                    back[i][j] = k
-
-    last = n - 1
-    best_j, best_score = None, NEG_INF
-    for j, s in enumerate(dp[last]):
-        if s > best_score:
-            best_score, best_j = s, j
-    if best_j is None or best_score == NEG_INF:
-        return None
-
-    chain: list[Optional[dict]] = [None] * n
-    j = best_j
-    for i in range(last, -1, -1):
-        chain[i] = event_hits[i][j]
-        j = back[i][j]
-    return chain  # type: ignore[return-value]
 
 
 # Trong so cua diem LLM crosscheck (0.0-1.0) khi cong vao trake_score (trung binh cosine similarity,
@@ -174,31 +112,6 @@ def _llm_crosscheck_chain(query_en: str, event_queries_en: list[str], chain: lis
         return DEFAULT_LLM_CROSSCHECK_SCORE
 
     return max(0.0, min(1.0, float(match.group(1))))
-
-
-def _rule_plausibility(event_queries_en: list[str], chain: list[dict]) -> float:
-    """
-    Cong loc nhanh rule-based (§5.3): do khop tu khoa giua Objects JSON cua tung frame trong chuoi
-    va mo ta event tuong ung. Tra ve [0.0, 1.0] = trung binh ti le tu khoa event tim thay trong
-    objects cua frame do.
-
-    Khong goi API, khong doc anh — chay duoc cho ca 20 video candidate. Frame khong co objects JSON
-    duoc tinh 0 cho event do (khong doan bua), nhung khong lam ca chuoi bi loai.
-    """
-    from scripts.agent.tools.sparse_index import tokenize
-
-    if not chain:
-        return 0.0
-    per_event: list[float] = []
-    for eq, hit in zip(event_queries_en, chain):
-        tokens = set(tokenize(eq))
-        if not tokens:
-            continue
-        vid, n = hit.get("video_id", ""), hit.get("n")
-        objs = get_objects(vid, int(n)) if vid and n is not None else []
-        obj_tokens = set(tokenize(" ".join(objs)))
-        per_event.append(len(tokens & obj_tokens) / len(tokens) if obj_tokens else 0.0)
-    return sum(per_event) / len(per_event) if per_event else 0.0
 
 
 def run_trake(
@@ -284,7 +197,7 @@ def run_trake(
 
     for vid in top_videos:
         event_hits = [fast_retrieve_for_video(eq, vid, top_k=top_k_frame) for eq in event_queries_en]
-        chain = _find_best_increasing_chain(event_hits, strict=strict_monotonic)
+        chain = find_best_increasing_chain(event_hits, strict=strict_monotonic)
         if chain is None:
             print(f"[trake]   {vid}: khong tim duoc chuoi moc tang dan hop le -> loai")
             continue
@@ -300,7 +213,7 @@ def run_trake(
     # ─── Giai doan 3: Gated Multi-Modal Verification (§5.3) ────────────────────
     # Cong 1 — loc nhanh rule-based (Objects JSON vs mo ta event): mien phi, chay cho TAT CA candidate.
     for vr in video_results:
-        vr["rule_score"] = _rule_plausibility(event_queries_en, vr["chain"])
+        vr["rule_score"] = rule_plausibility(event_queries_en, vr["chain"])
         vr["llm_score"] = None
         vr["score"] = vr["trake_score"] + RULE_GATE_WEIGHT * vr["rule_score"]
     video_results.sort(key=lambda x: x["score"], reverse=True)
@@ -363,7 +276,7 @@ def _run_self_tests() -> None:
         [_fake_hit("V", 100, 0.9), _fake_hit("V", 5, 0.8)],
         [_fake_hit("V", 10, 0.95), _fake_hit("V", 200, 0.3)],
     ]
-    chain_1 = _find_best_increasing_chain(event_hits_1)
+    chain_1 = find_best_increasing_chain(event_hits_1)
     assert chain_1 is not None, "Phai tim duoc chuoi hop le"
     total_1 = sum(h["score"] for h in chain_1)
     assert abs(total_1 - 1.75) < 1e-9, f"DP phai chon X2+Y1 (0.8+0.95=1.75), duoc {total_1}"
@@ -377,27 +290,27 @@ def _run_self_tests() -> None:
         [_fake_hit("V", 100, 0.9)],
         [_fake_hit("V", 50, 0.8)],  # frame_idx < event truoc -> khong the tang dan
     ]
-    assert _find_best_increasing_chain(event_hits_2) is None, "Khong co chuoi hop le phai tra None"
+    assert find_best_increasing_chain(event_hits_2) is None, "Khong co chuoi hop le phai tra None"
     print("[trake] Test khong co chuoi hop le: OK (tra None)")
 
     # Test 3: 1 event duy nhat -> chon frame diem cao nhat
     event_hits_3 = [[_fake_hit("V", 10, 0.5), _fake_hit("V", 20, 0.9)]]
-    chain_3 = _find_best_increasing_chain(event_hits_3)
+    chain_3 = find_best_increasing_chain(event_hits_3)
     assert chain_3 is not None and chain_3[0]["frame_idx"] == 20, "1 event phai chon diem cao nhat"
     print("[trake] Test 1 event: OK")
 
     # Test 4: STRICT MONOTONIC (BAN DAC TA §5.2) — 2 event lien tiep KHONG duoc tro ve cung 1 frame
     # o che do mac dinh; che do noi long (strict=False, hanh vi cu tu Phase 4) van cho phep.
     event_hits_4 = [[_fake_hit("V", 10, 0.5)], [_fake_hit("V", 10, 0.6)]]
-    assert _find_best_increasing_chain(event_hits_4) is None, (
+    assert find_best_increasing_chain(event_hits_4) is None, (
         "Mac dinh strict: 2 moc trung frame_idx phai bi loai"
     )
-    assert _find_best_increasing_chain(event_hits_4, strict=False) is not None, (
+    assert find_best_increasing_chain(event_hits_4, strict=False) is not None, (
         "strict=False phai cho phep frame_idx bang nhau (hanh vi cu)"
     )
     # Co lua chon khac tang nghiem ngat thi strict phai tim ra, khong loai ca video.
     event_hits_4b = [[_fake_hit("V", 10, 0.5)], [_fake_hit("V", 10, 0.6), _fake_hit("V", 11, 0.4)]]
-    chain_4b = _find_best_increasing_chain(event_hits_4b)
+    chain_4b = find_best_increasing_chain(event_hits_4b)
     assert chain_4b is not None and chain_4b[1]["frame_idx"] == 11, (
         f"Strict phai chon phuong an tang nghiem ngat con lai: {chain_4b}"
     )
@@ -405,19 +318,23 @@ def _run_self_tests() -> None:
 
     # Test 4c: cong loc nhanh rule-based (§5.3) — objects khop mo ta event thi diem cao hon.
     global get_objects
+    from scripts.agent.tools import trake_align   # rule_plausibility da chuyen sang day
     _orig_get_objects = get_objects
+    _orig_align_get_objects = trake_align.get_objects
     try:
-        get_objects = lambda vid, n: {1: ["Bicycle", "Person"], 2: ["Car"]}.get(n, [])
+        get_objects = trake_align.get_objects = (
+            lambda vid, n: {1: ["Bicycle", "Person"], 2: ["Car"]}.get(n, []))
         chain_rule = [_fake_hit("V", 1, 0.5), _fake_hit("V", 2, 0.5)]
         chain_rule[0]["n"], chain_rule[1]["n"] = 1, 2
-        score_match = _rule_plausibility(["a person riding a bicycle", "a car on the road"], chain_rule)
-        score_miss = _rule_plausibility(["an airplane taking off", "a boat on a river"], chain_rule)
+        score_match = rule_plausibility(["a person riding a bicycle", "a car on the road"], chain_rule)
+        score_miss = rule_plausibility(["an airplane taking off", "a boat on a river"], chain_rule)
         assert score_match > score_miss, f"Khop tu khoa phai cho diem cao hon: {score_match} vs {score_miss}"
         assert 0.0 <= score_match <= 1.0 and 0.0 <= score_miss <= 1.0, "rule_score phai nam trong [0,1]"
-        assert _rule_plausibility([], []) == 0.0, "Chuoi rong -> 0.0, khong crash"
+        assert rule_plausibility([], []) == 0.0, "Chuoi rong -> 0.0, khong crash"
         print(f"[trake] Test cong rule-based: OK (khop={score_match:.2f}, khong khop={score_miss:.2f})")
     finally:
         get_objects = _orig_get_objects
+        trake_align.get_objects = _orig_align_get_objects
 
     # Test 5-8: _llm_crosscheck_chain — monkeypatch call_llm (module-level, import truc tiep nen
     # gan lai bien global de "thay the ham that").
@@ -462,6 +379,9 @@ def _run_self_tests() -> None:
 # ─── CLI Demo ──────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     _run_self_tests()
+    if "--self-test" in sys.argv:
+        # Thoat som: demo ben duoi chay run_trake THAT (ton luot LLM). Cung quy uoc voi pipeline_qa.py.
+        sys.exit(0)
     print()
 
     query = "An athlete performing a high jump: approach, takeoff, clearance, landing"
