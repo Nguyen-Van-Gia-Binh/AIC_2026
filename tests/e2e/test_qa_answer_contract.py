@@ -11,7 +11,8 @@ if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
 from scripts.agent.tools import answer_qa
-from scripts.agent.tools.answer_qa import extract_visual_count, is_visual_count_question
+from scripts.agent.tools.qa_classify import is_visual_count_question
+from scripts.agent.tools.qa_normalize import extract_visual_count
 
 
 def test_map_marker_question_is_visual_counting() -> None:
