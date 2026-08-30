@@ -23,3 +23,6 @@ providers_import.json
 
 # Graphify output
 graphify-out/
+
+# Venv hong de lai khi cai lai moi truong
+.venv-broken/
