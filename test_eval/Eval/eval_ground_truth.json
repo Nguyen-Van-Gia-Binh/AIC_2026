@@ -72,6 +72,66 @@
     "gt_frame_end": 19479
   },
   {
+    "query_id": "e-kis-ai-007",
+    "type": "KIS",
+    "text_vi": "Cảnh quay một nhóm hơn 5 người xếp thành hàng tập thể dục, cùng thực hiện động tác hai tay chạm mũi chân. Trong nhóm chỉ có một người đeo kính và ba người đội nón có màu đỏ.",
+    "text_en": "A group of more than 5 people lined up doing physical exercise, touching their toes with both hands, featuring one person wearing glasses and three people wearing red hats.",
+    "difficulty_tags": [
+      "multi_object"
+    ],
+    "gt_video_id": "L30_V046 ",
+    "gt_frame_start": 6410,
+    "gt_frame_end": 6410
+  },
+  {
+    "query_id": "e-kis-ai-008",
+    "type": "KIS",
+    "text_vi": "Một đàn sư tử đang nghỉ ngơi và leo trèo trên các bục gỗ trong khu nuôi dưỡng, phía trước có bảng thông tin của London Zoo phục vụ công tác theo dõi và bảo tồn động vật.. Sau đó có cảnh hai nhân viên mặc áo xanh lá đang cân và ghi nhận số liệu của một con vật trong khuôn viên sở thú.",
+    "text_en": "A pride of lions resting and climbing on wooden platforms in the enclosure, with an information board of the London Zoo in front for monitoring and conservation purposes. Later, two staff members in green shirts are seen weighing and recording data of an animal in the zoo premises.",
+    "difficulty_tags": [
+      "multi_similar_object"
+    ],
+    "gt_video_id": "L22_V021",
+    "gt_frame_start": 10875,
+    "gt_frame_end": 10875
+  },
+  {
+    "query_id": "e-kis-ai-008",
+    "type": "KIS",
+    "text_vi": "Đoạn clip bắt đầu bằng việc đậu hà lan được bỏ vào với mực đang được xào trên chảo, bên cạnh là đĩa hành tây và ớt đỏ thái lát chuẩn bị cho vào món ăn. Đoạn clip kết thúc với khung quay chậm (slow motion) cảnh lắc chảo trên bếp lửa.",
+    "text_en": "The clip starts with green peas being added to squid being stir-fried in a pan, alongside a plate of sliced onions and red chilies prepared for the dish. The clip ends with a slow-motion shot of the pan being shaken over the stove.",
+    "difficulty_tags": [
+      "short_action"
+    ],
+    "gt_video_id": "L26_V035",
+    "gt_frame_start": 5084,
+    "gt_frame_end": 5084
+  },
+  {
+    "query_id": "e-kis-ai-009",
+    "type": "KIS",
+    "text_vi": "Mẩu tin bắt đầu với hình ảnh nột người đàn ông mặc vest xanh đậm, sơ mi trắng và cà vạt, đang ngồi trên một chiếc ghế lớn. Ông cầm bằng hai tay một khối đá quý thô khá lớn, đưa lên gần mặt để quan sát. \nBên phải là một phụ nữ mặc trang phục công sở màu đen và khăn trùm đầu màu hồng tím, đang đứng cạnh và mỉm cười. Tiếp theo có hình ảnh toàn cảnh từ trên cao của một mỏ đá quý lộ thiên quy mô lớn với hố khai thác sâu nhiều tầng và hệ thống đường vận chuyển bao quanh.",
+    "text_en": "The news segment starts with a man wearing a dark blue suit, white shirt, and tie, sitting on a large chair. He holds a fairly large rough gemstone with both hands, bringing it close to his face to examine it. \nTo the right is a woman wearing a black office outfit and a pink-purple headscarf, standing nearby and smiling. Next, there is an aerial view of a large-scale open-pit gemstone mine with deep multi-level excavation pits and a surrounding transportation network.",
+    "difficulty_tags": [
+      "short_action"
+    ],
+    "gt_video_id": "L22_V023",
+    "gt_frame_start": 18181,
+    "gt_frame_end": 18181
+  },
+  {
+    "query_id": "e-kis-ai-010",
+    "type": "KIS",
+    "text_vi": "Đoạn clip bắt đầu bằng cảnh cà rốt cắt hình ngôi sao đang được luộc trong nồi nước sôi, đặt trong rổ lưới kim loại và được đảo bằng đôi đũa gỗ.\nĐoạn clip kết thúc bằng hình ảnh đĩa rau củ luộc và đồ chiên được trình bày đẹp mắt, gồm đậu bắp, súp lơ, cà rốt hình ngôi sao, bí xanh, chén nước chấm màu hồng ở giữa và đôi đũa màu hồng nhạt đặt bên phải",
+    "text_en": "The clip starts with star-shaped carrots being boiled in a pot of boiling water, placed in a metal mesh strainer and stirred with a pair of wooden chopsticks.\nThe clip ends with a beautifully presented plate of boiled and fried vegetables, including okra, cauliflower, star-shaped carrots, zucchini, a small bowl of pink dipping sauce in the center, and a pair of light pink chopsticks placed on the right.",
+    "difficulty_tags": [
+      "short_action"
+    ],
+    "gt_video_id": "L26_V041",
+    "gt_frame_start": 3646,
+    "gt_frame_end": 3646
+  },
+  {
     "query_id": "e-qa-ai-001",
     "type": "QA",
     "text_vi": "Trong cảnh lớp học có nữ sinh đeo kính đang vẽ, có bao nhiêu học sinh đang ngồi tại bàn trong khung hình?",
