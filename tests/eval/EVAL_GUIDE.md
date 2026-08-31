@@ -1,72 +1,195 @@
-# Hướng dẫn ghi ground truth cho bộ eval Phase 6
+# Hướng dẫn ghi ground truth
 
-> Xem [PLAN.md](../../PLAN.md) §Phase 6 để biết bối cảnh đầy đủ. File dữ liệu thật cần điền:
-> [eval_ground_truth.json](eval_ground_truth.json) (khởi tạo rỗng `[]`).
+> File dữ liệu chính: [eval_ground_truth.json](eval_ground_truth.json) (38 câu tính đến 2026-08-31).
+> Bối cảnh vì sao cần mở rộng: [PLAN.md](../../PLAN.md) §10.2 và
+> [spec Pha 2 §5](../../docs/superpowers/specs/2026-08-31-phase2-behavior-fixes-design.md).
 
 ## Vì sao việc này cần người, không phải AI
 
-AI cố vấn/agent không xem được nội dung video thật. Ground truth (video nào, frame nào đúng) chỉ
-có thể lấy được bằng cách 1 người tự xem video trong `data/extracted/keyframes/{batch}/{video_id}/`
-(hoặc video gốc nếu có) rồi ghi lại. Dùng
-[lookup_frame.py](lookup_frame.py) để tra nhanh `frame_id` từ timestamp
-thay vì tự tính bằng tay từ fps.
+AI không xem được nội dung video. Ground truth (video nào, keyframe nào đúng) chỉ có thể lấy bằng
+cách **một người tự xem** rồi ghi lại.
 
-## Cỡ mẫu đề xuất
+⚠️ **Cảnh báo vòng tròn — quan trọng nhất trong tài liệu này.** Được phép dùng hệ thống (hoặc VLM)
+để **đề xuất ứng viên**, nhưng **mắt người phải xác nhận** trước khi ghi vào ground truth. Nếu lấy
+thẳng kết quả hệ thống làm đáp án thì bộ eval chỉ đang đo lại chính hệ thống — nó sẽ luôn cho điểm
+cao và không bao giờ phát hiện được lỗi.
 
-~30 câu KIS + 10 câu QA + 10 câu TRAKE (~50 câu tổng, đủ để so sánh có ý nghĩa mà không tốn quá
-nhiều thời gian ghi tay). Chọn video trải đều 10 batch `L21`–`L30` trong `data/extracted/keyframes/`,
-đừng dồn hết vào 1-2 batch.
+## Hai format — ghi bằng cái nào
 
-Trải phổ độ khó — giữ một số câu **dễ** (đối tượng/màu/hành động rõ, làm sanity check hệ thống chưa
-hỏng), phần còn lại dồn vào các dạng **lắt léo** sau (nên có đủ, không bắt buộc đều nhau):
+Có **hai** format, cố ý:
 
-- Đối tượng nhỏ / khuất một phần khung hình.
-- Nhiều đối tượng giống nhau chỉ khác 1 chi tiết (màu áo, số áo, loại xe).
-- Hành động rất ngắn giữa video dài.
-- Mô tả phụ thuộc thứ tự thời gian ("trước khi X thì Y") — quan trọng riêng cho TRAKE.
-- Câu hỏi đếm số lượng (QA) — dễ sai vì phần đếm nằm ở vision LLM, không phải retrieval.
-- Câu phủ định/loại trừ ("cảnh không có người").
-- Câu tiếng Việt có từ địa phương/viết tắt (kiểm tra `rewrite.py` dịch có giữ đúng ý).
-- Ảnh dễ đánh lừa CLIP (phản chiếu gương, ảnh lồng trong ảnh/màn hình TV trong khung).
+| | Format người ghi (v2) | Format harness (v1) |
+|---|---|---|
+| Bạn ghi bằng cái này | ✅ | ❌ |
+| `run_eval.py` / `score_pipelines.py` đọc | ❌ | ✅ |
+| Bọc ngoài | `{"entries": [...]}` | mảng JSON trần |
+| Câu truy vấn | `query_text` (tiếng Việt) | `text_vi` + `text_en` |
+| Vị trí đúng | `gt_frame` (một số) | `gt_frame_start` + `gt_frame_end` |
 
-## Quy trình ghi 1 câu
+Chuyển đổi bằng [normalize_gt.py](normalize_gt.py) — nó dịch máy sang tiếng Anh và dựng khoảng cho
+bạn. **Bạn không cần tự dịch, không cần tự nghĩ ra khoảng.**
 
-1. Xem video/lướt keyframe, chọn 1 khoảnh khắc rõ ràng, nghĩ ra câu mô tả (KIS) hoặc câu hỏi (QA)
-   hoặc chuỗi N khoảnh khắc (TRAKE).
-2. Ghi lại thời điểm (giây) của khoảnh khắc đó.
-3. Chạy `lookup_frame.py` để ra `frame_id` gần nhất + gợi ý khoảng `[gt_frame_start, gt_frame_end]`:
+```
+# Kiểm tra trước (chạy sớm và chạy thường xuyên — đừng gán 50 câu rồi mới kiểm tra)
+.venv\Scripts\python.exe tests\eval\normalize_gt.py <file cua ban>.json --check
 
+# Chuyển rồi nối vào bộ eval chính
+.venv\Scripts\python.exe tests\eval\normalize_gt.py <file cua ban>.json --merge tests\eval\eval_ground_truth.json
+```
+
+### Vì sao schema có `text_en`
+
+SigLIP được huấn luyện trên tiếng Anh — đưa tiếng Việt vào thì retrieval kém hẳn. Nên câu tiếng Anh
+phải tồn tại ở đâu đó. Câu hỏi là *dịch lúc đo hay đóng băng sẵn*.
+
+Chọn **đóng băng sẵn**: dịch bằng LLM lúc đo thì mỗi lần chạy ra một câu khác nhau ⇒ điểm nhảy vì lý
+do không liên quan tới thứ đang đo. Một thước đo tự co giãn thì không đo được gì.
+
+`text_vi` là **sự thật** (thứ BTC đưa). `text_en` là **biến đối chứng đông cứng**.
+
+> **Giới hạn phải biết:** `tests/e2e/score_pipelines.py` chấm KIS bằng `run_kis(q["text_en"])` —
+> **luôn** trên tiếng Anh đã dịch sẵn, không bao giờ trên tiếng Việt. Nghĩa là con số KIS đang đo
+> một bài **dễ hơn** bài thi thật. Chấp nhận được vì đúng quy trình thật (KIS dịch ở tầng UI và
+> người dùng duyệt câu rewrite bằng mắt trước khi chạy) — nhưng đó là **giả định**, không phải sự
+> thật hiển nhiên.
+
+`normalize_gt.py` đánh dấu `"text_en_reviewed": false` cho câu do máy dịch. Đọc lại và sửa nếu bản
+dịch sai ý — máy dịch hay hỏng ở từ địa phương và tên riêng.
+
+## Quy trình A — có video trước, nghĩ câu hỏi sau
+
+Dùng khi tự tạo câu mới (chủ yếu cho QA/TRAKE, hai loại đề thi cho quá ít câu).
+
+1. Lướt keyframe trong `data/extracted/keyframes/{batch}/{video_id}/`, chọn một khoảnh khắc rõ ràng.
+2. Ghi lại thời điểm (giây).
+3. Tra keyframe tương ứng:
    ```
    .venv\Scripts\python.exe tests\eval\lookup_frame.py L21_V001 25.0
    ```
+4. Ghi một entry theo schema bên dưới, `gt_frame` = `frame_id` của keyframe vừa tra.
 
-   Khoảng gợi ý mặc định khá rộng (tới keyframe lân cận) — nên tự thu hẹp lại bằng mắt (xem ảnh in
-   ra ở cột "ảnh") cho khớp đúng lúc khoảnh khắc bắt đầu/kết thúc, giống cách BTC định nghĩa `[s, e]`
-   trong `docs/Thong tin vong So tuyen AIC2026.md` §2.1 — khoảng càng sát thật càng đo baseline chính
-   xác, khoảng quá rộng sẽ làm mọi model "ăn điểm dễ" và mất khả năng phân biệt model mạnh/yếu.
-   Nếu lỡ ghi `gt_frame_start == gt_frame_end` (1 frame — quá chặt vì hệ thống chỉ trả được
-   frame_id của keyframe), chạy `widen_gt_windows.py` để nới tự động ra keyframe lân cận rồi dò tay lại.
-4. Thêm 1 object vào mảng trong `eval_ground_truth.json` theo đúng schema bên dưới.
+## Quy trình B — có câu hỏi trước, đi tìm video
 
-## Schema
+**Đây là chiều bạn dùng cho 79 câu đề thi thật.** Khó hơn quy trình A nhiều.
 
-Field chung cho cả 3 loại: `query_id` (duy nhất, ví dụ `"e-kis-001"`), `type`
-(`"KIS"`/`"QA"`/`"TRAKE"`), `text_vi`, `text_en` (English — dùng để retrieve, cùng quy ước
-`../sample_queries.json`), `difficulty_tags` (mảng string tuỳ chọn, ví dụ
-`["small_object", "counting"]` — dùng để soi kết quả theo từng dạng lắt léo sau này, không bắt buộc).
+Nguồn câu hỏi có sẵn:
+
+| Nguồn | Số câu | KIS | QA | TRAKE |
+|---|---|---|---|---|
+| `tests/data/thunghiem_bo_de_thi.csv` | 24 | 18 | 3 | 3 |
+| `tests/data/sotuyen1_bo_de_thi.csv` | 25 | 20 | 4 | 1 |
+| `data/extracted/Bo_De_Thi_Dot2/*.txt` | 30 | 19 | 9 | 2 |
+
+Các bước:
+
+1. Chạy chính hệ thống với câu đó (UI, hoặc `pipeline_kis.py "<query>"`) để **lấy danh sách ứng
+   viên**. Đây là chỗ duy nhất được dùng hệ thống.
+2. **Mở video xem tận mắt** để xác nhận. Không tin thứ hạng — video đúng có thể ở hạng 40.
+3. Xác nhận rồi thì tra keyframe: bấm vào ứng viên trong UI, hoặc dùng `lookup_frame.py`.
+4. Nếu **tìm không ra** sau khi đã cố: ghi `"status": "unresolved"` và **để nguyên**. Đừng đoán.
+   `normalize_gt.py` bỏ qua các câu này, không tính vào mẫu.
+
+   ```jsonc
+   { "query_id": "p1-7-kis", "type": "KIS", "query_text": "...", "status": "unresolved" }
+   ```
+
+   Đề thi có thể trỏ tới video **không nằm** trong `L21`–`L30` mà bạn có. Đó không phải lỗi của bạn.
+
+## Đánh dấu KEYFRAME, không đánh dấu mốc thời gian tuỳ ý
+
+Đây là chỗ dễ sai nhất, và sai thì hỏng câu.
+
+Hệ thống **chỉ trả về được `frame_id` của keyframe** — nó không trả về frame bất kỳ trong video.
+Nếu khoảng bạn ghi không chứa keyframe nào, câu đó **vĩnh viễn 0 điểm dù retrieval hoàn hảo**.
+
+Chuyện này đã thật sự xảy ra: câu `kis-001` trong file template ghi `gt_frame: 305` cho `L24_V035`,
+nhưng `L24_V035` không có keyframe nào ở `frame_id` 305.
+
+Luôn dùng `lookup_frame.py` để lấy con số, đừng tự tính từ giây × fps. `normalize_gt.py --check` sẽ
+bắt lỗi này, nhưng bắt sớm bằng `lookup_frame.py` thì đỡ mất công hơn.
+
+## Không tự nới khoảng
+
+Mặc định `normalize_gt.py` sinh `[gt_frame, gt_frame]` — **đúng một keyframe, chặt nhất**.
+
+Nới rộng khoảng làm điểm **dễ ăn hơn** ⇒ mọi model đều trông giỏi ⇒ mất khả năng phân biệt model
+mạnh/yếu, đúng thứ bộ eval sinh ra để làm.
+
+Chỉ thêm `gt_frame_end` khi **thật sự có nhiều keyframe liền kề cùng thể hiện khoảnh khắc đó**, và
+bạn đã nhìn từng ảnh một. Script không đoán hộ.
+
+> `widen_gt_windows.py` vẫn còn trong repo nhưng **không nằm trong quy trình chuẩn nữa**. Nó nới
+> theo cơ học tới keyframe lân cận mà không biết khoảnh khắc thật kết thúc ở đâu. Chỉ dùng khi bạn
+> hiểu rõ mình đang đánh đổi cái gì.
+
+## Cỡ mẫu
+
+Sai số chuẩn của R@k (tỷ lệ, ở mức khó nhất p ≈ 0,5):
+
+| n | sai số |
+|---|---|
+| 10 | ±16 điểm % |
+| 20 | ±11 điểm % |
+| 30 | ±9 điểm % |
+| 80 | ±5,6 điểm % |
+
+Nói cách khác: với 10 câu, một thay đổi phải cải thiện **hơn 16 điểm %** thì mới phân biệt được với
+nhiễu. Hầu hết cải tiến không đạt mức đó.
+
+Mục tiêu:
+
+| | Hiện có | Từ đề thi | Tự viết thêm | Đích |
+|---|---|---|---|---|
+| KIS | 23 | +57 | 0 | **80** |
+| Q&A | 5 | +16 | +9 | **30** |
+| TRAKE | 10 | +6 | +14 | **30** |
+| | **38** | **+79** | **+23** | **140** |
+
+**Đừng bịa thêm câu "cho đa dạng".** 79 câu đề thi *chính là* phân phối thật của BTC — đó là giá trị
+không thay thế được của chúng. Bịa thêm câu theo cảm tính sẽ kéo bộ đo lệch khỏi phân phối thật.
+
+Chỗ cần trải rộng là **nhãn độ khó** (để soi breakdown) và 23 câu tự viết cho QA/TRAKE — hai loại mà
+đề thi cho quá ít. Với 23 câu đó, nên trải đều các dạng khó trong bảng tag bên dưới.
+
+## Nhãn độ khó
+
+Danh sách cố định. Nguồn sự thật duy nhất: `TAG_CHUAN` trong [normalize_gt.py](normalize_gt.py).
+Tag tự do làm việc gom nhóm breakdown mất ý nghĩa (mỗi câu một tag riêng thì không có nhóm nào để so).
+
+| Tag | Nghĩa |
+|---|---|
+| `easy_sanity_check` | Câu dễ, để phát hiện hệ thống hỏng |
+| `small_object` | Đối tượng nhỏ / khuất một phần khung hình |
+| `multi_similar_object` | Nhiều đối tượng giống nhau, chỉ khác 1 chi tiết (màu áo, số áo) |
+| `multi_object` | Nhiều loại đối tượng cùng lúc trong khung |
+| `fine_detail` | Phải nhìn chi tiết nhỏ mới phân biệt được |
+| `short_action` | Hành động rất ngắn giữa video dài |
+| `action_sequence` | Chuỗi động tác nối tiếp (chủ yếu TRAKE) |
+| `temporal_order` | Phụ thuộc thứ tự thời gian ("trước khi X thì Y") |
+| `counting` | Đếm số lượng — điểm yếu của vision LLM |
+| `naming` | Đòi tên riêng / danh từ định danh cụ thể |
+| `text_in_frame` | Phải đọc chữ/số in trong khung (cần OCR) |
+| `chart_reading` | Phải đọc biểu đồ/đồ thị |
+| `image_in_image` | Ảnh lồng trong ảnh / màn hình TV trong khung |
+| `negation` | Câu phủ định/loại trừ ("cảnh không có người") |
+| `local_dialect` | Từ địa phương/viết tắt — thử sức `rewrite.py` |
+
+## Schema (format người ghi)
+
+Bọc ngoài: `{"entries": [ ... ]}`. Field chung: `query_id` (duy nhất trong **toàn bộ** bộ eval),
+`type` (`KIS`/`QA`/`TRAKE`), `query_text` (tiếng Việt), `difficulty_tags`, `gt_video_id`
+(không có `.mp4`).
 
 ### KIS
 
 ```jsonc
 {
-  "query_id": "e-kis-001",
+  "query_id": "p1-1-kis",
   "type": "KIS",
-  "text_vi": "...",
-  "text_en": "...",
-  "difficulty_tags": [],
-  "gt_video_id": "L21_V001",     // không có .mp4
-  "gt_frame_start": 532,          // frame_id = frame_idx + 1, giống mọi nơi khác trong repo
-  "gt_frame_end": 859
+  "query_text": "Cảnh quay một nhóm hơn 5 người xếp thành hàng tập thể dục...",
+  "difficulty_tags": ["multi_similar_object"],
+  "gt_video_id": "L21_V001",
+  "gt_frame": 532
 }
 ```
 
@@ -74,50 +197,49 @@ Field chung cho cả 3 loại: `query_id` (duy nhất, ví dụ `"e-kis-001"`), 
 
 ```jsonc
 {
-  "query_id": "e-qa-001",
+  "query_id": "p1-3-qa",
   "type": "QA",
-  "text_vi": "...",
-  "text_en": "...",
-  "question": "How many people are on stage?",   // câu hỏi tiếng Anh, khớp field "question" của sample_queries.json
-  "difficulty_tags": ["counting"],
+  "query_text": "Hình ảnh một con cá được đặt lên cân...",
+  "question": "Con số hiển thị cuối cùng trên cân là bao nhiêu?",
+  "difficulty_tags": ["counting", "text_in_frame"],
   "gt_video_id": "L22_V010",
-  "gt_frame_start": 100,
-  "gt_frame_end": 120,
-  "gt_answers": ["3", "ba", "three"]   // MẢNG các cách diễn đạt chấp nhận được. tests/e2e/
-                                        // score_pipelines.py chấm answer theo §2.1.2: answer pipeline
-                                        // sinh ra được tính đúng nếu (sau chuẩn hoá) TRÙNG / CHỨA / là
-                                        // CON của bất kỳ phần tử nào ở đây. run_eval.py (backbone
-                                        // bake-off) KHÔNG đọc field này — nó chỉ đo retrieval.
+  "gt_frame": 100,
+  "gt_answers": ["3", "ba", "three"]
 }
 ```
+
+`gt_answers` là **mảng** các cách diễn đạt chấp nhận được. `score_pipelines.py` chấm theo luật BTC
+§2.1.2: đáp án pipeline sinh ra tính đúng nếu (sau chuẩn hoá) **trùng / chứa / là con** của bất kỳ
+phần tử nào trong mảng. Ghi rộng tay: `"15"`, `"mười lăm"`, `"15 người"`.
+
+`run_eval.py` **không** đọc field này — nó chỉ đo retrieval.
 
 ### TRAKE
 
 ```jsonc
 {
-  "query_id": "e-trake-001",
+  "query_id": "p1-4-trake",
   "type": "TRAKE",
-  "text_vi": "...",
-  "text_en": "...",
-  "difficulty_tags": ["temporal_order"],
+  "query_text": "4 cảnh này xảy ra liên tiếp nhau...",
+  "difficulty_tags": ["temporal_order", "action_sequence"],
   "gt_video_id": "L25_V003",
   "events": [
-    {"text_en": "athlete takes off from the ground", "gt_frame_start": 95,  "gt_frame_end": 105},
-    {"text_en": "athlete clears over the bar at peak height", "gt_frame_start": 145, "gt_frame_end": 155},
-    {"text_en": "athlete lands on the mat", "gt_frame_start": 195, "gt_frame_end": 205}
+    {"text_en": "athlete takes off from the ground", "gt_frame": 95},
+    {"text_en": "athlete clears over the bar", "gt_frame": 145},
+    {"text_en": "athlete lands on the mat", "gt_frame": 195}
   ]
 }
 ```
 
-> ⚠️ 3 khối JSON trên chỉ là **VÍ DỤ MINH HOẠ format — KHÔNG PHẢI ground truth thật**. Đừng copy
-> nguyên giá trị số vào `eval_ground_truth.json`, chỉ copy đúng cấu trúc field rồi điền số thật của
-> bạn sau khi tự xem video.
+> ⚠️ Các khối JSON trên là **VÍ DỤ MINH HOẠ FORMAT**, không phải ground truth thật. Copy cấu trúc
+> field, đừng copy giá trị số.
 
-## Sau khi ghi xong (dù chưa đủ 50 câu)
+## Chạy thử
 
-Không cần đợi ghi đủ hết mới chạy thử — `run_eval.py` chạy được ngay cả khi
-`eval_ground_truth.json` mới có vài dòng, hữu ích để phát hiện lỗi format sớm:
+Không cần đợi ghi đủ — `--check` chạy được với một câu:
 
 ```
-.venv\Scripts\python.exe tests\eval\run_eval.py
+.venv\Scripts\python.exe tests\eval\normalize_gt.py <file>.json --check   # kiểm tra format
+.venv\Scripts\python.exe tests\eval\run_eval.py                           # so backbone, không LLM
+.venv\Scripts\python.exe tests\e2e\score_pipelines.py --types kis         # Final Score thật, 0 đồng
 ```

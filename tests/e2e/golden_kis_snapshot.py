@@ -42,9 +42,24 @@ TOP_K = 100
 
 
 def _load_kis_queries() -> list[dict]:
-    """18 câu KIS của bộ eval, giữ nguyên thứ tự trong file để ảnh chụp ổn định."""
+    """Các câu KIS của bộ eval, giữ nguyên thứ tự trong file để ảnh chụp ổn định.
+
+    Fail loud khi trùng `query_id`: `_run()` gom kết quả vào dict khoá theo `query_id`, nên câu
+    trùng id sẽ GHI ĐÈ ÂM THẦM câu trước — mất câu mà digest vẫn "khớp". Đã thật sự xảy ra
+    2026-08-31 (5 câu thêm mới dùng lại 4 id cũ, `e-kis-ai-008` xuất hiện 3 lần). Xem
+    docs/decisions-log.md và tests/unit/test_eval_ground_truth.py.
+    """
     data = json.loads(_EVAL_SET.read_text(encoding="utf-8"))
-    return [q for q in data if str(q.get("type", "")).upper() == "KIS"]
+    queries = [q for q in data if str(q.get("type", "")).upper() == "KIS"]
+
+    ids = [str(q.get("query_id")) for q in queries]
+    trung = sorted({i for i in ids if ids.count(i) > 1})
+    if trung:
+        raise SystemExit(
+            f"[golden] query_id bị trùng trong {_EVAL_SET.name}: {trung}\n"
+            f"[golden] Mỗi câu phải có id duy nhất, nếu không ảnh chụp sẽ lặng lẽ bỏ mất câu."
+        )
+    return queries
 
 
 def _run(queries: list[dict]) -> dict:
