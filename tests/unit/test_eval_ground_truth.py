@@ -64,6 +64,27 @@ def test_difficulty_tags_nam_trong_danh_sach_chuan():
     )
 
 
+def test_sub_files_co_cau_truc_hop_le_va_khong_trung_id():
+    """Kiểm tra cả 3 file con KIS, QA, TRAKE đều hợp lệ và không trùng query_id."""
+    eval_dir = _GT_PATH.parent
+    sub_files = {
+        "KIS": eval_dir / "eval_ground_truth_kis.json",
+        "QA": eval_dir / "eval_ground_truth_qa.json",
+        "TRAKE": eval_dir / "eval_ground_truth_trake.json",
+    }
+    for expected_type, path in sub_files.items():
+        if not path.exists():
+            continue
+        items = json.loads(path.read_text(encoding="utf-8"))
+        assert isinstance(items, list), f"{path.name} phai chua mot JSON array"
+        assert all(str(x.get("type", "")).upper() == expected_type for x in items), (
+            f"Moi phan tu trong {path.name} phai co type la {expected_type}"
+        )
+        ids = [x.get("query_id") for x in items]
+        trung = [k for k, v in collections.Counter(ids).items() if v > 1]
+        assert not trung, f"File {path.name} co query_id bi trung: {trung}"
+
+
 # ─── Regression Guard ──────────────────────────────────────────────────────────
 
 def test_regression_guard_khong_bao_dong_gia_khi_chay_tung_phan(tmp_path, capsys):
