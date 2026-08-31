@@ -121,10 +121,14 @@ def rewrite_query(query: str, feedback: str | None = None, question: str | None 
     prompt = REWRITE_INTRO.format(n_desc="ONE") + _SINGLE_SUFFIX.format(query=query)
     prompt += _build_extra_context(question, feedback)
 
-    result = call_llm(prompt, model="text", temperature=0.2, max_tokens=60)
-    # Clean up: bỏ dấu ngoặc kép, xuống dòng thừa
-    result = result.strip().strip('"').strip("'").split("\n")[0].strip()
-    return result
+    try:
+        result = call_llm(prompt, model="text", temperature=0.2, max_tokens=60)
+        # Clean up: bỏ dấu ngoặc kép, xuống dòng thừa
+        result = result.strip().strip('"').strip("'").split("\n")[0].strip()
+        return result if result else query.strip()
+    except Exception as e:
+        print(f"[rewrite] call_llm lỗi ({type(e).__name__}: {e}), fallback về query gốc")
+        return query.strip()
 
 
 def rewrite_query_candidates(

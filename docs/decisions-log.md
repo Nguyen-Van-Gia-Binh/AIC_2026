@@ -442,3 +442,11 @@ MỚI, nên bản giả không có tác dụng. Test vẫn "pass" ở bản cũ,
 **Bài học:** monkeypatch phải nhắm vào **module chứa hàm đang chạy**, không phải module mình đang
 import từ đó. Dùng `monkeypatch.setattr(module_that_owns_it, "name", fake)` của pytest thay vì gán
 biến global — nó bắt lỗi này sớm và tự khôi phục.
+
+### Sửa lỗi hành vi Pha 2 (2026-08-31)
+
+1. **TRAKE Top-100 & Fallback `strict=False`:** Nâng `top_k_video` lên 100 và fallback `strict=False` khi chuỗi động tác nhanh xảy ra trong cùng keyframe; ưu tiên xếp hạng chuỗi strict trước relaxed. Kết quả: TRAKE Final tăng mạnh từ 0.233 lên 0.430 (+84%).
+2. **Q&A Multi-Cluster Tiered Extraction:** Mở rộng từ 3 cụm lên 15 cụm (3 Full Tầng 1+2 + 12 Cheap Tầng 1 Objects JSON text LLM). Tăng độ phủ answer độc lập của từng video, giúp Q&A Final tăng từ 0.040 lên 0.360 (+0.320, gấp 9 lần).
+3. **VietOCR Offline Config & Health Check:** Đóng gói YAML config và weights cục bộ `vgg_transformer.pth`, loại bỏ phụ thuộc mạng/SSL của `vocr.vn`. Thêm `ocr_health() -> tuple[bool, str]`. KIS Final tăng lên 0.652.
+4. **Resilient Fail-Soft:** Bọc bảo vệ `try...except` tại tất cả các điểm gọi LLM (`rewrite_query`, `answer_from_hits`), đảm bảo pipeline không crash khi provider cạn hạn mức hoặc gặp sự cố mạng.
+

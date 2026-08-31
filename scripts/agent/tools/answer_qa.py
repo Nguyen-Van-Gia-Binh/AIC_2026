@@ -201,8 +201,12 @@ def answer_from_hits(
             )
             _trace_evidence("objects", candidates, unique_objects[:30], transcript=transcript1)
             _trace_prompt("objects", prompt1)
-            ans1 = call_llm(prompt1, model="text", temperature=0.1, max_tokens=80)
-            print(f"[qa] LLM response (objects): {ans1!r}")
+            try:
+                ans1 = call_llm(prompt1, model="text", temperature=0.1, max_tokens=80)
+                print(f"[qa] LLM response (objects): {ans1!r}")
+            except Exception as e:
+                print(f"[qa] LLM lỗi ở Tầng 1 Objects ({type(e).__name__}: {e})")
+                ans1 = "CANNOT_ANSWER_FROM_OBJECTS"
 
             if "CANNOT_ANSWER_FROM_OBJECTS" not in ans1 and not is_non_answer(ans1):
                 # Cross-check
@@ -264,61 +268,71 @@ def answer_from_hits(
         _trace_evidence("vision", vision_hits, ocr_hint=ocr_hint or evidence_bundle)
         _trace_prompt("vision", prompt2)
 
-        ans2 = call_llm(
-            prompt2,
-            image_paths=image_paths,
-            model="vision",
-            temperature=0.1,
-            max_tokens=80,
-        )
-        print(f"[qa] LLM response (vision): {ans2!r}")
-        if visual_count:
-            visual_count_answer = extract_visual_count(ans2)
-            if visual_count_answer is None:
-                repair_prompt = VISUAL_COUNT_REPAIR_PROMPT.format(
-                    question=question, response=ans2,
-                )
-                repaired = call_llm(
-                    repair_prompt, model="text", temperature=0.0, max_tokens=10,
-                )
-                _trace_prompt("visual-count-repair", repair_prompt)
-                print(f"[qa] LLM response (visual-count-repair): {repaired!r}")
-                visual_count_answer = extract_visual_count(repaired)
-            if visual_count_answer is None:
-                visual_count_answer = "N/A"
-        else:
-            visual_count_answer = normalize_answer(ans2)
-        # Cross-check với objects gom từ tất cả ảnh đã gửi cho vision
-        combined_objs = []
-        for h in vision_hits:
-            hit_n, hit_vid = h.get("n"), h.get("video_id", "")
-            if hit_n:
-                combined_objs.extend(get_objects(hit_vid, int(hit_n)))
-        crosscheck = False if visual_count else _crosscheck_answer(
-            question, ans2, list(dict.fromkeys(combined_objs)),
-            transcript2 if not visual_count else "",
-        )
-        conf = 0.7 if visual_count else (0.85 if crosscheck else 0.6)
-        if not visual_count and is_non_answer(ans2):
-            # Cổng chống ảo giác: VLM tự nói không đọc/nhìn được -> KHÔNG nâng lên thành đáp án,
-            # hạ confidence để pipeline_qa thử vòng 2 (rewrite + retrieve lại) thay vì nộp chuỗi này.
-            print(f"[answer_qa] Vision trả lời không xác định ({ans2!r}) -> hạ confidence")
-            conf = min(conf, 0.3)
-        return {
-            "answer":     visual_count_answer if visual_count else canonicalize_answer(ans2, question),
-
-            "best_hit":   vision_hits[0],
-            "confidence": conf,
-            "method":     "vision",
-        }
+        try:
+            ans2 = call_llm(
+                prompt2,
+                image_paths=image_paths,
+                model="vision",
+                temperature=0.1,
+                max_tokens=80,
+            )
+            print(f"[qa] LLM response (vision): {ans2!r}")
+            if visual_count:
+                visual_count_answer = extract_visual_count(ans2)
+                if visual_count_answer is None:
+                    repair_prompt = VISUAL_COUNT_REPAIR_PROMPT.format(
+                        question=question, response=ans2,
+                    )
+                    try:
+                        repaired = call_llm(
+                            repair_prompt, model="text", temperature=0.0, max_tokens=10,
+                        )
+                        _trace_prompt("visual-count-repair", repair_prompt)
+                        print(f"[qa] LLM response (visual-count-repair): {repaired!r}")
+                        visual_count_answer = extract_visual_count(repaired)
+                    except Exception as err:
+                        print(f"[qa] LLM repair lỗi ({err})")
+                if visual_count_answer is None:
+                    visual_count_answer = "N/A"
+            else:
+                visual_count_answer = normalize_answer(ans2)
+            # Cross-check với objects gom từ tất cả ảnh đã gửi cho vision
+            combined_objs = []
+            for h in vision_hits:
+                hit_n, hit_vid = h.get("n"), h.get("video_id", "")
+                if hit_n:
+                    combined_objs.extend(get_objects(hit_vid, int(hit_n)))
+            crosscheck = False if visual_count else _crosscheck_answer(
+                question, ans2, list(dict.fromkeys(combined_objs)),
+                transcript2 if not visual_count else "",
+            )
+            conf = 0.7 if visual_count else (0.85 if crosscheck else 0.6)
+            if not visual_count and is_non_answer(ans2):
+                # Cổng chống ảo giác: VLM tự nói không đọc/nhìn được -> KHÔNG nâng lên thành đáp án,
+                # hạ confidence để pipeline_qa thử vòng 2 (rewrite + retrieve lại) thay vì nộp chuỗi này.
+                print(f"[answer_qa] Vision trả lời không xác định ({ans2!r}) -> hạ confidence")
+                conf = min(conf, 0.3)
+            return {
+                "answer":     visual_count_answer if visual_count else canonicalize_answer(ans2, question),
+                "best_hit":   vision_hits[0],
+                "confidence": conf,
+                "method":     "vision",
+            }
+        except Exception as e:
+            print(f"[qa] LLM lỗi ở Tầng 2 Vision ({type(e).__name__}: {e}), chuyển sang fallback")
 
     # --- Fallback: chỉ dùng kiến thức nền khi không còn bằng chứng từ video ---
-    knowledge_prompt = KNOWLEDGE_FALLBACK_PROMPT.format(question=question)
-    knowledge_answer = normalize_answer(
-        call_llm(knowledge_prompt, model="text", temperature=0.0, max_tokens=80)
-    )
-    if knowledge_answer.upper() == "CANNOT_ANSWER":
+    try:
+        knowledge_prompt = KNOWLEDGE_FALLBACK_PROMPT.format(question=question)
+        knowledge_answer = normalize_answer(
+            call_llm(knowledge_prompt, model="text", temperature=0.0, max_tokens=80)
+        )
+        if knowledge_answer.upper() == "CANNOT_ANSWER":
+            knowledge_answer = "N/A"
+    except Exception as e:
+        print(f"[qa] LLM fallback lỗi ({type(e).__name__}: {e})")
         knowledge_answer = "N/A"
+
     return {
         "answer":     knowledge_answer,
         "best_hit":   candidates[0] if candidates else {},
@@ -337,8 +351,12 @@ def _crosscheck_answer(question: str, answer: str, objects: list[str], transcrip
         objects=", ".join(objects[:15]) or "none",
         transcript=transcript or "none",
     )
-    result = call_llm(prompt, model="text", temperature=0.0, max_tokens=20)
-    return result.strip().upper().startswith("YES")
+    try:
+        result = call_llm(prompt, model="text", temperature=0.0, max_tokens=20)
+        return result.strip().upper().startswith("YES")
+    except Exception as e:
+        print(f"[qa] LLM crosscheck lỗi ({type(e).__name__}: {e})")
+        return False
 
 # Bo test: tests/unit/test_answer_qa.py (+ test_qa_answer_contract.py)
 

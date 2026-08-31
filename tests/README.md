@@ -72,5 +72,6 @@ ghi `video_id` + khoảng `frame_id` đúng), **không phải đề thi chính t
 | File | Là gì |
 |---|---|
 | `sample_queries.json` | Query mẫu (không phải đề chính thức) — dùng khi test thủ công |
-| `sotuyen1_bo_de_thi.csv` | Gói đề BTC sơ tuyển đợt 1 (sinh từ `scripts/generate_sotuyen1_csv.py`) |
+| `sotuyen1_bo_de_thi.csv` | Gói đề BTC sơ tuyển đợt 1 (sinh từ `scripts/offline/shards/generate_sotuyen1_csv.py`) |
+| `sotuyen2_bo_de_thi.csv` | Gói đề BTC sơ tuyển đợt 2 (sinh từ `scripts/offline/shards/generate_sotuyen2_csv.py`) |
 | `thunghiem_bo_de_thi.csv` | Gói đề BTC vòng thử nghiệm |
