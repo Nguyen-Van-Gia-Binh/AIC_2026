@@ -64,6 +64,97 @@ _RECOGNIZER = None
 _ENGINE_LOAD_FAILED = False
 
 
+_VIETOCR_OFFLINE_CONFIG = {
+    "vocab": (
+        "aAàÀảẢãÃáÁạẠăĂằẰẳẲẵẴắẮặẶâÂầẦẩẨẫẪấẤậẬbBcCdDđĐeEèÈẻẺẽẼéÉẹẸêÊềỀểỂễỄếẾệỆ"
+        "fFgGhHiIìÌỉỈĩĨíÍịỊjJkKlLmMnNoOòÒỏỎõÕóÓọỌôÔồỒổỔỗỖốỐộỘơƠờỜởỞỡỠớỚợỢpPqQrR"
+        "sStTuUùÙủỦũŨúÚụỤưƯừỪửỬữỮứỨựỰvVwWxXyYỳỲỷỶỹỸýÝỵỴzZ0123456789!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~ "
+    ),
+    "device": "cpu",
+    "seq_modeling": "transformer",
+    "transformer": {
+        "d_model": 256,
+        "nhead": 8,
+        "num_encoder_layers": 6,
+        "num_decoder_layers": 6,
+        "dim_feedforward": 2048,
+        "max_seq_length": 1024,
+        "pos_dropout": 0.1,
+        "trans_dropout": 0.1,
+    },
+    "optimizer": {"max_lr": 0.0003, "pct_start": 0.1},
+    "trainer": {
+        "batch_size": 32,
+        "print_every": 200,
+        "valid_every": 4000,
+        "iters": 100000,
+        "export": "./weights/transformerocr.pth",
+        "checkpoint": "./checkpoint/transformerocr_checkpoint.pth",
+        "log": "./train.log",
+        "metrics": None,
+    },
+    "dataset": {
+        "name": "data",
+        "data_root": "./img/",
+        "train_annotation": "annotation_train.txt",
+        "valid_annotation": "annotation_val_small.txt",
+        "image_height": 32,
+        "image_min_width": 32,
+        "image_max_width": 512,
+    },
+    "dataloader": {"num_workers": 3, "pin_memory": True},
+    "aug": {"image_aug": True, "masked_language_model": True},
+    "predictor": {"beamsearch": False},
+    "quiet": True,
+    "backbone": "vgg19_bn",
+    "cnn": {
+        "pretrained": False,
+        "ss": [[2, 2], [2, 2], [2, 1], [2, 1], [1, 1]],
+        "ks": [[2, 2], [2, 2], [2, 1], [2, 1], [1, 1]],
+        "hidden": 256,
+    },
+}
+
+
+def _find_vietocr_weights() -> Path | None:
+    candidates = [
+        _ROOT / "data" / "models" / "vietocr" / "vgg_transformer.pth",
+        _ROOT / "data" / "extracted" / "vgg_transformer.pth",
+        Path.home() / ".cache" / "vietocr" / "vgg_transformer.pth",
+    ]
+    for p in candidates:
+        if p.is_file() and p.stat().st_size > 10_000_000:
+            return p
+    return None
+
+
+def ocr_health() -> tuple[bool, str]:
+    """Kiểm tra tính sẵn sàng của OCR Engine (PaddleOCR Detection + VietOCR Recognition).
+
+    Returns:
+        (True, message) nếu cả detector và weights recognition đều có sẵn offline.
+        (False, message) nếu thiếu dependency hoặc file weights offline.
+    """
+    try:
+        import paddleocr  # noqa: F401
+    except ImportError:
+        return False, "Thiếu package paddleocr (pip install paddleocr paddlepaddle)"
+
+    try:
+        import vietocr  # noqa: F401
+    except ImportError:
+        return False, "Thiếu package vietocr (pip install vietocr)"
+
+    pth = _find_vietocr_weights()
+    if pth is None:
+        return False, (
+            "Thiếu file weights VietOCR offline 'vgg_transformer.pth' "
+            "(cần chạy 'python scripts/offline/ocr/fetch_vietocr_assets.py' hoặc đặt vào data/models/vietocr/)"
+        )
+
+    return True, f"OCR Engine sẵn sàng (weights: {pth})"
+
+
 def _get_engine():
     """Singleton (detector, recognizer) — nạp 1 lần/process. Trả về (None, None) nếu load thất bại
     (không retry lại trong cùng 1 process, tránh lặp lại lỗi mạng/thiếu dependency nhiều lần)."""
@@ -88,11 +179,20 @@ def _get_engine():
         from vietocr.tool.predictor import Predictor
         from vietocr.tool.config import Cfg
         device = "cuda:0" if torch.cuda.is_available() else "cpu"
-        print(f"[ocr_read] Đang nạp VietOCR (vgg_transformer, device={device})...")
-        config = Cfg.load_config_from_name("vgg_transformer")
+        print(f"[ocr_read] Đang nạp VietOCR offline (vgg_transformer, device={device})...")
+
+        pth = _find_vietocr_weights()
+        if pth is None:
+            raise FileNotFoundError(
+                "Không tìm thấy weights VietOCR offline (vgg_transformer.pth). "
+                "Hãy chạy 'python scripts/offline/ocr/fetch_vietocr_assets.py'"
+            )
+
+        config = dict(_VIETOCR_OFFLINE_CONFIG)
+        config["weights"] = str(pth)
         config["device"] = device
-        _RECOGNIZER = Predictor(config)
-        print(f"[ocr_read] Recognizer san sang (device={device}).")
+        _RECOGNIZER = Predictor(Cfg(config))
+        print(f"[ocr_read] Recognizer san sang (device={device}, weights={pth.name}).")
     except Exception as error:
         print(f"[ocr_read] CẢNH BÁO: không nạp được OCR engine ({type(error).__name__}: {error}) "
               f"— bỏ qua OCR cho phiên này, pipeline sẽ chạy tiếp không có gợi ý/rerank OCR.")
@@ -100,6 +200,7 @@ def _get_engine():
         _DETECTOR = None
         _RECOGNIZER = None
     return _DETECTOR, _RECOGNIZER
+
 
 
 def _get_rotate_crop_image(img, points):

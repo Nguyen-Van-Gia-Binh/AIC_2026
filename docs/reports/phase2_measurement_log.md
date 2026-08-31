@@ -200,5 +200,21 @@ Hai test mới khoá cả hai chiều: không báo động giả khi chạy từ
 
 **Kết luận:** Giữ. Độ phủ answer độc lập của từng video tăng mạnh (từ 10 dòng lên 28–45 dòng trên top 100), giúp R@1/R@20/R@100 đều tăng vọt và Final Score Q&A đạt **0.360** (tăng gấp 9 lần so với baseline xuất phát 0.040) mà không phát sinh thêm chi phí Vision VLM.
 
+---
+
+## P2.5 — Gói config offline cho VietOCR và fail-loud check `ocr_health()`
+
+Đóng gói `scripts/offline/ocr/fetch_vietocr_assets.py` và cấu hình offline `_VIETOCR_OFFLINE_CONFIG` trong `ocr_read.py`. Không phụ thuộc mạng/SSL của `vocr.vn` khi khởi tạo VietOCR. Thêm `ocr_health() -> tuple[bool, str]` kiểm tra tính sẵn sàng offline.
+
+| | trước | sau |
+|---|---|---|
+| VietOCR loading | Lỗi mạng/SSL `vocr.vn` (silent fallback) | **Nạp offline 100%** (`vgg_transformer.pth` 151 MB trên CUDA) |
+| **KIS Final** | 0.643 | **0.652** (+0.009 nhờ OCR rerank hoạt động thật) |
+| golden digest (KIS) | `48fd64fc41f776d8` (OCR không chạy) | `a67ade7f22d881cf` (OCR chạy rerank thật trên 4 câu) |
+| pytest | 85 | 87 passed |
+
+**Kết luận:** Giữ. Loại bỏ rủi ro phụ thuộc hạ tầng mạng bên ngoài khi thi đấu, khôi phục năng lực OCR reranking cho KIS/Q&A giúp điểm KIS tăng lên 0.652.
+
+
 
 
