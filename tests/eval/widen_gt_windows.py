@@ -33,7 +33,11 @@ import pandas as pd
 _THIS_DIR = Path(__file__).resolve().parent
 _REPO_ROOT = _THIS_DIR.parent.parent  # tests/eval/ -> repo root
 _MAPKF_DIR = _REPO_ROOT / "data" / "extracted" / "map-keyframes"
-_EVAL_SET = _THIS_DIR / "eval_ground_truth.json"
+_SUB_FILES = [
+    _THIS_DIR / "eval_ground_truth_kis.json",
+    _THIS_DIR / "eval_ground_truth_qa.json",
+    _THIS_DIR / "eval_ground_truth_trake.json",
+]
 
 _MAP_CACHE: dict[str, pd.DataFrame] = {}
 
@@ -62,13 +66,10 @@ def _widen_one(video_id: str, frame_val: int) -> tuple[int, int]:
     return int(df.iloc[lo]["frame_id"]), int(df.iloc[hi]["frame_id"])
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--dry-run", action="store_true", help="Chi in bang, khong ghi lai file")
-    parser.add_argument("--eval-set", type=Path, default=_EVAL_SET)
-    args = parser.parse_args()
-
-    data = json.loads(args.eval_set.read_text(encoding="utf-8"))
+def widen_file(file_path: Path, dry_run: bool = False) -> None:
+    if not file_path.exists():
+        return
+    data = json.loads(file_path.read_text(encoding="utf-8"))
     changes: list[tuple[str, int, int, int, int]] = []  # (label, old_s, old_e, new_s, new_e)
 
     for q in data:
@@ -78,7 +79,7 @@ def main() -> None:
 
         if qtype in ("KIS", "QA"):
             s, e = q.get("gt_frame_start"), q.get("gt_frame_end")
-            if s is not None and s == e:
+            if s is not None and s == e and vid:
                 ns, ne = _widen_one(vid, int(s))
                 if (ns, ne) != (s, e):
                     q["gt_frame_start"], q["gt_frame_end"] = ns, ne
@@ -87,13 +88,13 @@ def main() -> None:
         elif qtype == "TRAKE":
             for i, ev in enumerate(q.get("events", [])):
                 s, e = ev.get("gt_frame_start"), ev.get("gt_frame_end")
-                if s is not None and s == e:
+                if s is not None and s == e and vid:
                     ns, ne = _widen_one(vid, int(s))
                     if (ns, ne) != (s, e):
                         ev["gt_frame_start"], ev["gt_frame_end"] = ns, ne
                         changes.append((f"{qid} events[{i}]", s, e, ns, ne))
 
-    print(f"[widen_gt] {args.eval_set.name}: {len(changes)} khoang single-frame duoc noi\n")
+    print(f"[widen_gt] {file_path.name}: {len(changes)} khoang single-frame duoc noi\n")
     print(f"  {'entry':<28} {'old [s,e]':>14}   ->  {'new [s,e]':>14}")
     for label, os_, oe, ns, ne in changes:
         print(f"  {label:<28} {f'[{os_}, {oe}]':>14}   ->  {f'[{ns}, {ne}]':>14}")
@@ -102,14 +103,25 @@ def main() -> None:
         print("  (khong co gi de noi — moi entry da co khoang that)")
         return
 
-    if args.dry_run:
+    if dry_run:
         print("\n[widen_gt] --dry-run: KHONG ghi file.")
         return
 
-    args.eval_set.write_text(
+    file_path.write_text(
         json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
-    print(f"\n[widen_gt] Da ghi {args.eval_set}. NHO DO TAY LAI bang mat (xem EVAL_GUIDE.md).")
+    print(f"\n[widen_gt] Da ghi {file_path}. NHO DO TAY LAI bang mat (xem EVAL_GUIDE.md).")
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--dry-run", action="store_true", help="Chi in bang, khong ghi lai file")
+    parser.add_argument("--eval-set", type=Path, default=None, help="File cu the de noi khoang (mac dinh xu ly ca 3 file con)")
+    args = parser.parse_args()
+
+    targets = [args.eval_set] if args.eval_set else _SUB_FILES
+    for t in targets:
+        widen_file(t, dry_run=args.dry_run)
 
 
 if __name__ == "__main__":

@@ -20,9 +20,9 @@ if str(_ROOT) not in sys.path:
 
 from scripts.agent.tools.retrieve import fast_retrieve
 from scripts.agent.tools.rerank import apply_risk_aware_ranking, RETRIEVAL_POOL_SIZE
+from tests.eval.gt_loader import load_ground_truth
 
 K_VALUES = [1, 5, 20, 50, 100]
-EVAL_SET_PATH = _ROOT / "tests" / "eval" / "eval_ground_truth.json"
 
 
 def _rank_of_gt(hits: list[dict], gt_video_id: str, gt_start: int, gt_end: int) -> int | None:
@@ -37,9 +37,8 @@ def _r_at_k(rank: int | None) -> dict[int, float]:
 
 
 def main() -> None:
-    eval_set = json.loads(EVAL_SET_PATH.read_text(encoding="utf-8"))
-    queries = [q for q in eval_set if q["type"] in ("KIS", "QA")]
-    print(f"[test_phase3] {len(queries)} cau KIS/QA tu {EVAL_SET_PATH}")
+    queries = load_ground_truth(types=["KIS", "QA"])
+    print(f"[test_phase3] {len(queries)} cau KIS/QA tu gt_loader")
 
     before_scores, after_scores = [], []
     for q in queries:

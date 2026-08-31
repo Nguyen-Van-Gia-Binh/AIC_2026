@@ -36,9 +36,8 @@ import scripts.agent.pipeline_trake as _trake_module
 # chay, lam so sanh "truoc/sau" khong con dang tin cay. Thay bang identity function CHI trong benchmark
 # nay (khong dung production code) — giong cach tests/e2e/test_phase3_rerank.py da tranh van de nay bang
 # cach goi fast_retrieve(text_en) truc tiep thay vi qua pipeline co rewrite.
+EVAL_SET_PATH = _ROOT / "tests" / "eval" / "eval_ground_truth_trake.json"
 _trake_module.rewrite_query = lambda text: text
-
-EVAL_SET_PATH = _ROOT / "tests" / "eval" / "eval_ground_truth.json"
 
 
 def _rank_of_video(results: list[dict], gt_video_id: str) -> int | None:

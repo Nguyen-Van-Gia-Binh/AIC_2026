@@ -35,7 +35,7 @@ try:
 except Exception:
     pass
 
-_EVAL_SET = _ROOT / "tests" / "eval" / "eval_ground_truth.json"
+_EVAL_SET = _ROOT / "tests" / "eval" / "eval_ground_truth_kis.json"
 _SNAPSHOT = Path(__file__).resolve().parent / "golden_kis_snapshot.json"
 
 TOP_K = 100

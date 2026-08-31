@@ -28,9 +28,9 @@ from scripts.agent.tools.rerank import apply_risk_aware_ranking, RETRIEVAL_POOL_
 from scripts.agent.tools.temporal_nms import temporal_nms
 from tests.e2e.score_pipelines import _final
 
-_DEFAULT_GT = _ROOT / "tests" / "eval" / "eval_ground_truth.json"
+_DEFAULT_GT = _ROOT / "tests" / "eval" / "eval_ground_truth_kis.json"
 if not _DEFAULT_GT.exists():
-    _DEFAULT_GT = _ROOT / "data" / "extracted" / "THUNGHIEM-bo-de-thi" / "eval_ground_truth.json"
+    _DEFAULT_GT = _ROOT / "data" / "extracted" / "THUNGHIEM-bo-de-thi" / "eval_ground_truth_kis.json"
 
 
 

@@ -63,7 +63,8 @@ from scripts.agent.tools.multi_index import (  # noqa: E402
 from scripts.agent.tools.fusion import reciprocal_rank_fusion, W_DENSE, W_SPARSE  # noqa: E402
 from scripts.agent.tools.temporal_nms import temporal_nms, MIN_TIME_GAP  # noqa: E402
 from scripts.agent.tools.query_expand import expand_aspects  # noqa: E402
-_DEFAULT_EVAL_SET = _THIS_DIR / "eval_ground_truth.json"
+from tests.eval.gt_loader import load_ground_truth  # noqa: E402
+
 _DEFAULT_OUT = _REPO_ROOT / "docs" / "reports" / "eval_baseline_comparison.md"
 
 K_VALUES = [1, 5, 20, 50, 100]
@@ -76,7 +77,11 @@ _REQUIRED_FIELDS = {
 }
 
 
-def load_eval_set(path: Path) -> list[dict]:
+def load_eval_set(path: Optional[Path] = None) -> list[dict]:
+    if path is None:
+        return load_ground_truth()
+    if path.is_dir():
+        return load_ground_truth(eval_dir=path)
     with open(path, "r", encoding="utf-8") as f:
         data = json.load(f)
     if not isinstance(data, list):
@@ -425,7 +430,8 @@ def format_markdown_table(
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--eval-set", type=Path, default=_DEFAULT_EVAL_SET)
+    parser.add_argument("--eval-set", type=Path, default=None,
+                        help="Đường dẫn file ground truth riêng hoặc thư mục (mặc định nạp qua gt_loader từ tests/eval/)")
     parser.add_argument("--models", type=str, default=",".join(MODEL_REGISTRY.keys()),
                          help="Danh sách tag cách nhau bởi dấu phẩy, ví dụ clip_vitb32,vitl14")
     parser.add_argument("--out", type=Path, default=_DEFAULT_OUT)

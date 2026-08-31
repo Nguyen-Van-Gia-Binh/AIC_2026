@@ -40,7 +40,9 @@ _ROOT = Path(__file__).resolve().parents[2]  # tests/e2e/ -> repo root
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
-_EVAL_SET_PATH = _ROOT / "tests" / "eval" / "eval_ground_truth.json"
+from tests.eval.gt_loader import load_ground_truth  # noqa: E402
+
+_EVAL_SET_DIR = _ROOT / "tests" / "eval"
 _DEFAULT_OUT = _ROOT / "docs" / "reports" / "eval_e2e_scores.md"
 _DEFAULT_BASELINE = _ROOT / "tests" / "e2e" / "e2e_baseline.json"
 
@@ -273,7 +275,8 @@ def main() -> None:
     parser.add_argument("--limit", type=int, default=0, help="Chỉ chấm N câu đầu mỗi loại (0 = tất cả)")
     parser.add_argument("--no-rewrite", action="store_true",
                         help="Thay rewrite_query bằng identity (text_en đã là tiếng Anh) — ổn định/nhanh")
-    parser.add_argument("--eval-set", type=Path, default=_EVAL_SET_PATH)
+    parser.add_argument("--eval-set", type=Path, default=None,
+                        help="Đường dẫn file ground truth riêng hoặc thư mục chứa các file con (mặc định tests/eval/)")
     parser.add_argument("--out", type=Path, default=_DEFAULT_OUT)
     parser.add_argument("--self-test", action="store_true")
     parser.add_argument("--baseline", type=Path, default=_DEFAULT_BASELINE,
@@ -297,7 +300,11 @@ def main() -> None:
         )
 
     want = {t.strip().upper() for t in args.types.split(",") if t.strip()}
-    eval_set = json.loads(args.eval_set.read_text(encoding="utf-8"))
+    if args.eval_set and args.eval_set.is_file():
+        eval_set = json.loads(args.eval_set.read_text(encoding="utf-8"))
+    else:
+        eval_dir = args.eval_set if (args.eval_set and args.eval_set.is_dir()) else _EVAL_SET_DIR
+        eval_set = load_ground_truth(types=args.types, eval_dir=eval_dir)
 
     from scripts.agent.pipeline_kis import run_kis
     from scripts.agent.pipeline_qa import run_qa
