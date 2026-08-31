@@ -1,0 +1,474 @@
+[
+  {
+    "query_id": "e-trake-001",
+    "type": "TRAKE",
+    "text_vi": "Đoạn video một người đàn ông đang cắt dây khánh thành một dự án, bao gồm ông và các đồng nghiệp của mình",
+    "text_en": "A view of a man cutting the ribbon to inaugurate a project, including him and his colleagues.",
+    "difficulty_tags": [
+      "temporal_order",
+      "short_action"
+    ],
+    "gt_video_id": "L21_V016",
+    "events": [
+      {
+        "text_en": "the first moment the ribbon is being cut",
+        "gt_frame_start": 25654,
+        "gt_frame_end": 25664
+      },
+      {
+        "text_en": "the moment the ribbon is cut",
+        "gt_frame_start": 25714,
+        "gt_frame_end": 25724
+      }
+    ]
+  },
+  {
+    "query_id": "e-trake-002",
+    "type": "TRAKE",
+    "text_vi": "Cảnh một người đàn ông đi bộ qua đường, tay cầm một cái xe đẩy em bé đã được xếp vào",
+    "text_en": "View of a man crossing the street, holding a baby stroller that has been folded up.",
+    "difficulty_tags": [
+      "temporal_order"
+    ],
+    "gt_video_id": "L21_V025",
+    "events": [
+      {
+        "text_en": "man starts crossing the street",
+        "gt_frame_start": 13707,
+        "gt_frame_end": 13717
+      },
+      {
+        "text_en": "man is halfway across the street",
+        "gt_frame_start": 13782,
+        "gt_frame_end": 13792
+      },
+      {
+        "text_en": "man reaches the other side",
+        "gt_frame_start": 13895,
+        "gt_frame_end": 13905
+      }
+    ]
+  },
+  {
+    "query_id": "e-trake-003",
+    "type": "TRAKE",
+    "text_vi": "Cảnh một người đàn ông bị thương đang được diều đi bởi 2 người khác, vừa rời đi từ trực thăng, đang di chuyển đến xe cứu thương",
+    "text_en": "A view of a wounded man being carried by two other people, just disembarked from a helicopter, moving towards an ambulance.",
+    "difficulty_tags": [
+      "temporal_order"
+    ],
+    "gt_video_id": "L22_V023",
+    "events": [
+      {
+        "text_en": "man starts walking while being carried by two other people",
+        "gt_frame_start": 12847,
+        "gt_frame_end": 12900
+      },
+      {
+        "text_en": "man arriving at the ambulance",
+        "gt_frame_start": 13149,
+        "gt_frame_end": 13170
+      },
+      {
+        "text_en": "man lays in the ambulance",
+        "gt_frame_start": 13199,
+        "gt_frame_end": 13278
+      }
+    ]
+  },
+  {
+    "query_id": "e-trake-004",
+    "type": "TRAKE",
+    "text_vi": "Cảnh một người tội phạm đang bị áp giải bởi một cảnh sát mặc quân phục màu xanh, đang đi đến phòng tra khảo",
+    "text_en": "A view of a criminal being escorted by a blue-uniformed police officer, walking towards the interrogation room.",
+    "difficulty_tags": [
+      "short_action"
+    ],
+    "gt_video_id": "L22_V003",
+    "events": [
+      {
+        "text_en": "criminal starts being escorted",
+        "gt_frame_start": 28531,
+        "gt_frame_end": 28541
+      },
+      {
+        "text_en": "criminal is escorted",
+        "gt_frame_start": 28531,
+        "gt_frame_end": 28541
+      },
+      {
+        "text_en": "criminal is being interrogated",
+        "gt_frame_start": 28532,
+        "gt_frame_end": 29363
+      }
+    ]
+  },
+  {
+    "query_id": "e-trake-005",
+    "type": "TRAKE",
+    "text_vi": "Cảnh múa lân sư rồng với con lân màu vàng đang biểu diễn trên sàn và dàn cột Mai Hoa Thung, bắt đầu từ lắc đầu, chuẩn bị bật nhảy, bật nhảy đứng lên cho đến khi nhảy từ cột này qua cột khác.",
+    "text_en": "A lion dance performance with a yellow lion performing on stage and high poles, starting from shaking its head, crouching to prepare to jump, jumping up standing on its hind legs, and leaping from pole to pole.",
+    "difficulty_tags": [
+      "temporal_order",
+      "action_sequence"
+    ],
+    "gt_video_id": "L24_V009",
+    "events": [
+      {
+        "text_en": "yellow lion shaking its head on the stage",
+        "gt_frame_start": 125,
+        "gt_frame_end": 249
+      },
+      {
+        "text_en": "yellow lion crouching and preparing to jump",
+        "gt_frame_start": 1457,
+        "gt_frame_end": 1489
+      },
+      {
+        "text_en": "yellow lion jumping and standing up on hind legs",
+        "gt_frame_start": 1680,
+        "gt_frame_end": 1690
+      },
+      {
+        "text_en": "yellow lion leaping from one pole to another on high stilts",
+        "gt_frame_start": 1737,
+        "gt_frame_end": 1861
+      }
+    ]
+  },
+  {
+    "query_id": "e-trake-006",
+    "type": "TRAKE",
+    "text_vi": "Cảnh múa lân sư rồng với con lân màu trắng biểu diễn trên dàn cột Mai Hoa Thung, bắt đầu từ quay đầu lại phía sau, nhảy lên bậc tiếp theo, bật nhảy lùi cho đến khi cúi đầu xuống.",
+    "text_en": "A lion dance performance with a white lion performing on high poles, starting from turning its head to look back, jumping up to the next level, leaping backward, and bowing its head down.",
+    "difficulty_tags": [
+      "temporal_order",
+      "action_sequence"
+    ],
+    "gt_video_id": "L24_V014",
+    "events": [
+      {
+        "text_en": "white lion turns its head to look back on the pole",
+        "gt_frame_start": 869,
+        "gt_frame_end": 993
+      },
+      {
+        "text_en": "white lion jumps up to the next pole level",
+        "gt_frame_start": 1241,
+        "gt_frame_end": 1365
+      },
+      {
+        "text_en": "white lion leaps backward on the high poles",
+        "gt_frame_start": 1489,
+        "gt_frame_end": 1613
+      },
+      {
+        "text_en": "white lion bows its head down on the pole",
+        "gt_frame_start": 1861,
+        "gt_frame_end": 1985
+      }
+    ]
+  },
+  {
+    "query_id": "e-trake-007",
+    "type": "TRAKE",
+    "text_vi": "Chương trình nấu ăn với các công đoạn chế biến món cua, bắt đầu từ cảnh người đầu bếp cầm đĩa cua trên tay, cắt hành tây thành múi cau, cắt cà chua thành múi cau, cho đến khi dùng muỗng khuấy bột chiên giòn với nước.",
+    "text_en": "A cooking show preparing a crab dish, starting from the chef holding a plate of fresh crabs, slicing onions into wedges, cutting tomatoes into wedges, to stirring crispy frying flour batter with water in a bowl.",
+    "difficulty_tags": [
+      "temporal_order",
+      "action_sequence"
+    ],
+    "gt_video_id": "L26_V412",
+    "events": [
+      {
+        "text_en": "the chef holding a plate of fresh crabs",
+        "gt_frame_start": 1194,
+        "gt_frame_end": 1236
+      },
+      {
+        "text_en": "the chef slicing an onion into wedges on the cutting board",
+        "gt_frame_start": 2177,
+        "gt_frame_end": 2185
+      },
+      {
+        "text_en": "cutting ripe red tomatoes into wedges",
+        "gt_frame_start": 2258,
+        "gt_frame_end": 2305
+      },
+      {
+        "text_en": "stirring crispy frying flour batter with water in a bowl using a spoon",
+        "gt_frame_start": 3329,
+        "gt_frame_end": 3373
+      }
+    ]
+  },
+  {
+    "query_id": "e-trake-008",
+    "type": "TRAKE",
+    "text_vi": "Chương trình làm bánh cam với các bước thực hiện, bắt đầu từ dùng dao cắt lát trái cam trên thớt gỗ, đổ bột bánh vào tô thủy tinh, đặt chảo phẳng lên bếp ga bật lửa, cho đến khi múc bột đổ vào khuôn tròn trên chảo.",
+    "text_en": "A cooking show demonstrating how to make orange pancakes, starting from slicing an orange on a cutting board, pouring flour into a glass bowl, placing a pan on the gas stove with flames, to pouring batter into a round mold.",
+    "difficulty_tags": [
+      "temporal_order",
+      "action_sequence"
+    ],
+    "gt_video_id": "L26_V419",
+    "events": [
+      {
+        "text_en": "slicing an orange into thin round slices on a wooden cutting board",
+        "gt_frame_start": 2305,
+        "gt_frame_end": 2358
+      },
+      {
+        "text_en": "pouring pancake flour mix from the package into a glass bowl",
+        "gt_frame_start": 2594,
+        "gt_frame_end": 2660
+      },
+      {
+        "text_en": "placing a flat square pan onto the gas stove with blue burning flames",
+        "gt_frame_start": 3386,
+        "gt_frame_end": 3457
+      },
+      {
+        "text_en": "pouring pancake batter with a spoon into a round metal mold on the pan",
+        "gt_frame_start": 4016,
+        "gt_frame_end": 4097
+      }
+    ]
+  },
+  {
+    "query_id": "e-trake-009",
+    "type": "TRAKE",
+    "text_vi": "Chương trình ẩm thực chuẩn bị món cá hồi sa-kê, bắt đầu từ dùng dao cắt miếng cá hồi tươi trên thớt gỗ, xếp các lát cá hồi vào đĩa sứ trắng, dùng muỗng trộn đều nguyên liệu trong tô, cho đến khi xếp các lát sa-kê chiên vào đĩa.",
+    "text_en": "A cooking show preparing a salmon and breadfruit dish, starting from slicing fresh salmon fillet on a cutting board, arranging salmon slices on a plate, mixing ingredients in a bowl, to adding fried breadfruit slices onto the plate.",
+    "difficulty_tags": [
+      "temporal_order",
+      "action_sequence"
+    ],
+    "gt_video_id": "L26_V425",
+    "events": [
+      {
+        "text_en": "slicing fresh raw salmon fillet on a wooden cutting board",
+        "gt_frame_start": 1973,
+        "gt_frame_end": 2049
+      },
+      {
+        "text_en": "arranging the sliced salmon pieces neatly onto a white ceramic plate",
+        "gt_frame_start": 2267,
+        "gt_frame_end": 2305
+      },
+      {
+        "text_en": "mixing salmon and seasonings together in a white bowl with a spoon",
+        "gt_frame_start": 2627,
+        "gt_frame_end": 2670
+      },
+      {
+        "text_en": "adding crispy fried breadfruit sake slices into the serving dish",
+        "gt_frame_start": 3505,
+        "gt_frame_end": 3578
+      }
+    ]
+  },
+  {
+    "query_id": "e-trake-010",
+    "type": "TRAKE",
+    "text_vi": "Chương trình làm món bánh tráng miệng lá dứa, bắt đầu từ rót nước cốt dừa vào cối hỗn hợp màu xanh, đập thêm 2 quả trứng gà, đặt nồi thủy tinh màu vàng hổ phách lên bếp ga bật lửa, cho đến khi dùng nĩa múc một miếng bánh kẹp nhân trên đĩa.",
+    "text_en": "A cooking show preparing a pandan dessert pancake, starting from pouring coconut milk into the green pandan mixture, cracking and adding two eggs, placing an amber glass pot on the stove with flame, to lifting a slice of pancake dessert with a fork.",
+    "difficulty_tags": [
+      "temporal_order",
+      "action_sequence"
+    ],
+    "gt_video_id": "L26_V430",
+    "events": [
+      {
+        "text_en": "pouring coconut milk into a measuring container containing green pandan liquid",
+        "gt_frame_start": 2545,
+        "gt_frame_end": 2561
+      },
+      {
+        "text_en": "cracking and adding two whole chicken eggs into the container",
+        "gt_frame_start": 2810,
+        "gt_frame_end": 2817
+      },
+      {
+        "text_en": "placing an amber-yellow glass cooking pot onto the gas stove and turning on the flame",
+        "gt_frame_start": 3255,
+        "gt_frame_end": 3305
+      },
+      {
+        "text_en": "lifting a slice of the finished layered dessert pancake with a fork from the plate",
+        "gt_frame_start": 6824,
+        "gt_frame_end": 6913
+      }
+    ]
+  },
+  {
+    "query_id": "e-trake-thunghiem-001",
+    "type": "TRAKE",
+    "text_vi": "Đoạn video về quá trình nấu ăn một món ăn với nguyên liệu chính là măng tây.",
+    "text_en": "A cooking pan with food inside on a stove in a kitchen",
+    "difficulty_tags": [],
+    "gt_video_id": "",
+    "events": [
+      {
+        "text_vi": "Khoảnh khắc đầu tiên bột được bỏ vào tô măng tây.",
+        "text_en": "The first moment the batter is added to the bamboo basket.",
+        "gt_frame_start": "4708",
+        "gt_frame_end": "4718"
+      },
+      {
+        "text_vi": "Khoảnh khắc đầu tiên thấy miến măng tây đầu tiên tiếp xúc với dầu trong chảo.",
+        "text_en": "The first moment the măng tây is接触到 with oil in the pan.",
+        "gt_frame_start": "5140",
+        "gt_frame_end": "5050"
+      },
+      {
+        "text_vi": "Khoảnh khắc miếng măng tây đầu tiên rời khỏi chảo dầu.",
+        "text_en": "The first moment the măng tây is removed from the oil in the pan.",
+        "gt_frame_start": "5416",
+        "gt_frame_end": "5426"
+      },
+      {
+        "text_vi": "Khoảng khắc miếng măng tây cuối cùng rời chảo dầu và nằm hoàn toàn trên dĩa.",
+        "text_en": "The last moment the măng tây is removed from the oil in the pan and placed on the plate.",
+        "gt_frame_start": "5796",
+        "gt_frame_end": "5806"
+      }
+    ]
+  },
+  {
+    "query_id": "query-p2-8-trake",
+    "type": "TRAKE",
+    "text_vi": "Video về một khu vườn cây ăn trái ở miền Tây Nam Bộ. Đây là chuỗi liên tiếp các cảnh quay về 4 loại trái cây trong vườn.\nE1: Cảnh đầu tiên có trái sầu riêng.\nE2: Cảnh đầu tiên có trái măng cụt.\nE3: Cảnh đầu tiên có trái bưởi.\nE4: Cảnh đầu tiên có trái dâu bòn bon.",
+    "text_en": "Video of a fruit orchard in the Mekong Delta region. This is a consecutive series of shots about 4 types of fruit in the garden.\nE1: The first scene featuring durian.\nE2: The first scene featuring mangosteen.\nE3: The first scene featuring pomelo.\nE4: The first scene featuring longan (bon bon berry).",
+    "difficulty_tags": [],
+    "gt_video_id": "L27_V011",
+    "events": [
+      {
+        "text_vi": "E1: Cảnh đầu tiên có trái sầu riêng.",
+        "text_en": "E1: The first scene featuring durian.",
+        "gt_frame_start": 3828,
+        "gt_frame_end": 3838
+      },
+      {
+        "text_vi": "E2: Cảnh đầu tiên có trái măng cụt.",
+        "text_en": "E2: The first scene featuring mangosteen.",
+        "gt_frame_start": 3909,
+        "gt_frame_end": 3819
+      },
+      {
+        "text_vi": "E3: Cảnh đầu tiên có trái bưởi.",
+        "text_en": "E3: The first scene featuring pomelo.",
+        "gt_frame_start": 4012,
+        "gt_frame_end": 4022
+      },
+      {
+        "text_vi": "E4: Cảnh đầu tiên có trái dâu bòn bon.",
+        "text_en": "E4: The first scene featuring longan (bon bon berry).",
+        "gt_frame_start": 5026,
+        "gt_frame_end": 5036
+      }
+    ]
+  },
+  {
+    "query_id": "query-p2-21-trake",
+    "type": "TRAKE",
+    "text_vi": "4 cảnh này xảy ra liên tiếp nhau. \nCảnh 1: Hai người phụ nữ cùng nhau dán niêm phong một thùng carton.\nCảnh 2: Các thùng mì tôm và bọc bánh mì được sắp xếp ngay ngắn.\nCảnh 3: Một người đàn ông nhấc thùng mì tôm lên và xếp lên trên chồng thùng mì.\nCảnh 4: Cảnh quay cận cảnh các thùng mì được xếp chồng trên xe tải.",
+    "text_en": "These 4 scenes occur consecutively.\nScene 1: Two women together seal a cardboard box with tape.\nScene 2: Boxes of instant noodles and wrapped bread are neatly arranged.\nScene 3: A man lifts a box of instant noodles and stacks it on top of the pile.\nScene 4: A close-up shot of the noodle boxes stacked on a truck.",
+    "difficulty_tags": [],
+    "gt_video_id": "L30_V031",
+    "events": [
+      {
+        "text_vi": "Cảnh 1: Hai người phụ nữ cùng nhau dán niêm phong một thùng carton.",
+        "text_en": "Scene 1: Two women together seal a cardboard box with tape.",
+        "gt_frame_start": 2075,
+        "gt_frame_end": 2085
+      },
+      {
+        "text_vi": "Cảnh 2: Các thùng mì tôm và bọc bánh mì được sắp xếp ngay ngắn.",
+        "text_en": "Scene 2: Boxes of instant noodles and wrapped bread are neatly arranged.",
+        "gt_frame_start": 2129,
+        "gt_frame_end": 2139
+      },
+      {
+        "text_vi": "Cảnh 3: Một người đàn ông nhấc thùng mì tôm lên và xếp lên trên chồng thùng mì.",
+        "text_en": "Scene 3: A man lifts a box of instant noodles and stacks it on top of the pile.",
+        "gt_frame_start": 2215,
+        "gt_frame_end": 2225
+      },
+      {
+        "text_vi": "Cảnh 4: Cảnh quay cận cảnh các thùng mì được xếp chồng trên xe tải.",
+        "text_en": "Scene 4: A close-up shot of the noodle boxes stacked on a truck.",
+        "gt_frame_start": 2227,
+        "gt_frame_end": 2237
+      }
+    ]
+  },
+  {
+    "query_id": "e-trake-thunghiem-002",
+    "type": "TRAKE",
+    "text_vi": "Đoạn video múa lân một con lân màu vàng đen trắng, tìm các sự kiện sau:",
+    "text_en": "A lion dance performer wearing a yellow, black, and white costume during a performance",
+    "difficulty_tags": [],
+    "gt_video_id": "L24_V033",
+    "events": [
+      {
+        "text_vi": "Lân quay vòng trên cột số 4 bằng 2 chân trước rồi tiếp đất. Khoảnh khắc đầu tiên mà lân bắt đầu xoay vòng.",
+        "text_en": "The first moment the lion starts spinning on the pillar.",
+        "gt_frame_start": "15961",
+        "gt_frame_end": "15971"
+      },
+      {
+        "text_vi": "Khoảnh khắc 4 chân hoàn toàn chạm đất đầu tiên.",
+        "text_en": "The first moment all four legs of the lion touch the ground.",
+        "gt_frame_start": "16113",
+        "gt_frame_end": "16123"
+      },
+      {
+        "text_vi": "Khoảnh khắc đầu tiên 2 người biểu diễn lân cuối chào ban giám khảo.",
+        "text_en": "The first moment the two lion dancers bow to the judges.",
+        "gt_frame_start": "16569",
+        "gt_frame_end": "16579"
+      },
+      {
+        "text_vi": "Sau đó lân tiến lại chào một con rồng. Khoảnh khắc đầu tiên con rồng cử động đầu.",
+        "text_en": "The first moment the dragon moves its head.",
+        "gt_frame_start": "16873",
+        "gt_frame_end": "16883"
+      }
+    ]
+  },
+  {
+    "query_id": "e-trake-thunghiem-003",
+    "type": "TRAKE",
+    "text_vi": "Trong đoạn video nấu ăn một món ăn về nấm, gồm các khoảnh khắc sơ chế:",
+    "text_en": "Mushroom ingredients being prepared on a cutting board in a kitchen cooking scene",
+    "difficulty_tags": [],
+    "gt_video_id": "",
+    "events": [
+      {
+        "text_vi": "Khoảnh khắc đầu tiên thấy cắt nấm.",
+        "text_en": "The first moment mushrooms are seen being cut.",
+        "gt_frame_start": "2467",
+        "gt_frame_end": "2477"
+      },
+      {
+        "text_vi": "Khoảnh khắc đầu tiên cắt củ năng.",
+        "text_en": "The first moment the taro root is cut.",
+        "gt_frame_start": "3134",
+        "gt_frame_end": "3144"
+      },
+      {
+        "text_vi": "Khoảnh khắc đầu tiên cắt đậu hủ.",
+        "text_en": "The first moment tofu is cut.",
+        "gt_frame_start": "3421",
+        "gt_frame_end": "3431"
+      },
+      {
+        "text_vi": "Khoảnh khắc chảo đặt lên bếp, đầu bếp mở lửa và thấy lửa bắt đầu xuất hiện",
+        "text_en": "The first moment the pan is placed on the stove and the chef turns on the flame, seeing the fire begin to appear.",
+        "gt_frame_start": "3828",
+        "gt_frame_end": "3838"
+      }
+    ]
+  }
+]

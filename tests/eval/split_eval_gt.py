@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+import sys
 from typing import Any, Dict, List
 
 
@@ -62,6 +63,7 @@ def split_ground_truth(
 
 
 def main() -> None:
+    sys.stdout.reconfigure(encoding="utf-8")
     parser = argparse.ArgumentParser(description="Tách eval_ground_truth.json thành 3 file KIS/QA/TRAKE.")
     parser.add_argument(
         "--source",
@@ -79,7 +81,7 @@ def main() -> None:
 
     buckets = split_ground_truth(args.source, args.out_dir)
     total = sum(len(v) for v in buckets.values())
-    print(f"✅ Đã tách thành công {total} entries từ {args.source.name}:")
+    print(f"[OK] Da tach thanh cong {total} entries tu {args.source.name}:")
     print(f"   - KIS:   {len(buckets['KIS'])} entries -> {args.out_dir / 'eval_ground_truth_kis.json'}")
     print(f"   - QA:    {len(buckets['QA'])} entries -> {args.out_dir / 'eval_ground_truth_qa.json'}")
     print(f"   - TRAKE: {len(buckets['TRAKE'])} entries -> {args.out_dir / 'eval_ground_truth_trake.json'}")
