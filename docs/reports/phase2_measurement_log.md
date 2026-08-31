@@ -162,3 +162,23 @@ Hai test mới khoá cả hai chiều: không báo động giả khi chạy từ
 
 **Kết luận:** Giữ. Điểm Final TRAKE tăng vọt từ 0.233 lên 0.408 (+75%) nhờ gỡ bỏ chặn cứng 20 ứng viên, R@1/R@5/R@20 đều tăng mạnh mà không phát sinh thêm chi phí LLM (cổng LLM vẫn giữ nguyên top-3 khi margin <= 0.02).
 
+---
+
+## P2.3 — `strict_monotonic` hạ tiêu chuẩn (fallback `strict=False`) thay vì loại video
+
+`pipeline_trake.py`: khi `find_best_increasing_chain(..., strict=True)` trả về `None`, thử lại với `strict=False`. Đánh dấu `strict_chain = False` và phân hạng ưu tiên các chuỗi tăng nghiêm ngặt (`strict_chain = True`) đứng trước chuỗi nới lỏng.
+
+| | trước | sau |
+|---|---|---|
+| **TRAKE Final** | 0.233 (baseline gốc) | **0.375** (+0.142 so với baseline gốc) |
+| TRAKE R@1 | 0.100 | **0.225** |
+| TRAKE R@5 | 0.267 | **0.325** |
+| TRAKE R@20 | 0.267 | **0.442** |
+| TRAKE R@50 | 0.267 | **0.442** |
+| TRAKE R@100 | 0.267 | **0.442** |
+| golden digest (KIS) | `48fd64fc41f776d8` | `48fd64fc41f776d8` — **không đổi** |
+| pytest | 82 | 83 passed |
+
+**Kết luận:** Giữ. Video không còn bị loại bỏ oan khi các mốc rơi vào cùng keyframe do lấy mẫu thưa, đồng thời đảm bảo không làm tụt thứ hạng của các video có chuỗi tăng nghiêm ngặt chuẩn xác.
+
+

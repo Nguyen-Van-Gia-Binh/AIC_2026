@@ -59,3 +59,19 @@ def test_clamp_ve_khoang_0_1(monkeypatch, chain_va_events) -> None:
     assert _llm_crosscheck_chain("q", events, chain) == 1.0, "Phai clamp ve 1.0"
     monkeypatch.setattr(pipeline_trake, "call_llm", lambda *a, **k: "SCORE: -0.20")
     assert _llm_crosscheck_chain("q", events, chain) == 0.0, "Phai clamp ve 0.0"
+
+
+def test_pipeline_trake_ranks_strict_before_relaxed() -> None:
+    """Video có chuỗi tăng nghiêm ngặt phải xếp trước video chỉ có chuỗi nới lỏng."""
+    candidates = [
+        {"video_id": "V_relaxed", "score": 0.95, "strict_chain": False},
+        {"video_id": "V_strict", "score": 0.90, "strict_chain": True},
+    ]
+    sorted_candidates = sorted(
+        candidates,
+        key=lambda x: (1 if x.get("strict_chain", True) else 0, x["score"]),
+        reverse=True,
+    )
+    assert sorted_candidates[0]["video_id"] == "V_strict"
+    assert sorted_candidates[1]["video_id"] == "V_relaxed"
+

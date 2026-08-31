@@ -198,8 +198,16 @@ def run_trake(
     for vid in top_videos:
         event_hits = [fast_retrieve_for_video(eq, vid, top_k=top_k_frame) for eq in event_queries_en]
         chain = find_best_increasing_chain(event_hits, strict=strict_monotonic)
+        is_strict = True
+        if chain is None and strict_monotonic:
+            # Thử nới lỏng strict=False để cứu video (vd keyframe thưa, 2 mốc rơi cùng 1 keyframe)
+            chain = find_best_increasing_chain(event_hits, strict=False)
+            is_strict = False
+            if chain is not None:
+                print(f"[trake]   {vid}: cứu video bằng chuỗi nới lỏng (strict=False)")
+
         if chain is None:
-            print(f"[trake]   {vid}: không tìm được chuỗi mốc tăng dần hợp lệ -> loại")
+            print(f"[trake]   {vid}: không tìm được chuỗi mốc hợp lệ -> loại")
             continue
 
         trake_score = sum(h["score"] for h in chain) / len(chain)
@@ -207,6 +215,7 @@ def run_trake(
             "video_id":    vid,
             "frame_ids":   [h["frame_id"] for h in chain],
             "trake_score": trake_score,
+            "strict_chain": is_strict,
             "chain":       chain,  # giữ hit đầy đủ (có "n") để cross-check tầng 3 đúng — không vào CSV
         })
 
@@ -216,9 +225,13 @@ def run_trake(
         vr["rule_score"] = rule_plausibility(event_queries_en, vr["chain"])
         vr["llm_score"] = None
         vr["score"] = vr["trake_score"] + RULE_GATE_WEIGHT * vr["rule_score"]
-    video_results.sort(key=lambda x: x["score"], reverse=True)
+    video_results.sort(
+        key=lambda x: (1 if x.get("strict_chain", True) else 0, x["score"]),
+        reverse=True,
+    )
     for vr in video_results[:5]:
-        print(f"[trake]   {vr['video_id']}: trake={vr['trake_score']:.4f} "
+        strict_tag = "" if vr.get("strict_chain", True) else " [relaxed]"
+        print(f"[trake]   {vr['video_id']}{strict_tag}: trake={vr['trake_score']:.4f} "
               f"rule={vr['rule_score']:.2f} -> {vr['score']:.4f}")
 
     # Cổng 2 — LLM/VLM: CHỈ chạy khi #1 và #2 sát nhau (<= GATE_MARGIN). Thay cho bản trước gọi LLM
@@ -235,7 +248,10 @@ def run_trake(
                 vr["score"] = (vr["trake_score"] + RULE_GATE_WEIGHT * vr["rule_score"]
                                + LLM_SCORE_WEIGHT * llm_score)
                 print(f"[trake]   {vr['video_id']}: llm={llm_score:.2f} -> final={vr['score']:.4f}")
-            video_results.sort(key=lambda x: x["score"], reverse=True)
+            video_results.sort(
+                key=lambda x: (1 if x.get("strict_chain", True) else 0, x["score"]),
+                reverse=True,
+            )
         else:
             print(f"[trake]   margin #1-#2 = {margin:.4f} > {GATE_MARGIN} -> bỏ qua cổng LLM "
                   f"(video dan dau da cach biet)")
