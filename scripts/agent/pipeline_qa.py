@@ -1,24 +1,25 @@
 """
-pipeline_qa.py — Pipeline Q&A: Orchestrator + Tool-use, max 2 vong verify-rewrite.
+pipeline_qa.py — Pipeline Q&A: Orchestrator + Tool-use, tối đa 2 vòng verify-rewrite.
 
-Workflow (BAN DAC TA §4):
+Workflow (BẢN ĐẶC TẢ §4):
   query_vi
     -> rewrite_query()            -> query_en
-    -> hybrid_retrieve(qa=True)   -> pool 500 (dense siglip2 + BM25, dung hop RRF — §2)
-    -> apply_risk_aware_ranking() -> top-100 hits (xep theo rrf_score)
-    -> answer_by_video_cluster()  -> MOI video trong top cum co answer RIENG cua no (§4.1)
-    -> neu confidence cum tot nhat < 0.5:
-         -> rewrite_query(feedback) -> query_en_v2 -> retrieve + tra loi lai, giu ket qua tot hon
-    -> build_qa_results: dong nop bai thuoc video nao mang answer CUA CHINH video do
+    -> hybrid_retrieve(qa=True)   -> pool 500 (dense + BM25, dung hợp RRF — §2)
+    -> apply_risk_aware_ranking() -> top-100 hits (xếp theo rrf_score)
+    -> answer_by_video_cluster()  -> MỖI video trong top cụm có answer RIÊNG của nó (§4.1)
+    -> nếu confidence cụm tốt nhất < 0.5:
+         -> rewrite_query(feedback) -> query_en_v2 -> retrieve + trả lời lại, giữ kết quả tốt hơn
+    -> build_qa_results: dòng nộp bài thuộc video nào mang answer CỦA CHÍNH video đó
 
-Diem khac quan trong so voi ban truoc (§4.1): KHONG con gan cung 1 dap an cua video top-1 cho ca
-100 dong. Neu video top-1 sai nhung video dung nam o hang 7, dong cua video hang 7 van mang dap an
-dung cua chinh no -> R@20/R@50/R@100 khong bi ve 0 vi "answer sai".
+Điểm khác quan trọng so với bản trước (§4.1): KHÔNG còn gán cùng 1 đáp án của video top-1 cho cả
+100 dòng. Nếu video top-1 sai nhưng video đúng nằm ở hạng 7, dòng của video hạng 7 vẫn mang đáp án
+đúng của chính nó -> R@20/R@50/R@100 không bị về 0 vì "answer sai".
 
-Model embedding Q&A: siglip2 (google/siglip2-so400m-patch14-384) — chon vi QA-retrieval Final=0.440
-(x3.7 so siglip) trong benchmark 33 query 2026-08-28.
+Model embedding Q&A: xem index_store.py (env AIC_QA_MODEL). ⚠️ Mặc định trong code hiện là `siglip`,
+trong khi bake-off 33 query (2026-08-28) cho QA-retrieval Final = 0.440 với `siglip2` so với 0.120
+với `siglip` — chênh lệch x3.7. Sai lệch giữa code và tài liệu này CHƯA được xử lý: xem PLAN.md P2.1.
 
-Output: list[dict] {video_id, frame_id, answer, score} da sap xep
+Output: list[dict] {video_id, frame_id, answer, score} đã sắp xếp
 """
 from __future__ import annotations
 
@@ -30,25 +31,25 @@ if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
 from scripts.agent.config import MAX_AGENT_LOOPS
-from scripts.agent.tools.retrieve import hybrid_retrieve
+from scripts.agent.tools.hybrid import hybrid_retrieve
 from scripts.agent.tools.rewrite import rewrite_query
 from scripts.agent.tools.answer_qa import answer_from_hits
 from scripts.agent.tools.rerank import apply_risk_aware_ranking, RETRIEVAL_POOL_SIZE
 
-CONFIDENCE_THRESHOLD = 0.5  # Duoi nguong nay: thu lai vong 2
+CONFIDENCE_THRESHOLD = 0.5  # Dưới ngưỡng này: thử lại vòng 2
 
-# So cum video (top theo diem) duoc trich xuat answer RIENG (§4.1 "Top 3-5 cum video"). Moi cum ton
-# them 1-3 luot goi LLM (Tier 1/Tier 2 + crosscheck) nen day la danh doi chi phi/do phu: 3 cum bao
-# phu duoc phan lon truong hop video dung khong phai top-1, van giu chi phi o muc chap nhan duoc.
+# Số cụm video (top theo điểm) được trích xuất answer RIÊNG (§4.1 "Top 3-5 cụm video"). Mỗi cụm tốn
+# thêm 1-3 lượt gọi LLM (Tier 1/Tier 2 + crosscheck) nên đây là đánh đổi chi phí/độ phủ: 3 cụm bao
+# phủ được phần lớn trường hợp video đúng không phải top-1, vẫn giữ chi phí ở mức chấp nhận được.
 MAX_ANSWER_CLUSTERS = 3
 
-# So keyframe tot nhat CUA MOI CUM dua vao answer_from_hits().
+# Số keyframe tốt nhất CỦA MỖI CỤM đưa vào answer_from_hits().
 CLUSTER_TOP_FRAMES = 5
 
 
 def _cluster_by_video(hits: list[dict], score_key: str = "rrf_score") -> list[tuple[str, list[dict]]]:
-    """Gom hits thanh cum theo video_id, sap xep cum theo diem tot nhat trong cum (giam dan).
-    Hits trong moi cum giu nguyen thu tu (da sap xep san tu buoc rerank)."""
+    """Gom hits thành cụm theo video_id, sắp xếp cụm theo điểm tốt nhất trong cụm (giảm dần).
+    Hits trong mỗi cụm giữ nguyên thứ tự (đã sắp xếp sẵn từ bước rerank)."""
     by_video: dict[str, list[dict]] = {}
     best: dict[str, float] = {}
     for h in hits:
@@ -66,12 +67,12 @@ def answer_by_video_cluster(
     max_clusters: int = MAX_ANSWER_CLUSTERS,
 ) -> tuple[dict, dict]:
     """
-    Trich xuat answer DOC LAP cho tung video trong top cum (§4.1).
+    Trích xuất answer ĐỘC LẬP cho từng video trong top cụm (§4.1).
 
     Returns:
-        (answers, best): `answers` = {video_id: answer} cho cac cum da chay; `best` = ket qua
-        answer_from_hits() cua cum co confidence cao nhat (dung lam dap an mac dinh cho cac dong
-        thuoc video ngoai top cum, va lam tin hieu confidence cho vong lap).
+        (answers, best): `answers` = {video_id: answer} cho các cụm đã chạy; `best` = kết quả
+        answer_from_hits() của cụm có confidence cao nhất (dùng làm đáp án mặc định cho các dòng
+        thuộc video ngoài top cụm, và làm tín hiệu confidence cho vòng lặp).
     """
     clusters = _cluster_by_video(hits)[:max_clusters]
     answers: dict[str, str] = {}
@@ -95,26 +96,26 @@ def run_qa(
     use_hybrid: bool = True,
 ) -> dict:
     """
-    Chay pipeline Q&A day du.
+    Chạy pipeline Q&A đầy đủ.
 
     Args:
-        query_text: Mo ta canh can tim (tieng Viet hoac Anh).
-        question:   Cau hoi cu the (neu None, dung query_text lam question).
-        top_k:      So ket qua retrieve toi da (100 theo rule BTC).
-        query_en:   Neu co (vd. nguoi dung da xem/sua cau rewrite trong UI — xem
-                    agent/tools/rewrite.py rewrite_query_candidates() + scripts/app.py), bo qua rewrite
-                    vong 1 va dung thang gia tri nay de retrieve. Vong 2 (confidence thap) van tu
-                    rewrite lai binh thuong tu query_text goc — day la auto-retry noi bo, khong phai
-                    buoc preview thu cong.
-        use_hybrid: Bat nhanh Sparse BM25 + RRF (§2). Tat = chi dense siglip2 nhu truoc.
+        query_text: Mô tả cảnh cần tìm (tiếng Việt hoặc Anh).
+        question:   Câu hỏi cụ thể (nếu None, dùng query_text làm question).
+        top_k:      Số kết quả retrieve tối đa (100 theo rule BTC).
+        query_en:   Nếu có (vd. người dùng đã xem/sửa câu rewrite trong UI — xem
+                    agent/tools/rewrite.py rewrite_query_candidates() + frontend/), bỏ qua rewrite
+                    vòng 1 và dùng thẳng giá trị này để retrieve. Vòng 2 (confidence thấp) vẫn tự
+                    rewrite lại bình thường từ query_text gốc — đây là auto-retry nội bộ, không phải
+                    bước preview thủ công.
+        use_hybrid: Bật nhánh Sparse BM25 + RRF (§2). Tắt = chỉ dense như trước.
 
     Returns:
         dict:
-          results  (list[dict]): Top-100 {video_id, frame_id, answer, score} — answer THEO TUNG VIDEO
-          answer   (str):        Cau tra loi cua cum tot nhat (dung cho UI/tom tat)
-          answers_by_video (dict): {video_id: answer} da trich xuat theo cum
-          best_hit (dict):       Hit co confidence cao nhat
-          n_loops  (int):        So vong loop da chay
+          results  (list[dict]): Top-100 {video_id, frame_id, answer, score} — answer THEO TỪNG VIDEO
+          answer   (str):        Câu trả lời của cụm tốt nhất (dùng cho UI/tóm tắt)
+          answers_by_video (dict): {video_id: answer} đã trích xuất theo cụm
+          best_hit (dict):       Hit có confidence cao nhất
+          n_loops  (int):        Số vòng loop đã chạy
     """
     if question is None:
         question = query_text
@@ -125,11 +126,11 @@ def run_qa(
         raw = hybrid_retrieve(q_en, top_k=pool_size, use_sparse=use_hybrid, qa=True)
         return apply_risk_aware_ranking(raw, top_k=top_k, query_text=q_en, score_key="rrf_score")
 
-    # ─── Vong 1 ────────────────────────────────────────────────────────────────
+    # ─── Vòng 1 ────────────────────────────────────────────────────────────────
     if query_en:
-        print(f"[qa] Vong 1: dung query_en co san (bo qua rewrite): {query_en!r}", flush=True)
+        print(f"[qa] Vòng 1: dùng query_en có sẵn (bỏ qua rewrite): {query_en!r}", flush=True)
     else:
-        print(f"[qa] Vong 1: rewrite + retrieve...", flush=True)
+        print("[qa] Vòng 1: rewrite + retrieve...", flush=True)
         query_en = rewrite_query(query_text, question=question)
         print(f"[qa]   query_en: {query_en!r}")
 
@@ -138,33 +139,33 @@ def run_qa(
           else "[qa]   Retrieved: 0 hits")
 
     answers, qa_result = answer_by_video_cluster(question, hits)
-    print(f"[qa]   Answer tot nhat (vong 1): {qa_result['answer']!r}  "
+    print(f"[qa]   Answer tốt nhất (vòng 1): {qa_result['answer']!r}  "
           f"conf={qa_result['confidence']:.2f}  method={qa_result['method']}")
 
     n_loops = 1
 
-    # ─── Vong 2 (neu can) ──────────────────────────────────────────────────────
+    # ─── Vòng 2 (nếu cần) ──────────────────────────────────────────────────────
     if qa_result["confidence"] < CONFIDENCE_THRESHOLD and n_loops < MAX_AGENT_LOOPS:
         feedback = f"Top results did not clearly answer: {question}. Objects found: {_summarize_top_objects(hits[:5])}"
-        print(f"[qa] Confidence thap ({qa_result['confidence']:.2f}), thu vong 2...")
+        print(f"[qa] Confidence thấp ({qa_result['confidence']:.2f}), thử vòng 2...")
 
         query_en_v2 = rewrite_query(query_text, feedback=feedback, question=question)
         print(f"[qa]   query_en_v2: {query_en_v2!r}")
 
         hits_v2 = _retrieve_and_rank(query_en_v2)
         answers_v2, qa_result_v2 = answer_by_video_cluster(question, hits_v2)
-        print(f"[qa]   Answer tot nhat (vong 2): {qa_result_v2['answer']!r}  "
+        print(f"[qa]   Answer tốt nhất (vòng 2): {qa_result_v2['answer']!r}  "
               f"conf={qa_result_v2['confidence']:.2f}")
 
-        # Chon ket qua tot hon
+        # Chọn kết quả tốt hơn
         if qa_result_v2["confidence"] > qa_result["confidence"]:
             qa_result, hits, answers = qa_result_v2, hits_v2, answers_v2
 
         n_loops = 2
 
     # ─── Build submission results ───────────────────────────────────────────────
-    # Dong thuoc video nao mang answer CUA CHINH video do (§4.1); video ngoai top cum (chua chay
-    # trich xuat rieng) dung answer cua cum tot nhat lam mac dinh — van hon la bo trong.
+    # Dòng thuộc video nào mang answer CỦA CHÍNH video đó (§4.1); video ngoài top cụm (chưa chạy
+    # trích xuất riêng) dùng answer của cụm tốt nhất làm mặc định — vẫn hơn là bỏ trống.
     best_answer = qa_result["answer"]
     results = []
     for h in hits:
@@ -179,7 +180,7 @@ def run_qa(
         })
 
     n_own = sum(1 for r in results if r["video_id"] in answers)
-    print(f"[qa]   {n_own}/{len(results)} dong mang answer rieng cua video minh "
+    print(f"[qa]   {n_own}/{len(results)} dòng mang answer riêng của video mình "
           f"({len(answers)} cum da trich xuat)")
 
     return {
@@ -193,8 +194,8 @@ def run_qa(
 
 
 def _summarize_top_objects(hits: list[dict]) -> str:
-    """Tom tat objects cua top hits thanh chuoi ngan."""
-    from scripts.agent.tools.ocr_lookup import get_objects
+    """Tóm tắt objects của top hits thành chuỗi ngắn."""
+    from scripts.agent.tools.objects_lookup import get_objects
     all_objs = []
     for h in hits:
         n = h.get("n")
@@ -202,58 +203,11 @@ def _summarize_top_objects(hits: list[dict]) -> str:
             all_objs.extend(get_objects(h["video_id"], int(n))[:5])
     return ", ".join(list(dict.fromkeys(all_objs))[:15]) or "none"
 
-
-# ─── CLI self-test (repo khong dung pytest — xem CLAUDE.md) ────────────────────
-def _run_self_tests() -> None:
-    """Test gom cum + gan answer theo video, khong goi LLM/index that."""
-    def _hit(vid: str, i: int, rrf: float) -> dict:
-        return {"video_id": vid, "n": i, "frame_idx": i, "frame_id": i + 1, "pts_time": float(i),
-                "score": 0.1, "rrf_score": rrf, "jpg_path": None}
-
-    hits = [_hit("A", 0, 0.016), _hit("B", 1, 0.015), _hit("A", 2, 0.014), _hit("C", 3, 0.010)]
-    clusters = _cluster_by_video(hits)
-    assert [vid for vid, _ in clusters] == ["A", "B", "C"], f"Cum phai xep theo diem: {clusters}"
-    assert len(clusters[0][1]) == 2, "Cum A phai gom ca 2 hit cua A"
-    print("[qa] Test gom cum theo video: OK")
-
-    # answer_by_video_cluster: moi cum goi answer_from_hits 1 lan, moi video co answer rieng.
-    global answer_from_hits
-    _orig = answer_from_hits
-    try:
-        calls: list = []
-
-        def _fake_answer(question, cluster_hits, top_n=5):
-            vid = cluster_hits[0]["video_id"]
-            calls.append(vid)
-            conf = {"A": 0.4, "B": 0.9, "C": 0.2}[vid]
-            return {"answer": f"answer-{vid}", "best_hit": cluster_hits[0],
-                    "confidence": conf, "method": "objects"}
-
-        answer_from_hits = _fake_answer
-        answers, best = answer_by_video_cluster("q?", hits, max_clusters=3)
-        assert calls == ["A", "B", "C"], f"Phai chay trich xuat cho tung cum: {calls}"
-        assert answers == {"A": "answer-A", "B": "answer-B", "C": "answer-C"}
-        assert best["answer"] == "answer-B", "Cum co confidence cao nhat phai duoc chon lam best"
-        print("[qa] Test answer theo tung cum video: OK")
-
-        # max_clusters gioi han so cum duoc chay (kiem soat chi phi LLM).
-        calls.clear()
-        answers2, _ = answer_by_video_cluster("q?", hits, max_clusters=2)
-        assert calls == ["A", "B"] and set(answers2) == {"A", "B"}, f"max_clusters=2: {calls}"
-        print("[qa] Test max_clusters gioi han chi phi: OK")
-    finally:
-        answer_from_hits = _orig
-
-    print("[qa] Tat ca self-test PASS")
-
+# Bo test: tests/unit/test_pipeline_qa.py
 
 # ─── CLI Demo ──────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
-    if "--self-test" in sys.argv:
-        _run_self_tests()
-        sys.exit(0)
-
-    query = "Mot nguoi dang phat bieu truoc dam dong, mac ao trang"
+    query = "Một người đang phát biểu trước đám đông, mặc áo trắng"
     question = "What color is the speaker's shirt?"
 
     print(f"\n[QA Pipeline] Query: {query!r}")
@@ -261,7 +215,7 @@ if __name__ == "__main__":
 
     out = run_qa(query, question, top_k=20)
 
-    print(f"\n=== KET QUA ===")
+    print("\n=== KẾT QUẢ ===")
     print(f"  Answer:     {out['answer']!r}")
     print(f"  Confidence: {out['confidence']:.2f}")
     print(f"  N_loops:    {out['n_loops']}")

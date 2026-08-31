@@ -148,7 +148,24 @@
   color: var(--color-accent-800);
 }
 .chip:hover { background: var(--color-accent-100); border-color: var(--color-accent); }
+.chip-raw { border-color: var(--color-divider); color: var(--color-text); }
+.chip-raw:hover { background: var(--color-neutral-100); border-color: var(--color-text); }
 .rewrite-note { font-size: 11.5px; color: color-mix(in srgb, var(--color-text) 55%, transparent); }
+
+/* — dong "Goc: ..." hien sau khi bam Goi y/Dich tho, de doi chieu voi cau dang dung — */
+.rewrite-original {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; padding: 4px 8px; border-radius: var(--radius-sm);
+  background: var(--color-surface); border: 1px dashed var(--color-divider);
+  color: color-mix(in srgb, var(--color-text) 70%, transparent);
+}
+.rewrite-original-label { font-weight: 600; color: var(--color-text); flex: none; }
+.rewrite-original-text { overflow-wrap: anywhere; }
+.rewrite-original-close {
+  margin-left: auto; flex: none; border: none; background: none; cursor: pointer;
+  font-size: 14px; line-height: 1; color: color-mix(in srgb, var(--color-text) 50%, transparent);
+}
+.rewrite-original-close:hover { color: var(--color-text); }
 
 /* — o sua frame_id (KIS shortlist, TRAKE per-event) — */
 .frame-input {

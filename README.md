@@ -135,30 +135,48 @@ AIC2026/
 │   │   ├── pipeline_qa.py          # Pipeline Q&A (Reflection Orchestrator + Anti-hallucination)
 │   │   ├── pipeline_trake.py       # Pipeline TRAKE (2 giai đoạn: Candidate ➔ DP Alignment)
 │   │   └── tools/                  # Thư viện công cụ dùng chung
-│   │       ├── retrieve.py         # Dense retrieval singleton (SigLIP / SigLIP 2)
+│   │       ├── index_store.py      # Sở hữu ma trận + meta + encoder; ĐIỂM DUY NHẤT quy đổi frame_id
+│   │       ├── retrieve.py         # Truy vấn dense thuần (SigLIP / SigLIP 2)
+│   │       ├── hybrid.py           # Dense + BM25 dung hợp bằng RRF, multi-model RRF
+│   │       ├── frames.py           # Tra cứu keyframe cho tầng UI (không có score)
 │   │       ├── sparse_index.py     # BM25 lexical index builder & searcher
-│   │       ├── fusion.py           # Reciprocal Rank Fusion (RRF)
-│   │       ├── rerank.py           # Risk-Aware Ranking & Dynamic Pools
-│   │       ├── temporal_nms.py     # Khử trùng lặp theo thời gian (Temporal NMS)
-│   │       ├── query_expand.py     # Multi-Aspect Query Expansion
+│   │       ├── fusion.py           # Reciprocal Rank Fusion (RRF) — module thuần
+│   │       ├── rerank.py           # Risk-Aware Ranking + giữ đuôi theo retrieval gốc
+│   │       ├── temporal_nms.py     # Khử trùng lặp theo thời gian — module thuần
+│   │       ├── query_expand.py     # Multi-Aspect Query Expansion — module thuần
+│   │       ├── trake_align.py      # DP đơn điệu + rule plausibility — module thuần
 │   │       ├── rewrite.py          # LLM Query Translation (VN➔EN) & Candidates
-│   │       ├── answer_qa.py        # Logic trả lời Q&A (2 tầng: Objects ➔ Vision)
-│   │       └── ocr_lookup.py       # Đọc Objects JSON (Faster R-CNN offline)
+│   │       ├── translate_raw.py    # Dịch thô VN➔EN, không qua LLM (để đối chiếu)
+│   │       ├── answer_qa.py        # Logic trả lời Q&A 3 tầng + cross-check
+│   │       ├── qa_prompts.py       # 9 prompt template của nhánh Q&A
+│   │       ├── qa_classify.py      # Nhận dạng loại câu hỏi (đếm / đọc chữ / số hiển thị)
+│   │       ├── qa_normalize.py     # Canonicalize answer + cổng chống ảo giác
+│   │       ├── objects_lookup.py   # Đọc Objects JSON (Faster R-CNN) — KHÔNG phải OCR
+│   │       ├── ocr_read.py         # OCR thật, chạy on-demand tối đa 3 ảnh
+│   │       └── asr_lookup.py       # Tra transcript quanh một mốc thời gian
 │   │
 │   ├── submit/                     # Đóng gói và xác thực bài nộp
 │   │   ├── build_submission.py     # Sinh file CSV và file ZIP theo chuẩn BTC
 │   │   └── validate_submission.py  # Bộ kiểm tra tính hợp lệ bài nộp
 │   │
-│   └── index.py                    # Script xây dựng index offline từ dữ liệu thô
+│   └── offline/                    # Chạy MỘT LẦN, ghi vào data/ — không nằm trên đường truy vấn
+│       ├── captions/               # Sinh & gộp caption Vintern-1B
+│       ├── ocr/                    # OCR hàng loạt + đẩy vào Elasticsearch
+│       ├── shards/                 # Đóng gói / đẩy / tải shard cho Kaggle & Colab
+│       └── analysis/               # Phân tích dữ liệu (vd. độ tương tự frame liền kề)
 │
-├── test_eval/                      # Bộ kiểm thử & Benchmark theo chuẩn BTC
-│   ├── Test/                       # Kiểm thử production pipelines (có gọi LLM)
+├── tests/                          # Bộ kiểm thử & Benchmark theo chuẩn BTC
+│   ├── conftest.py                 # Đặt repo root lên sys.path — điểm duy nhất cho pytest
+│   ├── unit/                       # pytest, tất định, KHÔNG cần data/ hay API key (~10s)
+│   ├── e2e/                        # Chạy đường production (cần API key)
 │   │   ├── score_pipelines.py      # Chấm Final Score BTC thật end-to-end
+│   │   ├── golden_kis_snapshot.py  # Ảnh chụp TẤT ĐỊNH của cả đường KIS (không cần API key)
 │   │   └── test_smoke_pipelines.py # Smoke test KIS, QA, TRAKE & Submission
-│   └── Eval/                       # Đánh giá so sánh backbone embedding (offline, không LLM)
-│       ├── run_eval.py             # Script so sánh các backbone trên bộ 33 query
-│       ├── multi_index.py          # Index loader hỗ trợ nhiều model đồng thời
-│       └── eval_ground_truth.json  # Bộ ground truth 33 query mẫu
+│   ├── eval/                       # So sánh backbone embedding (offline, không LLM)
+│   │   ├── run_eval.py             # So sánh backbone trên bộ 33 query
+│   │   ├── multi_index.py          # Index loader hỗ trợ nhiều model đồng thời
+│   │   └── eval_ground_truth.json  # Bộ ground truth 33 query mẫu
+│   └── data/                       # Dữ liệu query dùng chung (sample_queries, bộ đề BTC)
 │
 ├── data/                           # [git-ignored] Dữ liệu BTC & Vector Features
 │   ├── extracted/
@@ -367,13 +385,13 @@ Các notebook trích xuất đặc trưng trên Kaggle GPU (T4 x2) nằm trong `
 .venv\Scripts\python.exe scripts\api\_smoke_test.py
 
 # 2. Smoke test các pipeline độc lập
-.venv\Scripts\python.exe test_eval\Test\test_smoke_pipelines.py
+.venv\Scripts\python.exe tests\e2e\test_smoke_pipelines.py
 
 # 3. Đánh giá Final Score BTC thật end-to-end
-.venv\Scripts\python.exe test_eval\Test\score_pipelines.py --types kis
+.venv\Scripts\python.exe tests\e2e\score_pipelines.py --types kis
 
 # 4. Chạy bake-off so sánh các backbone embedding
-.venv\Scripts\python.exe test_eval\Eval\run_eval.py
+.venv\Scripts\python.exe tests\eval\run_eval.py
 
 # 5. Kiểm tra tính hợp lệ của file bài nộp mới nhất
 .venv\Scripts\python.exe scripts\submit\validate_submission.py

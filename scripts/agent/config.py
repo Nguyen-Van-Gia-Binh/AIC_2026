@@ -1,10 +1,10 @@
-"""Cau hinh LLM tap trung cho toan project AIC2026.
+"""Cấu hình LLM tập trung cho toàn project AIC2026.
 
-Moi loi goi LLM di qua LiteLLM. O AIC_MODE=test, uu tien goi thang Google AI
-Studio (Gemini) bang cac key trong GEMINI_API_KEY, xoay vong qua nhieu model
-Flash de tan dung free tier, roi moi fallback sang OpenRouter. O AIC_MODE=
-contest, chi dung OpenRouter (OPENROUTER_MODEL_CONTEST) de on dinh. Cung mot
-model duoc dung cho ca text va vision trong tung provider — xem PROVIDER_CHAIN.
+Mọi lời gọi LLM đi qua LiteLLM. Ở AIC_MODE=test, ưu tiên gọi thẳng Google AI
+Studio (Gemini) bằng các key trong GEMINI_API_KEY, xoay vòng qua nhiều model
+Flash để tận dụng free tier, rồi mới fallback sang OpenRouter. Ở AIC_MODE=
+contest, chỉ dùng OpenRouter (OPENROUTER_MODEL_CONTEST) để ổn định. Cùng một
+model được dùng cho cả text và vision trong từng provider — xem PROVIDER_CHAIN.
 """
 from __future__ import annotations
 
@@ -21,7 +21,7 @@ load_dotenv(_ROOT / ".env", override=False)
 
 
 def _parse_key_list(raw: str) -> list[str]:
-    """Tach mot hoac nhieu API key ngan cach bang dau phay/xuong dong."""
+    """Tách một hoặc nhiều API key ngăn cách bằng dấu phẩy/xuống dòng."""
     if not raw:
         return []
     seen: set[str] = set()
@@ -40,24 +40,24 @@ OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "google/gemini-2.5-flash").stri
 if OPENROUTER_MODEL.startswith("openrouter/"):
     OPENROUTER_MODEL = OPENROUTER_MODEL[len("openrouter/"):]
 
-# AIC_MODE chon model theo che do: "test" (re, dung khi dev) hoac "contest" (manh hon, dung luc nop
-# that). Khong doi signature call_llm() — chi doi model nao duoc PROVIDER_CHAIN tro toi.
+# AIC_MODE chọn model theo chế độ: "test" (rẻ, dùng khi dev) hoặc "contest" (mạnh hơn, dùng lúc nộp
+# thật). Không đổi signature call_llm() — chỉ đổi model nào được PROVIDER_CHAIN trỏ tới.
 AIC_MODE = os.getenv("AIC_MODE", "test").strip().lower()
 if AIC_MODE not in ("test", "contest"):
-    print(f"[config] WARNING: AIC_MODE='{AIC_MODE}' khong hop le, dung 'test' hoac 'contest'. Mac dinh: 'test'")
+    print(f"[config] WARNING: AIC_MODE='{AIC_MODE}' không hợp lệ, dùng 'test' hoặc 'contest'. Mặc định: 'test'")
     AIC_MODE = "test"
 
-# Nhieu key Google AI Studio (goi thang Gemini, khong qua OpenRouter) — chi dung o AIC_MODE=test de
-# tan dung free tier truoc khi ton tien OpenRouter. Cu phap nhieu key: xem _parse_key_list o tren
-# (phay hoac xuong dong trong GEMINI_API_KEY).
-# Luu y: Google phat hanh Gemini API key duoi nhieu dinh dang khac nhau (da xac nhan bang test that
-# qua REST API — ca dang "AIzaSy..." lan dang "AQ.Ab8..." deu la key hop le, tra ve HTTP 200). Khong
-# loc theo tien to o day — moi dong khong phai placeholder deu duoc coi la key that va dua vao vong xoay.
+# Nhiều key Google AI Studio (gọi thẳng Gemini, không qua OpenRouter) — chỉ dùng ở AIC_MODE=test để
+# tận dụng free tier trước khi tốn tiền OpenRouter. Cú pháp nhiều key: xem _parse_key_list ở trên
+# (phẩy hoặc xuống dòng trong GEMINI_API_KEY).
+# Lưu ý: Google phát hành Gemini API key dưới nhiều định dạng khác nhau (đã xác nhận bằng test thật
+# qua REST API — cả dạng "AIzaSy..." lẫn dạng "AQ.Ab8..." đều là key hợp lệ, trả về HTTP 200). Không
+# lọc theo tiền tố ở đây — mỗi dòng không phải placeholder đều được coi là key thật và đưa vào vòng xoay.
 GEMINI_API_KEYS = _parse_key_list(os.getenv("GEMINI_API_KEY", ""))
 
-# Danh sach model Gemini truc tiep, sap theo RPD (requests/ngay) giam dan roi RPM giam dan — de dung
-# het quota cua cac model "Flash Lite" moi (RPD 500) truoc khi phai cham den nhom RPD 20, giup 1 key
-# song duoc lau nhat trong 1 phien test. Rate limit free tier thuc te (1 key, ghi nhan 08/2026):
+# Danh sách model Gemini trực tiếp, sắp theo RPD (requests/ngày) giảm dần rồi RPM giảm dần — để dùng
+# hết quota của các model "Flash Lite" mới (RPD 500) trước khi phải chạm đến nhóm RPD 20, giúp 1 key
+# sống được lâu nhất trong 1 phiên test. Rate limit free tier thực tế (1 key, ghi nhận 08/2026):
 #   model                   RPM   TPM    RPD
 #   gemini-3.5-flash-lite    15   250K   500
 #   gemini-3.1-flash-lite    15   250K   500
@@ -67,8 +67,8 @@ GEMINI_API_KEYS = _parse_key_list(os.getenv("GEMINI_API_KEY", ""))
 #   gemini-3.5-flash          5   250K    20
 #   gemini-3-flash             5   250K    20
 #   gemini-2.5-flash           5   250K    20
-# Neu ten model tren Google AI Studio doi khac (vd them hau to phien ban), goi sai chi loi 400/404
-# rat nhanh roi rot xuong model/key ke tiep — khong lam ket qua treo, khong can sua code.
+# Nếu tên model trên Google AI Studio đổi khác (vd thêm hậu tố phiên bản), gọi sai chỉ lỗi 400/404
+# rất nhanh rồi rớt xuống model/key kế tiếp — không làm kết quả treo, không cần sửa code.
 GEMINI_DIRECT_MODELS = [
     "gemini-3.5-flash-lite",
     "gemini-3.1-flash-lite",
@@ -86,17 +86,17 @@ if OPENROUTER_MODEL_CONTEST.startswith("openrouter/"):
 
 _SELECTED_MODEL = OPENROUTER_MODEL_CONTEST if AIC_MODE == "contest" else OPENROUTER_MODEL
 if AIC_MODE == "contest" and not OPENROUTER_MODEL_CONTEST:
-    print("[config] WARNING: AIC_MODE=contest nhung OPENROUTER_MODEL_CONTEST trong .env trong rong. Dung OPENROUTER_MODEL thay the.")
+    print("[config] WARNING: AIC_MODE=contest nhưng OPENROUTER_MODEL_CONTEST trong .env trống rỗng. Dùng OPENROUTER_MODEL thay thế.")
     _SELECTED_MODEL = OPENROUTER_MODEL
 
 MIN_OUTPUT_TOKENS = 2048
 MAX_AGENT_LOOPS = 2
 
-# LiteLLM dung tien to gemini/ de goi thang Google AI Studio, openrouter/ de chuyen den OpenRouter.
-# O AIC_MODE=test: uu tien xoay vong GEMINI_DIRECT_MODELS x GEMINI_API_KEYS (free tier) truoc,
-# OpenRouter la luoi an toan cuoi cung khi tat ca deu that bai (het quota/loi mang/sai ten model).
-# O AIC_MODE=contest: chi dung OpenRouter — uu tien on dinh, khong phu thuoc free tier co the bi
-# rate-limit giua luc thi that.
+# LiteLLM dùng tiền tố gemini/ để gọi thẳng Google AI Studio, openrouter/ để chuyển đến OpenRouter.
+# Ở AIC_MODE=test: ưu tiên xoay vòng GEMINI_DIRECT_MODELS x GEMINI_API_KEYS (free tier) trước,
+# OpenRouter là lưới an toàn cuối cùng khi tất cả đều thất bại (hết quota/lỗi mạng/sai tên model).
+# Ở AIC_MODE=contest: chỉ dùng OpenRouter — ưu tiên ổn định, không phụ thuộc free tier có thể bị
+# rate-limit giữa lúc thi thật.
 PROVIDER_CHAIN = []
 if AIC_MODE == "test" and GEMINI_API_KEYS:
     PROVIDER_CHAIN.extend(
@@ -118,14 +118,14 @@ PROVIDER_CHAIN.append({
 MODEL_TEXT = PROVIDER_CHAIN[0]["model_text"]
 MODEL_VISION = PROVIDER_CHAIN[0]["model_vision"]
 
-# Xoay diem bat dau trong danh sach key moi lan goi call_llm(), de cac lan goi lien tiep rai deu qua
-# nhieu key thay vi lan nao cung dam vao key dau tien (de dinh RPM neu goi lien tuc trong 1 phut).
-# Bien dem trong bo nho cua tien trinh — khong can luu lai giua cac lan chay script.
+# Xoay điểm bắt đầu trong danh sách key mỗi lần gọi call_llm(), để các lần gọi liên tiếp rải đều qua
+# nhiều key thay vì lần nào cũng đâm vào key đầu tiên (dễ dính RPM nếu gọi liên tục trong 1 phút).
+# Biến đếm trong bộ nhớ của tiến trình — không cần lưu lại giữa các lần chạy script.
 _call_counter = 0
 
 
 def _rotate_keys(keys: list[str]) -> list[tuple[int, str]]:
-    """Tra ve list (vi tri goc trong .env, key) da xoay, de log con tro ro vi tri that."""
+    """Trả về list (vị trí gốc trong .env, key) đã xoay, để log con trỏ rõ vị trí thật."""
     if len(keys) <= 1:
         return list(enumerate(keys, start=1))
     offset = _call_counter % len(keys)
@@ -174,7 +174,7 @@ def _call_one(model: str, api_key: str, messages, temperature: float, max_tokens
         )
         content = response.choices[0].message.content
     if content is None:
-        raise ValueError(f"{model} tra ve response rong")
+        raise ValueError(f"{model} trả về response rỗng")
     return content.strip()
 
 
@@ -185,7 +185,7 @@ def call_llm(
     temperature: float = 0.1,
     max_tokens: int = 512,
 ) -> str:
-    """Goi LLM theo PROVIDER_CHAIN: uu tien Gemini truc tiep (AIC_MODE=test), fallback OpenRouter."""
+    """Gọi LLM theo PROVIDER_CHAIN: ưu tiên Gemini trực tiếp (AIC_MODE=test), fallback OpenRouter."""
     global _call_counter
     is_vision = model == "vision" or bool(image_paths)
     actual_max = max(max_tokens, MIN_OUTPUT_TOKENS)
@@ -196,7 +196,7 @@ def call_llm(
     for provider in PROVIDER_CHAIN:
         api_keys = provider["api_keys"]
         if not api_keys:
-            print(f"[config] Bo qua {provider['name']} (chua co API key trong .env)")
+            print(f"[config] Bỏ qua {provider['name']} (chưa có API key trong .env)")
             continue
         chosen_model = provider["model_vision"] if is_vision else provider["model_text"]
         for key_index, api_key in _rotate_keys(api_keys):
@@ -208,7 +208,7 @@ def call_llm(
                 last_error = error
 
     raise RuntimeError(
-        "Tat ca provider deu that bai — kiem tra GEMINI_API_KEY/OPENROUTER_API_KEY va model trong .env."
+        "Tất cả provider đều thất bại — kiểm tra GEMINI_API_KEY/OPENROUTER_API_KEY và model trong .env."
     ) from last_error
 
 

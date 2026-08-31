@@ -32,7 +32,7 @@ sau bài học đợt 1:
   sang **1 provider OpenRouter duy nhất** (`OPENROUTER_API_KEY`/`OPENROUTER_MODEL`/
   `OPENROUTER_MODEL_CONTEST`).
 
-**Cập nhật 2026-08-26 — [DECISION.md](DECISION.md)/[EXPERIMENT.md](EXPERIMENT.md) đã dựng lại:**
+**Cập nhật 2026-08-26 — [docs/decisions-log.md](docs/decisions-log.md)/[docs/decisions-log.md](docs/decisions-log.md) đã dựng lại:**
 2 file này chưa từng thật sự lên GitHub — bị chặn bởi `.gitignore` từ đầu (đã gỡ khỏi `.gitignore`),
 và máy chứa bản gốc đã bị reset trước khi kịp phát hiện. Đã tổng hợp lại nội dung có thể suy ra được
 từ các trích dẫn còn sót trong `docs/_archive/PLAN_Lan2.md`/`ARCHITECTURE.md`/
@@ -48,27 +48,27 @@ cho phần chưa dựng lại được. Link trong 2 file archive giờ trỏ đ
 - [ ] **Freeze 03/09** — mốc quy trình của round 2 (không merge thay đổi mới, chỉ sửa lỗi chặn) —
   xác nhận lại còn áp dụng hay đã lùi lịch trước khi coi round 2 thật sự đóng.
 
-## Phase 7: Sửa chấm điểm eval khớp BTC + gom `test_eval/`
+## Phase 7: Sửa chấm điểm eval khớp BTC + gom `tests/`
 
 Cơ chế chấm điểm so model/phương án chưa bám đúng công thức BTC (§2.1–2.2); test/eval nằm rải rác.
 
-- [X] **Nới khoảng ground truth** — `test_eval/Eval/widen_gt_windows.py` (mới): mọi entry
+- [X] **Nới khoảng ground truth** — `tests/eval/widen_gt_windows.py` (mới): mọi entry
   `gt_frame_start == gt_frame_end` (KIS/QA/event TRAKE) nới ra keyframe lân cận từ `map-keyframes`.
   Đã chạy (27 khoảng). **Cần dò tay lại** — vài khoảng còn rộng do keyframe thưa.
 - [X] **Fix `score_trake` trong `run_eval.py`** — bỏ cách cũ (mean-trên-event, không cổng video,
   không thứ tự). Giờ: dựng ứng viên (video + N frame, chuỗi `frame_idx` không giảm bằng DP) có xếp
   hạng → cổng video (`v ≠ GT` → 0) → `R@k = max` trên k ứng viên đầu. Vẫn retrieval-only, không LLM.
   Thêm cột `Final` = (1/5)Σ R@k. Header report viết lại trung thực từng loại.
-- [X] **Harness end-to-end mới** — `test_eval/Test/score_pipelines.py`: chạy `run_kis/run_qa/run_trake`
+- [X] **Harness end-to-end mới** — `tests/e2e/score_pipelines.py`: chạy `run_kis/run_qa/run_trake`
   production → Final Score BTC thật, **QA có chấm answer** (`answer_matches`, substring 2 chiều so với
-  `gt_answers`). Cờ `--types/--limit/--no-rewrite/--self-test`. Ghi `docs/eval_e2e_scores.md`.
+  `gt_answers`). Cờ `--types/--limit/--no-rewrite/--self-test`. Ghi `docs/reports/eval_e2e_scores.md`.
 - [X] **Schema** `gt_answer` (string) → `gt_answers` (list) — 5 câu QA + file draft + `EVAL_GUIDE.md`.
-- [X] **Gom `test_eval/`** (đổi từ `queries/`): `Test/` (harness đường production: `test_phase3–6`,
+- [X] **Gom `tests/`** (đổi từ `queries/`): `Test/` (harness đường production: `test_phase3–6`,
   `score_pipelines`, `test_smoke_tools`/`test_smoke_pipelines` gộp từ `test_day*`), `Eval/`
   (`run_eval`/`multi_index`/`lookup_frame`/`widen_gt_windows` + ground truth + `EVAL_GUIDE.md`),
   `README.md` ở gốc. `git mv` giữ lịch sử; `retrieve.py` repoint import `multi_index` sang vị trí mới.
 - [X] **Chạy lại `run_eval.py` đủ 5 model** + `score_pipelines.py` cho QA/TRAKE (cần API key) sau khi
-  user dò tay xong ground truth — cập nhật `docs/eval_baseline_comparison.md` / `docs/eval_e2e_scores.md`.
+  user dò tay xong ground truth — cập nhật `docs/reports/eval_baseline_comparison.md` / `docs/reports/eval_e2e_scores.md`.
 
 ## Phase 8: Tách Frontend/Backend — FastAPI + React (vòng sau)
 
@@ -152,7 +152,7 @@ Triển khai BẢN ĐẶC TẢ §2–§6. Mọi bước mới đều có công t
 - [ ] **Chốt baseline E2E đầy đủ** — `score_pipelines.py --save-baseline` (cả 3 loại) để các lần sau
   có mốc so sánh.
 
-Số đo (xem DECISION.md/EXPERIMENT.md để biết vì sao chọn mặc định như hiện tại).
+Số đo (xem [docs/decisions-log.md](docs/decisions-log.md) để biết vì sao chọn mặc định như hiện tại).
 
 ---
 
@@ -166,7 +166,7 @@ Guard của Phase 9.
 |---|----------|-----------------|---------|---------------|
 | 0 | torch bản CUDA | **chặn đứng mọi thứ dưới** | 1 buổi | `.venv-gpu/`, `requirements.txt` |
 | 1 | `refine_frame.py` | TRAKE 0,12 → có thể 0,5–0,7 | 1–2 ngày | tool mới, `pipeline_trake.py`, `pipeline_kis.py` |
-| 2 | Mở rộng ground truth | mọi số đo sau đó mới đáng tin | 1–2 ngày, không cần GPU | `test_eval/Eval/` |
+| 2 | Mở rộng ground truth | mọi số đo sau đó mới đáng tin | 1–2 ngày, không cần GPU | `tests/eval/` |
 | 3 | `model_registry.py` | điều kiện cần của #4,#6 (8 GB VRAM) | 1 ngày | tool mới, `retrieve.py`, `ocr_read.py`, `vlm_ocr_caption.py` |
 | 4 | `vlm_rerank.py` cho KIS | đòn bẩy R@1 lớn nhất còn lại | 1 ngày | tool mới, `pipeline_kis.py` |
 | 5 | 3 cải tiến Q&A | Q&A phải đúng cả 3 yếu tố, sai sót nhân nhau | 0,5 ngày, **không cần GPU** | `pipeline_qa.py`, `answer_qa.py` |
@@ -186,7 +186,7 @@ CUDA cũ đều không nhận card này.
 - [ ] Xác minh `torch.cuda.is_available()` và `torch.cuda.get_device_capability()` ra `(12, 0)`
 - [ ] Xác minh SigLIP so400m chạy được fp16 trên GPU và đo throughput thật (ảnh/giây)
 - [ ] **Xác minh riêng rủi ro đã biết**: `paddlepaddle` (CPU thuần, KHÔNG `-gpu`) + VietOCR (GPU) +
-      torch-CUDA cùng một process không gây `WinError 127` — xem [EXPERIMENT.md](EXPERIMENT.md).
+      torch-CUDA cùng một process không gây `WinError 127` — xem [docs/decisions-log.md](docs/decisions-log.md).
       Torch chạy CUDA làm rủi ro DLL này **tăng**, không giảm.
 - [ ] Chỉ khi cả 5 mục trên xanh mới đổi `.venv/` chính
 
@@ -305,6 +305,84 @@ Chuẩn hoá điểm theo một querybank dựng sẵn (từ caption có sẵn) 
 
 ---
 
+## Pha chuẩn hoá repo (2026-08-31) — ✅ XONG
+
+Chuẩn hoá cấu trúc/tài liệu, **bảo toàn hành vi tuyệt đối**. Spec:
+[docs/superpowers/specs/2026-08-31-repo-standardization-design.md](docs/superpowers/specs/2026-08-31-repo-standardization-design.md).
+Nghiệm thu bằng `tests/e2e/golden_kis_snapshot.py --check` (digest `81448536a4f1245f`) sau mỗi bước.
+
+- [x] `scripts/` về đúng 4 bucket: `agent` / `api` / `submit` / `offline`
+- [x] Tách `retrieve.py` → `index_store` + `retrieve` + `hybrid` + `frames`
+- [x] Tách `answer_qa.py` → `qa_prompts` + `qa_classify` + `qa_normalize`
+- [x] Tách DP của TRAKE → `tools/trake_align.py`
+- [x] `ocr_lookup.py` → `objects_lookup.py` (tên cũ nói dối: nó không làm OCR)
+- [x] `test_eval/` → `tests/{unit,eval,e2e,data}` + `conftest.py`
+- [x] Self-test → `tests/unit/` (pytest, 59 test / 124 assert, ~10s, không cần data/API)
+- [x] Gộp `DECISION.md` + `EXPERIMENT.md` → `docs/decisions-log.md`; `docs/` chia 8 nhóm
+- [x] Sửa bug nạp index 2 bản còn sót ở 3 chỗ (`test_smoke_tools`, `test_smoke_pipelines`, `index_ocr_es`)
+
+---
+
+## Pha 2 — Sửa lỗi hành vi (CHƯA LÀM, ưu tiên theo thứ tự)
+
+> Cố ý tách khỏi pha chuẩn hoá: mỗi mục dưới đây **đổi hành vi**, nên phải chạy
+> `golden_kis_snapshot.py --save` chốt mốc mới sau khi sửa xong từng mục.
+
+### P2.1 — [ ] `_QA_MODEL_TAG` mặc định đang là `siglip`, mọi tài liệu ghi `siglip2`
+
+`index_store.py` đặt mặc định Q&A là `siglip`, trong khi `pipeline_qa.py` docstring, ARCHITECTURE và
+bake-off đều nói `siglip2`. Bake-off 33 query: **QA Final siglip2 = 0.440 vs siglip = 0.120**. Thay
+đổi này lọt vào ở commit `ab0ab32` — nhiều khả năng là tai nạn merge, không phải quyết định.
+**Đây là chênh lệch lớn nhất còn lại trong hệ thống.**
+
+### P2.2 — [ ] TRAKE `top_k_video=20` khoá cứng R@50 = R@100 = R@20
+
+`results` ≤ 20 dòng nên 2 trong 5 hạng của Final Score bị khoá ở giá trị hạng 20. Mở rộng lên 100
+**không tốn một lượt LLM nào** (giai đoạn 2 chỉ là nhân ma trận trong 1 video + DP O(N·K²); cổng LLM
+vẫn chỉ mở cho top-3). Món rẻ nhất trong danh sách.
+
+### P2.3 — [ ] `strict_monotonic` loại thẳng video thay vì hạ tiêu chuẩn
+
+`chain is None` → `continue`, video biến mất hoàn toàn. Nhưng keyframe cách nhau ~2,5–3 s, còn một
+chuỗi động tác nhanh (giậm nhảy → qua xà → tiếp đất) có thể gói trong <3 s ⇒ hai mốc rơi vào **cùng
+một keyframe** ⇒ video đúng bị loại vì lấy mẫu thưa, không phải vì sai. Đã có sẵn `strict=False`;
+nên rơi về đó thay vì bỏ video.
+
+### P2.4 — [ ] `_bet_mode` chấm điểm ứng viên đào sâu khiến chúng không bao giờ lọt top-100
+
+Ứng viên đào sâu được gán `W_DENSE/(RRF_K + len(hits) + 1 + i)` ≈ 0.0013369, thấp hơn **mọi** ứng
+viên trong pool 500 (ứng viên tệ nhất ≈ 0.0013393). Với pool=500 > top_k=100, chúng không bao giờ
+xuất hiện — trong khi vẫn tốn một lượt encode + nhân ma trận mỗi query. Ý tưởng đặt cược đúng; cách
+gán điểm làm nó chết lâm sàng.
+
+### P2.5 — [ ] OCR chết hoàn toàn
+
+`ocr_read` tải config VietOCR từ `vocr.vn` — **chứng chỉ SSL đã hết hạn**. Cache offline
+`data/extracted/ocr_text_paddleocr/` cũng **chưa build**. Hệ quả: OCR Direct Overwrite không bao giờ
+kích hoạt, gợi ý OCR không bao giờ vào prompt Vision, `rerank_by_ocr` chỉ còn khớp caption. Cần pin
+config VietOCR về máy (hoặc build cache offline) trước ngày thi.
+
+### P2.6 — [ ] Q&A chỉ trích answer riêng cho 3 cụm video đầu
+
+`MAX_ANSWER_CLUSTERS = 3`, nên ~97/100 dòng mang `best_answer` của video **khác**. Với luật "sai
+answer = 0 điểm dòng đó", R@20/R@50/R@100 của Q&A bị khoá vào 3 video đầu — khớp đúng với QA e2e
+phẳng 0.200 ở mọi k. Hướng rẻ: các cụm ngoài top-3 chỉ chạy Tầng 1 (objects, 1 lượt text LLM).
+
+### P2.7 — [ ] `MARGIN_THRESHOLD = 0.012` hiệu chỉnh trên thang đo của model đã retire
+
+Comment tự khai là hiệu chỉnh trên cosine CLIP (~0,28–0,31), nhưng CLIP đã retire và cosine SigLIP
+thực tế ~0,05–0,15. Đo thật trong phiên 2026-08-31 cho thấy margin điển hình 0,0039–0,0528 ⇒ ngưỡng
+tuyệt đối 0,012 khiến chế độ ĐẶT CƯỢC bật ở phần lớn truy vấn. Quét lại bằng `tests/eval/run_eval.py`
+(0 chi phí API).
+
+### P2.8 — [ ] Production đang import từ `tests/`
+
+`agent/tools/index_store.py` nạp `multi_index` từ `tests/eval/` — code chạy thật phụ thuộc code test.
+Chuyển `multi_index.py` (+ `MODEL_REGISTRY`) vào `scripts/agent/tools/` và để `tests/eval/` import
+ngược lại.
+
+---
+
 ## Blockers / Risks
 
 - **⛔ Độ dài thật của khoảng đáp án `[s,e]` cho KIS là ẩn số** — luật BTC không định nghĩa cách dựng
@@ -315,7 +393,7 @@ Chuẩn hoá điểm theo một querybank dựng sẵn (từ caption có sẵn) 
   nhưng nếu moi được con số thật từ kết quả vòng 1 hoặc phản hồi BTC thì chốt được ngay cả Phase 10.1
   lẫn 10.7. **Ưu tiên tìm dữ kiện này.**
 - **⛔ Xung đột DLL `paddlepaddle` × `torch-CUDA` trên Windows chưa được kiểm chứng lại sau khi đổi
-  torch** — rủi ro đã xác nhận ở [EXPERIMENT.md](EXPERIMENT.md) (WinError 127, `cudnn_cnn64_9.dll`).
+  torch** — rủi ro đã xác nhận ở [docs/decisions-log.md](docs/decisions-log.md) (WinError 127, `cudnn_cnn64_9.dll`).
   Chuyển torch sang bản CUDA làm rủi ro này **tăng**. Đây là lý do Phase 10.0 bắt buộc dựng
   `.venv-gpu/` song song và xác minh trước, không nâng cấp thẳng `.venv/` đang chạy được.
 - **Mọi tham số hiện tại đang chốt trên 33 câu ground truth** — sai số lấy mẫu ở cỡ đó lớn hơn hầu
@@ -325,7 +403,7 @@ Chuẩn hoá điểm theo một querybank dựng sẵn (từ caption có sẵn) 
   nhân mất điểm ở đợt 1). Cân nhắc lại trước round 3 nếu còn phụ thuộc 1 provider duy nhất.
 - **Rotation key chưa nhớ trạng thái quota giữa các lần khởi động** (bài học đợt 1) — chưa Phase
   nào ở lần 2 xử lý việc này.
-- **`DECISION.md`/`EXPERIMENT.md` vừa dựng lại (2026-08-26) từ dữ liệu gián tiếp, không phải bản
+- **`docs/decisions-log.md` (gộp từ `DECISION.md`+`EXPERIMENT.md`, 2026-08-31) vừa dựng lại (2026-08-26) từ dữ liệu gián tiếp, không phải bản
   gốc** — máy cũ chứa bản thật đã bị reset. Xem mục TODO cuối mỗi file cho phần chưa dựng lại được;
   bổ sung dần khi nhớ ra hoặc gặp bài học/quyết định mới — đừng để mất máy lần nữa mới ghi lại.
 - **2 việc Dry-run/Freeze của lần 2 chưa xác nhận đã xong** — xem mục carry-forward ở trên.

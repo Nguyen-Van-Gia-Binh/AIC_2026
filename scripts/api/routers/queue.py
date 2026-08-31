@@ -1,8 +1,8 @@
 """
-routers/queue.py — Hang doi submission trong RAM + export ZIP.
+routers/queue.py — Hàng đợi submission trong RAM + export ZIP.
 
-Export bridge sang scripts/submit/build_submission.py (noi DUY NHAT duoc phep ghi CSV/ZIP submission
-— xem CLAUDE.md) va scripts/submit/validate_submission.py — khong tu ghi file o day.
+Export bridge sang scripts/submit/build_submission.py (nơi DUY NHẤT được phép ghi CSV/ZIP submission
+— xem CLAUDE.md) và scripts/submit/validate_submission.py — không tự ghi file ở đây.
 """
 from __future__ import annotations
 
@@ -32,7 +32,7 @@ def add_to_queue(session_id: str, item: QueueRowIn) -> list[QueueRowOut]:
 @router.delete("/queue/{session_id}/{query_id}", response_model=list[QueueRowOut])
 def remove_from_queue(session_id: str, query_id: str) -> list[QueueRowOut]:
     if not state.remove_from_queue(session_id, query_id):
-        raise HTTPException(404, f"khong tim thay query_id={query_id}")
+        raise HTTPException(404, f"không tìm thấy query_id={query_id}")
     return [QueueRowOut(**q) for q in state.get_queue(session_id)]
 
 
@@ -63,12 +63,12 @@ def export_zip(session_id: str) -> ExportResponse:
             elif qtype == "trake":
                 csv_files.append(build_trake_csv(qid, rows))
             else:
-                errors.append(f"{qid}: query_type khong hop le '{qtype}'")
+                errors.append(f"{qid}: query_type không hợp lệ '{qtype}'")
         except Exception as e:
             errors.append(f"{qid}: {e}")
 
     if not csv_files:
-        raise HTTPException(500, "Khong tao duoc CSV nao:\n" + "\n".join(errors))
+        raise HTTPException(500, "Không tạo được CSV nào:\n" + "\n".join(errors))
 
     zip_path = build_zip_submission(csv_files, tag="frontend")
     valid = validate_file(zip_path)

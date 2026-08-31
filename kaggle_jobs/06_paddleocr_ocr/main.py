@@ -4,7 +4,7 @@ Kaggle GPU job — OCR (trích văn bản) TOÀN BỘ keyframe AIC2026 bằng Pa
 PHASE 1 trong chiến lược tách OCR/caption:
   Phase 1 (job này): OCR toàn bộ 177.321 keyframe.
   Phase 2 (kaggle_jobs/07_vintern_caption/): caption tiếng Việt bằng Vintern-1B, CHỈ trên tập frame
-    đã lọc (xem scripts/experiments/analyze_frame_similarity.py) — đã smoke-test: 2.64s/frame.
+    đã lọc (xem scripts/offline/analysis/analyze_frame_similarity.py) — đã smoke-test: 2.64s/frame.
   Merge: scripts/index_ocr_es.py ghép ocr_text (Phase 1) + caption (Phase 2) theo "n" trước khi đẩy
     vào Elasticsearch — CHƯA sửa.
 

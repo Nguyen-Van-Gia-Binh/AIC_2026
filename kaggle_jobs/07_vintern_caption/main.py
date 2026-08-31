@@ -4,7 +4,7 @@ Kaggle GPU job — sinh caption tiếng Việt ngắn gọn cho keyframe AIC2026
 trong chiến lược tách OCR/caption:
   Phase 1 (kaggle_jobs/06_rapidocr_ocr/): OCR toàn bộ 177.321 keyframe bằng RapidOCR — job riêng.
   Phase 2 (job này): caption tiếng Việt, CHỈ trên tập frame đã lọc (KHÔNG cần toàn bộ 177K — xem
-    scripts/experiments/analyze_frame_similarity.py). Manifest lọc THẬT (build_ocr_frame_manifest.py)
+    scripts/offline/analysis/analyze_frame_similarity.py). Manifest lọc THẬT (build_ocr_frame_manifest.py)
     CHƯA viết — job này tạm dùng FRAME_STRIDE làm placeholder, SẼ SỬA để đọc manifest sau khi có số
     giây/frame thật từ SMOKE_TEST (số đó quyết định τ/MAX_GAP_SEC dùng ở bước lọc).
   Merge: scripts/index_ocr_es.py ghép ocr_text (Phase 1, dày) + caption (Phase 2, thưa) theo "n"
@@ -375,7 +375,7 @@ def main():
     if total_done:
         spf = elapsed / total_done
         print(f"[{TAG}] >>> Giây/frame TRUNG BÌNH thật: {spf:.2f}s/frame — dùng số này để chạy lại "
-              f"scripts/experiments/analyze_frame_similarity.py (đổi SEC_PER_FRAME) và chọn "
+              f"scripts/offline/analysis/analyze_frame_similarity.py (đổi SEC_PER_FRAME) và chọn "
               f"(τ, MAX_GAP_SEC) cho scripts/build_ocr_frame_manifest.py (chưa viết).")
 
 

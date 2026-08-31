@@ -1,11 +1,11 @@
 """
-main.py — FastAPI app entrypoint cho backend AIC2026 (Phase 1 skeleton).
+main.py — FastAPI app entrypoint cho backend AIC2026.
 
 Chay:  .venv\\Scripts\\python.exe -m uvicorn scripts.api.main:app --reload --port 8000
 Mo:    http://127.0.0.1:8000/api/health
 
-Nap san index + model CLIP luc khoi dong (giong scripts/app.py) de request search dau tien khong
-phai cho load model.
+Nạp sẵn index + model SigLIP lúc khởi động để request search đầu tiên không phải chờ load model.
+(Trước đây việc này do scripts/app.py làm — Gradio đã retire vào docs/_archive/.)
 """
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ if str(_ROOT) not in sys.path:
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from scripts.agent.tools.retrieve import preload
+from scripts.agent.tools.index_store import preload
 
 app = FastAPI(title="AIC2026 Backend API")
 
@@ -33,7 +33,7 @@ app.add_middleware(
 
 @app.on_event("startup")
 def _on_startup() -> None:
-    print("[api] Nap index + CLIP model (mot lan)...")
+    print("[api] Nạp index + SigLIP model (một lần)...")
     preload()
     print("[api] San sang.")
 
