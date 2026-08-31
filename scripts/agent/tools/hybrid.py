@@ -35,24 +35,24 @@ def hybrid_retrieve(
     sparse_top_k: int | None = None,
 ) -> list[dict]:
     """
-    Truy xuat lai ghep Dense + Sparse, tra ve pool ung vien da dung hop bang RRF (BAN DAC TA §2).
+    Truy xuất lai ghép Dense + Sparse, trả về pool ứng viên đã dung hợp bằng RRF (BẢN ĐẶC TẢ §2).
 
     Args:
-        query_text: Query (tieng Anh cho ket qua tot nhat). Dung cho ca BM25 va (neu khong truyen
-                    aspects) cho nhanh dense.
-        top_k:      Kich thuoc pool tra ve (mac dinh 500 = RETRIEVAL_POOL_SIZE).
-        aspects:    Cac cach dien dat cua cung query cho nhanh dense (query_expand.expand_aspects()).
-                    None => chi dung query_text.
-        use_sparse: False => chay dense-only (dung de do truoc/sau khi bat hybrid).
-        sparse_top_k: So ung vien BM25 dua vao dung hop (None = SPARSE_TOP_K). Nho hon top_k co chu
+        query_text: Query (tiếng Anh cho kết quả tốt nhất). Dùng cho cả BM25 và (nếu không truyền
+                    aspects) cho nhánh dense.
+        top_k:      Kích thước pool trả về (mặc định 500 = RETRIEVAL_POOL_SIZE).
+        aspects:    Các cách diễn đạt của cùng query cho nhánh dense (query_expand.expand_aspects()).
+                    None => chỉ dùng query_text.
+        use_sparse: False => chạy dense-only (dùng để đo trước/sau khi bật hybrid).
+        sparse_top_k: Số ứng viên BM25 đưa vào dung hợp (None = SPARSE_TOP_K). Nhỏ hơn top_k có chủ
                     dich — xem SPARSE_TOP_K.
-        qa:         True => dung khong gian embedding siglip2 cua Q&A thay vi siglip cua KIS/TRAKE.
+        qa:         True => dùng không gian embedding của Q&A thay vì của KIS/TRAKE (xem index_store).
 
     Returns:
-        list[dict] cung dinh dang fast_retrieve(), SAP XEP GIAM DAN THEO 'rrf_score', trong do:
-          score      — cosine similarity dense GOC (giu nguyen thang do cu cho cac buoc sau)
-          rrf_score  — diem dung hop RRF (thu tu list bam theo diem nay)
-          rank_dense / rank_sparse — thu hang trong tung he thong (None neu he thong do khong tra ve)
+        list[dict] cùng định dạng fast_retrieve(), SẮP XẾP GIẢM DẦN THEO 'rrf_score', trong đó:
+          score      — cosine similarity dense GỐC (giữ nguyên thang đo cũ cho các bước sau)
+          rrf_score  — điểm dung hợp RRF (thứ tự list bám theo điểm này)
+          rank_dense / rank_sparse — thứ hạng trong từng hệ thống (None nếu hệ thống đó không trả về)
     """
     from scripts.agent.tools.fusion import reciprocal_rank_fusion, RRF_K, W_DENSE, W_SPARSE
 
@@ -79,13 +79,13 @@ def hybrid_retrieve(
             key = (h["video_id"], int(h["n"]))
             row = key_index.get(key)
             if row is None:
-                continue  # keyframe co objects/caption nhung khong co trong index dense -> bo qua
+                continue  # keyframe có objects/caption nhưng không có trong index dense -> bỏ qua
             key_of_row.setdefault(key, row)
             sparse_keys.append(key)
 
     if not sparse_keys:
-        # Khong co tin hieu sparse (chua build cache / query khong co token khop) -> dense-only,
-        # giu nguyen thu tu cosine de khong khac gi fast_retrieve().
+        # Không có tín hiệu sparse (chưa build cache / query không có token khớp) -> dense-only,
+        # giữ nguyên thứ tự cosine để không khác gì fast_retrieve().
         hits = [index_store.row_to_hit(meta, key_of_row[k], float(dense_scores[key_of_row[k]])) for k in dense_keys]
         for rank, h in enumerate(hits, start=1):
             h["rrf_score"] = W_DENSE / (RRF_K + rank)
@@ -109,7 +109,7 @@ def hybrid_retrieve(
 
     n_sparse_only = sum(1 for h in hits if h["rank_dense"] is None)
     print(f"[retrieve] hybrid: {len(dense_keys)} dense + {len(sparse_keys)} sparse -> {len(hits)} "
-          f"ung vien sau RRF ({n_sparse_only} chi den tu BM25)")
+          f"ứng viên sau RRF ({n_sparse_only} chỉ đến từ BM25)")
     return hits
 
 
@@ -119,20 +119,20 @@ def fast_retrieve_multi_model(
     top_k: int = 500,
     rrf_k: int = 60,
 ) -> list[dict]:
-    """Tim ung vien bang nhieu model roi gop o muc frame bang RRF.
+    """Tìm ứng viên bằng nhiều model rồi gộp ở mức frame bằng RRF.
 
-    Khac voi hybrid_retrieve() (dense + sparse cung 1 model), ham nay chay doc lap nhieu model
-    CLIP/SigLIP khac nhau va dung hop ket qua — phu hop cho nut 'use_model_fusion' trong
-    pipeline_kis.run_kis(). Cac model phai da build index bang kaggle_jobs/.
+    Khác với hybrid_retrieve() (dense + sparse cùng 1 model), hàm này chạy độc lập nhiều model
+    CLIP/SigLIP khác nhau và dung hợp kết quả — phù hợp cho nút 'use_model_fusion' trong
+    pipeline_kis.run_kis(). Các model phải đã build index bằng kaggle_jobs/.
 
     Args:
-        query_text:   Query text (tieng Anh cho ket qua tot nhat).
-        model_tags:   Tap model de thu nghiem — tag hop le xem MODEL_REGISTRY trong multi_index.py.
-        top_k:        So ung vien tra ve sau fusion.
-        rrf_k:        Hang so RRF (mac dinh 60, theo Cormack et al. 2009).
+        query_text:   Query text (tiếng Anh cho kết quả tốt nhất).
+        model_tags:   Tập model để thử nghiệm — tag hợp lệ xem MODEL_REGISTRY trong multi_index.py.
+        top_k:        Số ứng viên trả về sau fusion.
+        rrf_k:        Hằng số RRF (mặc định 60, theo Cormack et al. 2009).
 
     Returns:
-        list[dict] da sap xep giam dan theo diem RRF tong hop, cung dinh dang fast_retrieve().
+        list[dict] đã sắp xếp giảm dần theo điểm RRF tổng hợp, cùng định dạng fast_retrieve().
     """
     from scripts.agent.tools.fusion import rrf_fuse_hits
     if not model_tags:

@@ -1,11 +1,11 @@
 """
 schemas.py — Pydantic request/response models cho scripts/api/.
 
-Chi mo ta shape HTTP (JSON) — KHONG chua business logic. Cac field khop voi dict tra ve tu
+Chỉ mô tả shape HTTP (JSON) — KHÔNG chứa business logic. Các field khớp với dict trả về từ
 scripts/agent/pipeline_kis.py / pipeline_qa.py / pipeline_trake.py / scripts/agent/tools/retrieve.py,
-TRU jpg_path — khong lo duong dan file ra JSON. Frontend lay anh keyframe that qua endpoint rieng
-GET /api/images/{video_id}/{frame_idx} (routers/images.py), chi can (video_id, frame_idx) co san
-trong moi Hit / NeighborFrame.
+TRỪ jpg_path — không lộ đường dẫn file ra JSON. Frontend lấy ảnh keyframe thật qua endpoint riêng
+GET /api/images/{video_id}/{frame_idx} (routers/images.py), chỉ cần (video_id, frame_idx) có sẵn
+trong mỗi Hit / NeighborFrame.
 """
 from __future__ import annotations
 
@@ -47,7 +47,7 @@ class NeighborFrame(BaseModel):
 
 class VideoMeta(BaseModel):
     fps: float
-    duration: float | None = None  # giay — tu media-info/{video_id}.json "length" neu co
+    duration: float | None = None  # giây — từ media-info/{video_id}.json "length" nếu có
 
 
 class KisSearchRequest(BaseModel):
@@ -98,8 +98,8 @@ class TrakeRunResponse(BaseModel):
 class QueueRowIn(BaseModel):
     query_id: str
     query_type: str  # "kis" | "qa" | "trake"
-    rows: list[dict]  # shape phu thuoc query_type — xem state.py
-    answer: str | None = None  # chi dung khi query_type == "qa"
+    rows: list[dict]  # shape phụ thuộc query_type — xem state.py
+    answer: str | None = None  # chỉ dùng khi query_type == "qa"
 
 
 class QueueRowOut(QueueRowIn):

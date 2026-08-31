@@ -1,28 +1,28 @@
 """
 pipeline_trake.py — Pipeline TRAKE: Retrieve video + Windowed Alignment.
 
-Workflow co dinh 2 giai doan (khong de LLM tu quyet dinh so buoc):
+Workflow cố định 2 giai đoạn (không để LLM tự quyết định số bước):
 
 Giai doan 1 - Multi-Event Coverage Pooling (BAN DAC TA §5.1):
   rewrite global query VA ca N event query
-  -> fast_retrieve(top_k=RETRIEVAL_POOL_SIZE) cho global query + cho TUNG event
+  -> fast_retrieve(top_k=RETRIEVAL_POOL_SIZE) cho global query + cho TỪNG event
   -> Video_Score(V) = Sim_global(V) + sum_i max_{f in V} Sim(e_i, f)
-  -> xep theo (so moc video co mat trong pool, tong diem) -> top_k_video candidate (mac dinh 20)
-  Y nghia: video "phu" du ca N moc thang video chi trung boi canh chung — dung dieu TRAKE can.
+  -> xếp theo (số mốc video có mặt trong pool, tổng điểm) -> top_k_video candidate (mặc định 20)
+  Ý nghĩa: video "phủ" đủ cả N mốc thắng video chỉ trùng bối cảnh chung — đúng điều TRAKE cần.
 
 Giai doan 2 - Strict Monotonic DP (§5.2):
-  For moi video candidate:
-    For moi event_i: fast_retrieve_for_video(event_query_i, video_id, top_k=top_k_frame)
-    -> DP tim chuoi 1 frame/event co frame_idx TANG NGHIEM NGAT (f_1 < ... < f_N), tong score max
-    -> video khong ton tai chuoi hop le bi LOAI hoan toan
-    -> trake_score = trung binh score cac event trong chuoi
+  For mỗi video candidate:
+    For mỗi event_i: fast_retrieve_for_video(event_query_i, video_id, top_k=top_k_frame)
+    -> DP tìm chuỗi 1 frame/event có frame_idx TĂNG NGHIÊM NGẶT (f_1 < ... < f_N), tổng score max
+    -> video không tồn tại chuỗi hợp lệ bị LOẠI hoàn toàn
+    -> trake_score = trung bình score các event trong chuỗi
 
 Giai doan 3 - Gated Multi-Modal Verification (§5.3):
-  Cong 1 (rule, mien phi, chay cho TAT CA candidate): do khop tu khoa Objects JSON tung frame trong
-    chuoi vs mo ta event -> rule_score -> score = trake_score + RULE_GATE_WEIGHT * rule_score
-  Cong 2 (LLM, dat): CHI mo khi chenh lech #1-#2 <= GATE_MARGIN (0.02) -> hoi LLM plausibility cho
-    top GATE_MAX_VIDEOS video (objects + transcript tung frame) -> cong LLM_SCORE_WEIGHT * llm_score
-  -> Sap xep lai theo final_score -> chon video tot nhat
+  Cổng 1 (rule, miễn phí, chạy cho TẤT CẢ candidate): độ khớp từ khoá Objects JSON từng frame trong
+    chuỗi vs mô tả event -> rule_score -> score = trake_score + RULE_GATE_WEIGHT * rule_score
+  Cổng 2 (LLM, đắt): CHỈ mở khi chênh lệch #1-#2 <= GATE_MARGIN (0.02) -> hỏi LLM plausibility cho
+    top GATE_MAX_VIDEOS video (objects + transcript từng frame) -> cộng LLM_SCORE_WEIGHT * llm_score
+  -> Sắp xếp lại theo final_score -> chọn video tốt nhất
 
 Output: list[dict] {video_id, frame_id_1, ..., frame_id_N}
 """
@@ -47,23 +47,23 @@ from scripts.agent.tools.trake_align import find_best_increasing_chain, rule_pla
 from scripts.agent.tools.asr_lookup import get_transcript
 
 
-# Trong so cua diem LLM crosscheck (0.0-1.0) khi cong vao trake_score (trung binh cosine similarity,
-# cung thang do voi rerank.MARGIN_THRESHOLD ~0.012) de ra final_score dung de rank. Diem khoi dau, se
-# tinh chinh o Phase 6 khi co benchmark rong hon (xem PLAN.md "Blockers").
+# Trọng số của điểm LLM crosscheck (0.0-1.0) khi cộng vào trake_score (trung bình cosine similarity,
+# cùng thang đo với rerank.MARGIN_THRESHOLD ~0.012) để ra final_score dùng để rank. Điểm khởi đầu, sẽ
+# tinh chỉnh khi có benchmark rộng hơn (xem PLAN.md "Blockers").
 LLM_SCORE_WEIGHT = 0.05
 
-# Diem trung lap khi LLM crosscheck loi hoac khong parse duoc — khong lam lech ranking so voi trake_score.
+# Điểm trung lập khi LLM crosscheck lỗi hoặc không parse được — không làm lệch ranking so với trake_score.
 DEFAULT_LLM_CROSSCHECK_SCORE = 0.5
 
-# Trong so cua "cong nhanh" rule-based (do khop tu khoa giua Objects JSON tung frame trong chuoi va
-# mo ta event) — chay cho TAT CA video candidate vi khong ton API call (BAN DAC TA §5.3).
+# Trọng số của "cổng nhanh" rule-based (độ khớp từ khoá giữa Objects JSON từng frame trong chuỗi và
+# mô tả event) — chạy cho TẤT CẢ video candidate vì không tốn API call (BẢN ĐẶC TẢ §5.3).
 RULE_GATE_WEIGHT = 0.03
 
-# Chi kich hoat cong LLM/VLM (dat, cham) khi chenh lech diem giua video #1 va #2 nho hon nguong nay —
-# khi 1 video da thang cach biet thi LLM gan nhu khong the doi thu tu, chi ton tien (§5.3).
+# Chỉ kích hoạt cổng LLM/VLM (đắt, chậm) khi chênh lệch điểm giữa video #1 và #2 nhỏ hơn ngưỡng này —
+# khi 1 video đã thắng cách biệt thì LLM gần như không thể đổi thứ tự, chỉ tốn tiền (§5.3).
 GATE_MARGIN = 0.02
 
-# So video duoc dua qua cong LLM khi cong duoc kich hoat (§5.3 "Top 2-3").
+# Số video được đưa qua cổng LLM khi cổng được kích hoạt (§5.3 "Top 2-3").
 GATE_MAX_VIDEOS = 3
 
 _SCORE_RE = re.compile(r"SCORE:\s*(-?\d+(?:\.\d+)?)", re.IGNORECASE)
@@ -84,10 +84,10 @@ Reply with exactly one line in the form: SCORE: <a number between 0.00 and 1.00>
 
 
 def _llm_crosscheck_chain(query_en: str, event_queries_en: list[str], chain: list[dict]) -> float:
-    """Goi LLM 1 lan de danh gia plausibility cua ca chain (object + transcript moi frame) so voi
-    chuoi event mo ta — thay cho crosscheck rule-based (keyword-matching) truoc day (xem
-    DECISION.md/EXPERIMENT.md neu can boi canh doi huong). Loi/parse fail -> tra ve
-    DEFAULT_LLM_CROSSCHECK_SCORE (trung lap, khong lam lech ranking)."""
+    """Gọi LLM 1 lần để đánh giá plausibility của cả chain (object + transcript mỗi frame) so với
+    chuỗi event mô tả — thay cho crosscheck rule-based (keyword-matching) trước đây (xem
+    docs/decisions-log.md nếu cần bối cảnh đổi hướng). Lỗi/parse fail -> trả về
+    DEFAULT_LLM_CROSSCHECK_SCORE (trung lập, không làm lệch ranking)."""
     lines = []
     for i, (eq, hit) in enumerate(zip(event_queries_en, chain)):
         vid, n, pts = hit.get("video_id", ""), hit.get("n"), hit.get("pts_time")
@@ -103,12 +103,12 @@ def _llm_crosscheck_chain(query_en: str, event_queries_en: list[str], chain: lis
     try:
         response = call_llm(prompt, model="text", temperature=0.0, max_tokens=20)
     except Exception as error:
-        print(f"[trake]   LLM crosscheck loi ({type(error).__name__}: {error}), dung diem trung lap {DEFAULT_LLM_CROSSCHECK_SCORE}")
+        print(f"[trake]   LLM crosscheck lỗi ({type(error).__name__}: {error}), dùng điểm trung lập {DEFAULT_LLM_CROSSCHECK_SCORE}")
         return DEFAULT_LLM_CROSSCHECK_SCORE
 
     match = _SCORE_RE.search(response)
     if not match:
-        print(f"[trake]   LLM crosscheck khong parse duoc score tu: {response!r}, dung diem trung lap")
+        print(f"[trake]   LLM crosscheck không parse được score từ: {response!r}, dùng điểm trung lập")
         return DEFAULT_LLM_CROSSCHECK_SCORE
 
     return max(0.0, min(1.0, float(match.group(1))))
@@ -123,48 +123,48 @@ def run_trake(
     strict_monotonic: bool = True,
 ) -> dict:
     """
-    Chay pipeline TRAKE day du.
+    Chạy pipeline TRAKE đầy đủ.
 
     Args:
-        query_text:  Mo ta tong quat chuoi su kien (de tim video).
-        events:      Danh sach mo ta tung khoang khac theo thu tu thoi gian.
-                     Vi du: ["athlete takes off", "athlete clears bar", "athlete lands"]
-        top_k_video: So video candidate de thu alignment (default 20).
-        top_k_frame: So frame candidate moi event khi alignment (default 20).
-        query_en:    Neu co (vd. nguoi dung da xem/sua cau rewrite global query trong UI — xem
-                     agent/tools/rewrite.py rewrite_query_candidates() + scripts/app.py), bo qua
-                     rewrite global query o Giai doan 1 va dung thang gia tri nay. Rewrite tung event
-                     khong doi (van tu dong nhu cu — xem docstring module).
-        strict_monotonic: True (mac dinh, §5.2) = chuoi frame phai TANG NGHIEM NGAT. Dat False neu
-                     can cho phep 2 moc lien tiep roi vao cung 1 keyframe (video keyframe rat thua).
+        query_text:  Mô tả tổng quát chuỗi sự kiện (để tìm video).
+        events:      Danh sách mô tả từng khoảnh khắc theo thứ tự thời gian.
+                     Ví dụ: ["athlete takes off", "athlete clears bar", "athlete lands"]
+        top_k_video: Số video candidate để thử alignment (default 20).
+        top_k_frame: Số frame candidate mỗi event khi alignment (default 20).
+        query_en:    Nếu có (vd. người dùng đã xem/sửa câu rewrite global query trong UI — xem
+                     agent/tools/rewrite.py rewrite_query_candidates() + frontend/), bỏ qua
+                     rewrite global query ở Giai đoạn 1 và dùng thẳng giá trị này. Rewrite từng event
+                     không đổi (vẫn tự động như cũ — xem docstring module).
+        strict_monotonic: True (mặc định, §5.2) = chuỗi frame phải TĂNG NGHIÊM NGẶT. Đặt False nếu
+                     cần cho phép 2 mốc liên tiếp rơi vào cùng 1 keyframe (video keyframe rất thưa).
 
     Returns:
         dict:
-          results   (list[dict]): Top submissions, moi item {video_id, frame_ids, score}
-          best      (dict):       Ket qua tot nhat.
-          n_events  (int):        So khoang khac.
+          results   (list[dict]): Top submissions, mỗi item {video_id, frame_ids, score}
+          best      (dict):       Kết quả tốt nhất.
+          n_events  (int):        Số khoảnh khắc.
     """
     n_events = len(events)
     print(f"[trake] {n_events} events, finding video candidates...", flush=True)
 
     # ─── Giai doan 1: Tim video ────────────────────────────────────────────────
     if query_en:
-        print(f"[trake]   Global query co san (bo qua rewrite): {query_en!r}")
+        print(f"[trake]   Global query có sẵn (bỏ qua rewrite): {query_en!r}")
     else:
         query_en = rewrite_query(query_text)
         print(f"[trake]   Global query: {query_en!r}")
 
-    # Rewrite tung event query TRUOC giai doan 1 — can chung ngay de tinh do phu N moc khi loc video
-    # (chi rewrite 1 lan, dung chung cho moi video o giai doan 2).
+    # Rewrite từng event query TRƯỚC giai đoạn 1 — cần chúng ngay để tính độ phủ N mốc khi lọc video
+    # (chỉ rewrite 1 lần, dùng chung cho mọi video ở giai đoạn 2).
     event_queries_en = []
     for i, ev in enumerate(events):
         eq = rewrite_query(ev)
         event_queries_en.append(eq)
         print(f"[trake]   Event {i+1}: {ev!r} -> {eq!r}")
 
-    # Multi-Event Coverage Pooling (§5.1): thay vi chi loc video bang 1 global query chung chung,
-    # cham diem video = Sim_global(V) + tong cac max_{f in V} Sim(e_i, f). Video "phu" du ca N moc se
-    # thang video chi trung boi canh chung — dung dieu TRAKE thuc su can.
+    # Multi-Event Coverage Pooling (§5.1): thay vì chỉ lọc video bằng 1 global query chung chung,
+    # chấm điểm video = Sim_global(V) + tổng các max_{f in V} Sim(e_i, f). Video "phủ" đủ cả N mốc sẽ
+    # thắng video chỉ trùng bối cảnh chung — đúng điều TRAKE thực sự cần.
     def _video_best(hits: list[dict]) -> dict[str, float]:
         best: dict[str, float] = {}
         for h in hits:
@@ -182,24 +182,24 @@ def run_trake(
     for eq in event_queries_en:
         for vid, s in _video_best(fast_retrieve(eq, top_k=RETRIEVAL_POOL_SIZE)).items():
             coverage_score[vid] += s
-            coverage_count[vid] += 1  # so moc ma video nay co mat trong pool -> do "phu"
+            coverage_count[vid] += 1  # số mốc mà video này có mặt trong pool -> độ "phủ"
 
-    # Uu tien video phu duoc NHIEU moc nhat truoc, roi moi den tong diem — dung §5.1 "Top-20 video
-    # co do phu day du N moc nhat".
+    # Ưu tiên video phủ được NHIỀU mốc nhất trước, rồi mới đến tổng điểm — đúng §5.1 "Top-20 video
+    # có độ phủ đầy đủ N mốc nhất".
     top_videos = sorted(
         coverage_score, key=lambda v: (coverage_count[v], coverage_score[v]), reverse=True
     )[:top_k_video]
     print(f"[trake]   Top {len(top_videos)} videos (phu {[coverage_count[v] for v in top_videos]}"
           f"/{n_events} moc): {top_videos}")
 
-    # ─── Giai doan 2: Alignment cho tung video ─────────────────────────────────
+    # ─── Giai đoạn 2: Alignment cho từng video ─────────────────────────────────
     video_results = []
 
     for vid in top_videos:
         event_hits = [fast_retrieve_for_video(eq, vid, top_k=top_k_frame) for eq in event_queries_en]
         chain = find_best_increasing_chain(event_hits, strict=strict_monotonic)
         if chain is None:
-            print(f"[trake]   {vid}: khong tim duoc chuoi moc tang dan hop le -> loai")
+            print(f"[trake]   {vid}: không tìm được chuỗi mốc tăng dần hợp lệ -> loại")
             continue
 
         trake_score = sum(h["score"] for h in chain) / len(chain)
@@ -207,11 +207,11 @@ def run_trake(
             "video_id":    vid,
             "frame_ids":   [h["frame_id"] for h in chain],
             "trake_score": trake_score,
-            "chain":       chain,  # giu hit day du (co "n") de cross-check tang 3 dung — khong vao CSV
+            "chain":       chain,  # giữ hit đầy đủ (có "n") để cross-check tầng 3 đúng — không vào CSV
         })
 
     # ─── Giai doan 3: Gated Multi-Modal Verification (§5.3) ────────────────────
-    # Cong 1 — loc nhanh rule-based (Objects JSON vs mo ta event): mien phi, chay cho TAT CA candidate.
+    # Cổng 1 — lọc nhanh rule-based (Objects JSON vs mô tả event): miễn phí, chạy cho TẤT CẢ candidate.
     for vr in video_results:
         vr["rule_score"] = rule_plausibility(event_queries_en, vr["chain"])
         vr["llm_score"] = None
@@ -221,13 +221,13 @@ def run_trake(
         print(f"[trake]   {vr['video_id']}: trake={vr['trake_score']:.4f} "
               f"rule={vr['rule_score']:.2f} -> {vr['score']:.4f}")
 
-    # Cong 2 — LLM/VLM: CHI chay khi #1 va #2 sat nhau (<= GATE_MARGIN). Thay cho ban truoc goi LLM
-    # cho MOI candidate (toi da 20 luot/lan chay TRAKE) — khi 1 video da thang cach biet thi LLM
-    # khong the doi thu tu, luot goi do chi ton tien/thoi gian.
+    # Cổng 2 — LLM/VLM: CHỈ chạy khi #1 và #2 sát nhau (<= GATE_MARGIN). Thay cho bản trước gọi LLM
+    # cho MỌI candidate (tối đa 20 lượt/lần chạy TRAKE) — khi 1 video đã thắng cách biệt thì LLM
+    # không thể đổi thứ tự, lượt gọi đó chỉ tốn tiền/thời gian.
     if len(video_results) >= 2:
         margin = video_results[0]["score"] - video_results[1]["score"]
         if margin <= GATE_MARGIN:
-            print(f"[trake]   margin #1-#2 = {margin:.4f} <= {GATE_MARGIN} -> mo cong LLM cho top "
+            print(f"[trake]   margin #1-#2 = {margin:.4f} <= {GATE_MARGIN} -> mở cổng LLM cho top "
                   f"{GATE_MAX_VIDEOS} video")
             for vr in video_results[:GATE_MAX_VIDEOS]:
                 llm_score = _llm_crosscheck_chain(query_en, event_queries_en, vr["chain"])
@@ -237,10 +237,10 @@ def run_trake(
                 print(f"[trake]   {vr['video_id']}: llm={llm_score:.2f} -> final={vr['score']:.4f}")
             video_results.sort(key=lambda x: x["score"], reverse=True)
         else:
-            print(f"[trake]   margin #1-#2 = {margin:.4f} > {GATE_MARGIN} -> bo qua cong LLM "
+            print(f"[trake]   margin #1-#2 = {margin:.4f} > {GATE_MARGIN} -> bỏ qua cổng LLM "
                   f"(video dan dau da cach biet)")
 
-    # Moi video la 1 phuong an; giu tran 100 dong theo rule BTC.
+    # Mỗi video là 1 phương án; giữ trần 100 dòng theo rule BTC.
     results = []
     for vr in video_results[:100]:
         results.append({
@@ -277,7 +277,7 @@ if __name__ == "__main__":
 
     out = run_trake(query, events, top_k_video=3, top_k_frame=5)
 
-    print(f"\n=== KET QUA ===")
+    print("\n=== KẾT QUẢ ===")
     print(f"  N events:  {out['n_events']}")
     print(f"  Best video: {out['best'].get('video_id')}")
     print(f"  Frame IDs:  {out['best'].get('frame_ids')}")

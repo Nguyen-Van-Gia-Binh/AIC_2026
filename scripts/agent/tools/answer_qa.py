@@ -1,12 +1,12 @@
 """
-answer_qa.py — Trich xuat answer cho query dang Q&A.
+answer_qa.py — Trích xuất answer cho query dạng Q&A.
 
-Workflow 2 tang (theo khuyen nghi tieu lieu BTC):
-  Tang 1: Doc objects JSON (offline, mien phi) -> tra loi neu du
-  Tang 2: Goi Gemini VLM doc anh (chi khi can, chi khi co jpg)
+Workflow 3 tầng:
+  Tầng 1: Đọc objects JSON (offline, miễn phí) -> trả lời nếu đủ
+  Tầng 2: Gọi LLM Vision đọc ảnh (chỉ khi cần, chỉ khi có jpg)
 
-Cross-check: answer phai nhat quan voi objects detect duoc.
-Vi "sai answer = R-Score ve 0 du dung frame/video".
+Cross-check: answer phải nhất quán với objects detect được.
+Vì "sai answer = R-Score về 0 dù đúng frame/video".
 
 Usage:
     from scripts.agent.tools.answer_qa import answer_from_hits
@@ -48,7 +48,7 @@ _CAPTION_CACHE: dict[str, dict[int, str] | None] = {}
 
 def _trace_evidence(stage: str, candidates: list[dict], objects: list[str] | None = None,
                     ocr_hint: str = "", transcript: str = "") -> None:
-    """In ra cac bang chung va nguon du lieu da duoc dung de tra loi."""
+    """In ra các bằng chứng và nguồn dữ liệu đã được dùng để trả lời."""
     candidate_ids = [
         f"{hit.get('video_id', '?')}/n={hit.get('n', '?')}/frame={hit.get('frame_id', '?')}"
         for hit in candidates
@@ -85,7 +85,7 @@ def _load_captions(video_id: str) -> dict[int, str] | None:
 
 
 def _build_evidence_bundle(candidates: list[dict]) -> tuple[str, list[str]]:
-    """Gom moi bang chung cua top candidate va danh sach anh gui cho vision."""
+    """Gom mọi bằng chứng của top candidate và danh sách ảnh gửi cho vision."""
     ocr_results = read_text_from_hits(candidates, top_n=len(candidates))
     image_paths: list[str] = []
     blocks: list[str] = []
@@ -112,7 +112,7 @@ def _build_evidence_bundle(candidates: list[dict]) -> tuple[str, list[str]]:
 
 
 def _trace_prompt(stage: str, prompt: str) -> None:
-    """In ra nguyen prompt da gui qua call_llm()."""
+    """In ra nguyên prompt đã gửi qua call_llm()."""
     print(f"[qa] Prompt ({stage}):")
     print(prompt)
 
@@ -121,13 +121,13 @@ _DIGIT_TOKEN_RE = re.compile(r"\d[\d.,:/-]*\d|\d")
 
 def ocr_direct_answer(question: str, ocr_results: dict) -> str | None:
     """
-    OCR Direct Overwrite (§4.2): neu cau hoi hoi ve SO DUOC HIEN THI tren khung hinh va OCR doc duoc
-    DUY NHAT 1 chuoi so tren cac frame candidate, tra thang chuoi so do — khong de VLM tu phong doan
-    con so.
+    OCR Direct Overwrite (§4.2): nếu câu hỏi hỏi về SỐ ĐƯỢC HIỂN THỊ trên khung hình và OCR đọc được
+    DUY NHẤT 1 chuỗi số trên các frame candidate, trả thẳng chuỗi số đó — không để VLM tự phỏng đoán
+    con số.
 
-    Co y RAT chat: chi kich hoat khi (a) cau hoi thuoc nhom "so hien thi" (khong phai dem vat the),
-    va (b) tat ca frame candidate doc ra CUNG 1 chuoi so duy nhat. Nhieu chuoi so khac nhau -> tra
-    None (de VLM nhin anh quyet dinh), vi luc do khong biet so nao thuoc "vung quan tam".
+    Có ý RẤT chặt: chỉ kích hoạt khi (a) câu hỏi thuộc nhóm "số hiển thị" (không phải đếm vật thể),
+    và (b) tất cả frame candidate đọc ra CÙNG 1 chuỗi số duy nhất. Nhiều chuỗi số khác nhau -> trả
+    None (để VLM nhìn ảnh quyết định), vì lúc đó không biết số nào thuộc "vùng quan tâm".
     """
     if not asks_displayed_number(question) or not ocr_results:
         return None
@@ -138,7 +138,7 @@ def ocr_direct_answer(question: str, ocr_results: dict) -> str | None:
     if len(tokens) != 1:
         return None
     token = tokens.pop()
-    print(f"[answer_qa] OCR direct overwrite: cau hoi ve so hien thi, OCR doc duy nhat {token!r}")
+    print(f"[answer_qa] OCR direct overwrite: câu hỏi về số hiển thị, OCR đọc duy nhất {token!r}")
     return token
 
 # ─── Main Function ─────────────────────────────────────────────────────────────
@@ -149,16 +149,16 @@ def answer_from_hits(
     top_n: int = 5,
 ) -> dict:
     """
-    Trich xuat answer tu danh sach candidate hits.
+    Trích xuất answer từ danh sách candidate hits.
 
     Args:
-        question: Cau hoi (tieng Viet hoac Anh).
-        hits:     list[dict] tu fast_retrieve(), da co truong 'n' tu map-keyframes.
+        question: Câu hỏi (tiếng Việt hoặc Anh).
+        hits:     list[dict] từ fast_retrieve(), đã có trường 'n' từ map-keyframes.
         top_n:    So hit dau can xem xet.
 
     Returns:
         dict:
-          answer     (str):   Cau tra loi.
+          answer     (str):   Câu trả lời.
           best_hit   (dict):  Hit tot nhat de nop submission.
           confidence (float): 0.0-1.0.
           method     (str):   "objects" | "vision" | "fallback".
@@ -170,7 +170,7 @@ def answer_from_hits(
     skip_objects_tier = needs_text_reading(question)
     visual_count = is_visual_count_question(question)
 
-    # --- Tang 1: Objects JSON (bo qua neu cau hoi can doc so/chu — xem _needs_text_reading) ---
+    # --- Tầng 1: Objects JSON (bỏ qua nếu câu hỏi cần đọc số/chữ — xem needs_text_reading) ---
     if not skip_objects_tier:
         all_objects = []
         objects_by_hit = {}
@@ -213,15 +213,15 @@ def answer_from_hits(
                     "method":     "objects",
                 }
 
-    # --- Tang 2: Vision (chi khi co anh) ---
-    # --- Tang 2: Vision voi evidence bundle ---
-    # Gui top-10 candidate va moi nguon bang chung de LLM tu danh gia muc do lien quan.
+    # --- Tầng 2: Vision (chỉ khi có ảnh) ---
+    # --- Tầng 2: Vision với evidence bundle ---
+    # Gửi top-10 candidate và mọi nguồn bằng chứng để LLM tự đánh giá mức độ liên quan.
     vision_hits = [h for h in candidates if h.get("jpg_path") and Path(h["jpg_path"]).exists()][:QA_EVIDENCE_TOP_N]
     if vision_hits:
         evidence_bundle, image_paths = _build_evidence_bundle(vision_hits)
 
-        # OCR that (Phase 5) — chi chay khi cau hoi thuc su can doc chu/so (dieu kien tai su dung tu
-        # skip_objects_tier o tren), chi lam goi y phu cho Vision, khong thay the no.
+        # OCR thật — chỉ chạy khi câu hỏi thực sự cần đọc chữ/số (điều kiện tái sử dụng từ
+        # skip_objects_tier ở trên), chỉ làm gợi ý phụ cho Vision, không thay thế nó.
         ocr_hint = ""
         if skip_objects_tier:
             ocr_results = read_text_from_hits(vision_hits, top_n=3)
@@ -229,8 +229,8 @@ def answer_from_hits(
             if formatted:
                 ocr_hint = OCR_HINT_TEMPLATE.format(ocr_lines=formatted)
 
-            # OCR Direct Overwrite (§4.2) — cau hoi ve so HIEN THI tren khung hinh + OCR doc duoc
-            # duy nhat 1 chuoi so => lay thang chuoi do, khong de VLM phong doan con so.
+            # OCR Direct Overwrite (§4.2) — câu hỏi về số HIỂN THỊ trên khung hình + OCR đọc được
+            # duy nhất 1 chuỗi số => lấy thẳng chuỗi đó, không để VLM phỏng đoán con số.
             direct = ocr_direct_answer(question, ocr_results)
             if direct:
                 return {
@@ -278,7 +278,7 @@ def answer_from_hits(
                 visual_count_answer = "N/A"
         else:
             visual_count_answer = normalize_answer(ans2)
-        # Cross-check voi objects gom tu tat ca anh da gui cho vision
+        # Cross-check với objects gom từ tất cả ảnh đã gửi cho vision
         combined_objs = []
         for h in vision_hits:
             hit_n, hit_vid = h.get("n"), h.get("video_id", "")
@@ -290,9 +290,9 @@ def answer_from_hits(
         )
         conf = 0.7 if visual_count else (0.85 if crosscheck else 0.6)
         if not visual_count and is_non_answer(ans2):
-            # Cong chong ao giac: VLM tu noi khong doc/nhin duoc -> KHONG nang len thanh dap an,
-            # ha confidence de pipeline_qa thu vong 2 (rewrite + retrieve lai) thay vi nop chuoi nay.
-            print(f"[answer_qa] Vision tra loi khong xac dinh ({ans2!r}) -> ha confidence")
+            # Cổng chống ảo giác: VLM tự nói không đọc/nhìn được -> KHÔNG nâng lên thành đáp án,
+            # hạ confidence để pipeline_qa thử vòng 2 (rewrite + retrieve lại) thay vì nộp chuỗi này.
+            print(f"[answer_qa] Vision trả lời không xác định ({ans2!r}) -> hạ confidence")
             conf = min(conf, 0.3)
         return {
             "answer":     visual_count_answer if visual_count else canonicalize_answer(ans2, question),
@@ -302,7 +302,7 @@ def answer_from_hits(
             "method":     "vision",
         }
 
-    # --- Fallback: chi dung kien thuc nen khi khong con bang chung tu video ---
+    # --- Fallback: chỉ dùng kiến thức nền khi không còn bằng chứng từ video ---
     knowledge_prompt = KNOWLEDGE_FALLBACK_PROMPT.format(question=question)
     knowledge_answer = normalize_answer(
         call_llm(knowledge_prompt, model="text", temperature=0.0, max_tokens=80)
@@ -318,7 +318,7 @@ def answer_from_hits(
 
 
 def _crosscheck_answer(question: str, answer: str, objects: list[str], transcript: str = "") -> bool:
-    """Kiem tra answer nhat quan voi objects + transcript. Tra True neu qua duoc cross-check."""
+    """Kiểm tra answer nhất quán với objects + transcript. Trả True nếu qua được cross-check."""
     if (not objects and not transcript) or not answer or answer == "N/A":
         return False
     prompt = CROSSCHECK_PROMPT.format(

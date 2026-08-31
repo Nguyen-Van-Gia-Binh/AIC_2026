@@ -1,14 +1,14 @@
 """
-translate_raw.py — Dich tho VN->EN, KHONG qua LLM (khong goi call_llm()).
+translate_raw.py — Dịch thô VN->EN, KHÔNG qua LLM (không gọi call_llm()).
 
-Khac voi rewrite.py (rewrite.py dich + toi uu lai cau cho CLIP qua LLM), module nay chi dich may
-thuan tuy (deep-translator, boc Google Translate mien phi, khong can API key). Dung de nguoi dung
-doi chieu ban dich "tho" (sat nghia goc) voi ban rewrite da qua LLM toi uu, tranh truong hop LLM
-rewrite lam lech y ma khong nhan ra.
+Khác với rewrite.py (rewrite.py dịch + tối ưu lại câu cho CLIP qua LLM), module này chỉ dịch máy
+thuần tuý (deep-translator, bọc Google Translate miễn phí, không cần API key). Dùng để người dùng
+đối chiếu bản dịch "thô" (sát nghĩa gốc) với bản rewrite đã qua LLM tối ưu, tránh trường hợp LLM
+rewrite làm lệch ý mà không nhận ra.
 
 Usage:
     from scripts.agent.tools.translate_raw import translate_raw
-    en = translate_raw("Mot nguoi dang di xe dap tren duong nui")
+    en = translate_raw("Một người đang đi xe đạp trên đường núi")
     # -> "A person is cycling on a mountain road"
 """
 from __future__ import annotations
@@ -18,16 +18,16 @@ from deep_translator import GoogleTranslator
 
 def translate_raw(text: str, source: str = "vi", target: str = "en") -> str:
     """
-    Dich tho 1 cau, khong qua LLM — chi dich may thuan (khong toi uu lai cho CLIP).
+    Dịch thô 1 câu, không qua LLM — chỉ dịch máy thuần (không tối ưu lại cho CLIP).
 
     Args:
-        text:   Cau can dich (mac dinh coi la tieng Viet).
-        source: Ngon ngu goc (mac dinh "vi").
+        text:   Câu cần dịch (mặc định coi là tiếng Việt).
+        source: Ngôn ngữ gốc (mặc định "vi").
         target: Ngon ngu dich (mac dinh "en").
 
     Returns:
-        Cau da dich. Neu dich loi (mat mang, API doi format...), fail loud —
-        nguoi goi (API endpoint) chiu trach nhiem bat exception va tra ve loi ro rang.
+        Câu đã dịch. Nếu dịch lỗi (mất mạng, API đổi format...), fail loud —
+        người gọi (API endpoint) chịu trách nhiệm bắt exception và trả về lỗi rõ ràng.
     """
     text = text.strip()
     if not text:

@@ -1,19 +1,19 @@
 """
-fusion.py — Reciprocal Rank Fusion (RRF) de dung hop ket qua Dense (SigLIP cosine) va Sparse (BM25).
+fusion.py — Reciprocal Rank Fusion (RRF) để dung hợp kết quả Dense (SigLIP cosine) và Sparse (BM25).
 
-Vi sao KHONG cong thang 2 diem: cosine similarity nam trong [-1, 1] (thuc te SigLIP ~0.05-0.15,
-CLIP ~0.28-0.31 — xem ocr_read.py) con BM25 nam trong [0, +inf) va thay doi theo do hiem cua term.
-Cong/chuan hoa min-max deu bi lech nang theo tung query. RRF chi dung THU HANG (rank), khong dung
-gia tri diem, nen mien nhiem hoan toan voi chenh lech thang do:
+Vì sao KHÔNG cộng thẳng 2 điểm: cosine similarity nằm trong [-1, 1] (thực tế SigLIP ~0.05-0.15,
+CLIP ~0.28-0.31 — xem ocr_read.py) còn BM25 nằm trong [0, +inf) và thay đổi theo độ hiếm của term.
+Cộng/chuẩn hoá min-max đều bị lệch nặng theo từng query. RRF chỉ dùng THỨ HẠNG (rank), không dùng
+giá trị điểm, nên miễn nhiễm hoàn toàn với chênh lệch thang đo:
 
     RRF(d) = w_dense / (k + rank_dense(d)) + w_sparse / (k + rank_sparse(d))
 
-k = 60 la gia tri chuan trong bai goc (Cormack et al. 2009) — du lon de 1 vai vi tri dau khong ap
-dao toan bo, du nho de rank 1-100 van tach biet ro.
+k = 60 là giá trị chuẩn trong bài gốc (Cormack et al. 2009) — đủ lớn để 1 vài vị trí đầu không áp
+đảo toàn bộ, đủ nhỏ để rank 1-100 vẫn tách biệt rõ.
 
-Module THUAN (pure): khong doc index, khong goi model, khong I/O — nen dung duoc ca o duong
-production (scripts/agent/tools/retrieve.py) lan o nhanh eval (tests/eval/run_eval.py) ma khong
-keo theo viec nap SigLIP/index (tests/eval/multi_index.py van tu nap index rieng nhu cu).
+Module THUẦN (pure): không đọc index, không gọi model, không I/O — nên dùng được cả ở đường
+production (scripts/agent/tools/hybrid.py) lẫn ở nhánh eval (tests/eval/run_eval.py) mà không
+kéo theo việc nạp SigLIP/index (tests/eval/multi_index.py vẫn tự nạp index riêng như cũ).
 
 Usage:
     from scripts.agent.tools.fusion import reciprocal_rank_fusion
@@ -23,7 +23,7 @@ Usage:
 """
 from __future__ import annotations
 
-# Tham so chuan hoa — xem BAN DAC TA §2.2.
+# Tham số chuẩn hoá — xem BẢN ĐẶC TẢ §2.2.
 RRF_K = 60
 W_DENSE = 0.75
 W_SPARSE = 0.25
@@ -33,18 +33,18 @@ def reciprocal_rank_fusion(
     ranked_lists: list, k: int = RRF_K, top_k: int | None = None
 ) -> list:
     """
-    Dung hop nhieu danh sach da xep hang thanh 1 danh sach duy nhat bang RRF.
+    Dung hợp nhiều danh sách đã xếp hạng thành 1 danh sách duy nhất bằng RRF.
 
     Args:
-        ranked_lists: list cac tuple (keys, weight) — `keys` la list key (bat ky kieu hashable nao,
-                      vd tuple (video_id, n)) DA sap xep giam dan theo do phu hop cua he thong do;
-                      `weight` la trong so cua he thong do.
-        k:            Hang so lam min RRF (mac dinh 60).
-        top_k:        Cat bot ket qua tra ve (None = tra het).
+        ranked_lists: list các tuple (keys, weight) — `keys` là list key (bất kỳ kiểu hashable nào,
+                      vd tuple (video_id, n)) ĐÃ sắp xếp giảm dần theo độ phù hợp của hệ thống đó;
+                      `weight` là trọng số của hệ thống đó.
+        k:            Hằng số làm mịn RRF (mặc định 60).
+        top_k:        Cắt bớt kết quả trả về (None = trả hết).
 
     Returns:
-        list[tuple[key, float]] sap xep giam dan theo diem RRF. Key chi xuat hien o 1 he thong van
-        duoc giu (chi cong 1 so hang) — RRF khong doi hoi giao nhau.
+        list[tuple[key, float]] sắp xếp giảm dần theo điểm RRF. Key chỉ xuất hiện ở 1 hệ thống vẫn
+        được giữ (chỉ cộng 1 số hạng) — RRF không đòi hỏi giao nhau.
     """
     scores: dict = {}
     for keys, weight in ranked_lists:
@@ -60,21 +60,21 @@ def reciprocal_rank_fusion(
 def rrf_fuse_hits(
     model_hits: list, top_k: int = 500, rrf_k: int = 60
 ) -> list:
-    """Gop cac hit (dict) cung frame theo hang, khong cong truc tiep diem model.
+    """Gộp các hit (dict) cùng frame theo hạng, không cộng trực tiếp điểm model.
 
-    Khac voi reciprocal_rank_fusion() (lam viec tren key hashable + trong so), ham nay nhan truc tiep
-    list[list[dict]] tu nhieu model va tra ve list[dict] da gop — tien cho fast_retrieve_multi_model()
+    Khác với reciprocal_rank_fusion() (làm việc trên key hashable + trọng số), hàm này nhận trực tiếp
+    list[list[dict]] từ nhiều model và trả về list[dict] đã gộp — tiện cho fast_retrieve_multi_model()
     trong retrieve.py.
 
     Args:
-        model_hits: list cac danh sach hit (moi phan tu la list[dict] tu 1 model, da sap xep giam dan
-                    theo diem). Moi hit dict phai co 'video_id' va 'n'.
-        top_k:      So ung vien tra ve toi da.
-        rrf_k:      Hang so lam min RRF (mac dinh 60).
+        model_hits: list các danh sách hit (mỗi phần tử là list[dict] từ 1 model, đã sắp xếp giảm dần
+                    theo điểm). Mỗi hit dict phải có 'video_id' và 'n'.
+        top_k:      Số ứng viên trả về tối đa.
+        rrf_k:      Hằng số làm mịn RRF (mặc định 60).
 
     Returns:
-        list[dict] sap xep giam dan theo diem RRF tong hop. Truong 'score' trong dict duoc ghi de
-        bang diem RRF (khong phai cosine goc). Truong 'rrf_ranks' chua danh sach hang trong tung model.
+        list[dict] sắp xếp giảm dần theo điểm RRF tổng hợp. Trường 'score' trong dict được ghi đè
+        bằng điểm RRF (không phải cosine gốc). Trường 'rrf_ranks' chứa danh sách hạng trong từng model.
     """
     if top_k <= 0 or rrf_k < 0:
         return []

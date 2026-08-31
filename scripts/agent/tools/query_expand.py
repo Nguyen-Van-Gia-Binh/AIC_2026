@@ -1,25 +1,25 @@
 """
-query_expand.py — Multi-Aspect Prompt Expansion cho KIS (BAN DAC TA §3.1).
+query_expand.py — Multi-Aspect Prompt Expansion cho KIS (BẢN ĐẶC TẢ §3.1).
 
-Y tuong: 1 cau mo ta canh duoc chieu thanh 2-3 "goc nhin thi giac" khac nhau, moi goc nhin encode
-thanh 1 vector rieng, roi lay trung binh + chuan hoa:
+Ý tưởng: 1 câu mô tả cảnh được chiếu thành 2-3 "góc nhìn thị giác" khác nhau, mỗi góc nhìn encode
+thành 1 vector riêng, rồi lấy trung bình + chuẩn hoá:
 
     q_final = Normalize((q_1 + q_2 + q_3) / 3)
 
-  v1 — Boi canh tong the (global environment)
-  v2 — Doi tuong trong tam + vi tri tuong doi (anchor object & spatial position)
-  v3 — Mau sac, hanh dong, trang thai dong (color attributes & actions)
+  v1 — Bối cảnh tổng thể (global environment)
+  v2 — Đối tượng trọng tâm + vị trí tương đối (anchor object & spatial position)
+  v3 — Màu sắc, hành động, trạng thái động (color attributes & actions)
 
-Day la ky thuat "prompt ensembling" quen thuoc cua ho CLIP/SigLIP: text encoder rat nhay voi cach
-dien dat, trung binh nhieu cach dien dat cua CUNG 1 y lam vector truy van on dinh hon, bot phu thuoc
+Đây là kỹ thuật "prompt ensembling" quen thuộc của họ CLIP/SigLIP: text encoder rất nhạy với cách
+diễn đạt, trung bình nhiều cách diễn đạt của CÙNG 1 ý làm vector truy vấn ổn định hơn, bớt phụ thuộc
 vao 1 cach dat cau duy nhat.
 
-QUAN TRONG — KIS KHONG goi LLM trong runtime (ARCHITECTURE.md §3, BAN DAC TA §3 "Tuyen tinh, Khong
-LLM"): mac dinh o day la template TAT DINH (deterministic), khong ton API call, khong bien thien
-giua cac lan chay. Nhanh LLM (expand_aspects_llm) co san nhung PHAI bat tuong minh, va pipeline_kis
-khong bao gio tu bat.
+QUAN TRỌNG — KIS KHÔNG gọi LLM trong runtime (ARCHITECTURE.md §3, BẢN ĐẶC TẢ §3 "Tuyến tính, Không
+LLM"): mặc định ở đây là template TẤT ĐỊNH (deterministic), không tốn API call, không biến thiên
+giữa các lần chạy. Nhánh LLM (expand_aspects_llm) có sẵn nhưng PHẢI bật tường minh, và pipeline_kis
+không bao giờ tự bật.
 
-Module thuan text (khong doc index/model) — dung duoc ca o eval lan production.
+Module thuần text (không đọc index/model) — dùng được cả ở eval lẫn production.
 
 Usage:
     from scripts.agent.tools.query_expand import expand_aspects
@@ -30,16 +30,16 @@ from __future__ import annotations
 
 import re
 
-# 3 goc nhin theo BAN DAC TA §3.1. Giu cau ngan va tu nhien — SigLIP duoc huan luyen tren caption
-# anh that, cau cang giong caption cang tot; tranh nhoi tu khoa lam loang vector.
+# 3 góc nhìn theo BẢN ĐẶC TẢ §3.1. Giữ câu ngắn và tự nhiên — SigLIP được huấn luyện trên caption
+# ảnh thật, câu càng giống caption càng tốt; tránh nhồi từ khoá làm loãng vector.
 ASPECT_TEMPLATES = [
-    "{q}",                                                    # v1 — boi canh tong the, giu nguyen van
-    "a close-up view of {q}, the main subject in the center of the frame",  # v2 — doi tuong trong tam
-    "{q}, showing the colors, clothing and the action taking place",         # v3 — mau sac + hanh dong
+    "{q}",                                                    # v1 — bối cảnh tổng thể, giữ nguyên văn
+    "a close-up view of {q}, the main subject in the center of the frame",  # v2 — đối tượng trọng tâm
+    "{q}, showing the colors, clothing and the action taking place",         # v3 — màu sắc + hành động
 ]
 
-# Query da dai san (nhieu menh de) thi template v2/v3 chi lam loang them — voi query dai hon nguong
-# nay chi giu v1 + v3. Nguong dem theo tu, chon 25 (~2 cau mo ta day du).
+# Query đã dài sẵn (nhiều mệnh đề) thì template v2/v3 chỉ làm loãng thêm — với query dài hơn ngưỡng
+# này chỉ giữ v1 + v3. Ngưỡng đếm theo từ, chọn 25 (~2 câu mô tả đầy đủ).
 LONG_QUERY_WORDS = 25
 
 EXPAND_ASPECTS_PROMPT = """\
@@ -56,15 +56,15 @@ Reply with exactly 3 lines, one caption per line, no numbering, no extra text.""
 
 def expand_aspects(query_text: str, max_aspects: int = 3) -> list:
     """
-    Sinh 2-3 bien the goc nhin cua query bang template tat dinh (KHONG goi LLM).
+    Sinh 2-3 biến thể góc nhìn của query bằng template tất định (KHÔNG gọi LLM).
 
     Args:
-        query_text:   Mo ta canh (tieng Anh cho ket qua tot nhat — SigLIP manh nhat o tieng Anh).
-        max_aspects:  Tran so goc nhin (1 = tat expansion, tra ve dung query goc).
+        query_text:   Mô tả cảnh (tiếng Anh cho kết quả tốt nhất — SigLIP mạnh nhất ở tiếng Anh).
+        max_aspects:  Trần số góc nhìn (1 = tắt expansion, trả về đúng query gốc).
 
     Returns:
-        list[str] do dai 1..max_aspects, PHAN TU DAU LUON la query goc — de neu ai do chi lay
-        aspects[0] thi hanh vi y het truoc khi co module nay.
+        list[str] độ dài 1..max_aspects, PHẦN TỬ ĐẦU LUÔN là query gốc — để nếu ai đó chỉ lấy
+        aspects[0] thì hành vi y hệt trước khi có module này.
     """
     q = (query_text or "").strip()
     if not q:
@@ -77,16 +77,16 @@ def expand_aspects(query_text: str, max_aspects: int = 3) -> list:
         templates = [ASPECT_TEMPLATES[0], ASPECT_TEMPLATES[2]]
 
     aspects = [t.format(q=q) for t in templates[:max_aspects]]
-    # Bo trung (vd query da chua san cum tu trong template) nhung giu thu tu.
+    # Bỏ trùng (vd query đã chứa sẵn cụm từ trong template) nhưng giữ thứ tự.
     return list(dict.fromkeys(aspects))
 
 
 def expand_aspects_llm(query_text: str, max_aspects: int = 3) -> list:
     """
-    Nhanh LLM cua expand_aspects() — CHI dung khi goi tuong minh (Q&A/TRAKE, hoac thu nghiem KIS).
-    pipeline_kis.py KHONG goi ham nay (KIS phai tat dinh, khong LLM — xem docstring dau file).
+    Nhánh LLM của expand_aspects() — CHỈ dùng khi gọi tường minh (Q&A/TRAKE, hoặc thử nghiệm KIS).
+    pipeline_kis.py KHÔNG gọi hàm này (KIS phải tất định, không LLM — xem docstring đầu file).
 
-    Loi LLM/parse that bai -> rot ve expand_aspects() (template tat dinh), khong bao gio crash.
+    Lỗi LLM/parse thất bại -> rớt về expand_aspects() (template tất định), không bao giờ crash.
     """
     q = (query_text or "").strip()
     if not q:
@@ -97,13 +97,13 @@ def expand_aspects_llm(query_text: str, max_aspects: int = 3) -> list:
             EXPAND_ASPECTS_PROMPT.format(query=q), model="text", temperature=0.2, max_tokens=200
         )
     except Exception as error:
-        print(f"[query_expand] LLM loi ({type(error).__name__}: {error}) -> dung template tat dinh")
+        print(f"[query_expand] LLM lỗi ({type(error).__name__}: {error}) -> dùng template tất định")
         return expand_aspects(q, max_aspects)
 
     lines = [re.sub(r"^\s*\d+[.)]\s*", "", ln).strip(" -*\t") for ln in raw.splitlines()]
     lines = [ln for ln in lines if len(ln.split()) >= 3]
     if not lines:
-        print(f"[query_expand] Khong parse duoc goc nhin tu LLM ({raw!r}) -> dung template tat dinh")
+        print(f"[query_expand] Không parse được góc nhìn từ LLM ({raw!r}) -> dùng template tất định")
         return expand_aspects(q, max_aspects)
     return [q] + lines[: max_aspects - 1]
 

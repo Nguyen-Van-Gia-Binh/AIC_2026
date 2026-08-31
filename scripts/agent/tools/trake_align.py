@@ -18,29 +18,29 @@ from scripts.agent.tools.objects_lookup import get_objects
 def find_best_increasing_chain(
     event_hits: list[list[dict]], strict: bool = True
 ) -> list[dict] | None:
-    """Tim chuoi 1 frame/event sao cho frame_idx TANG DAN qua tung event va TONG score la lon nhat,
-    bang quy hoach dong — thay vi greedy cu (chon diem cao nhat cho event dau tien roi khoa cung, co
-    the chan mat lua chon tot hon o cac event sau, xem "Ly do thiet ke" trong plan
+    """Tìm chuỗi 1 frame/event sao cho frame_idx TĂNG DẦN qua từng event và TỔNG score là lớn nhất,
+    bằng quy hoạch động — thay vì greedy cũ (chọn điểm cao nhất cho event đầu tiên rồi khoá cứng, có
+    thể chặn mất lựa chọn tốt hơn ở các event sau, xem "Lý do thiết kế" trong plan
     docs/superpowers/plans/2026-08-24-phase4-trake-dp-crosscheck.md).
 
     Args:
-        event_hits: event_hits[i] = list ung vien (tu fast_retrieve_for_video, da sap xep giam dan
-                    theo score) cho event thu i.
-        strict:     True (mac dinh, BAN DAC TA §5.2 "Strict Monotonic") = frame_idx phai TANG NGHIEM
-                    NGAT (f_1 < f_2 < ... < f_N) — 2 moc khac nhau khong duoc tro ve cung 1 frame.
-                    False = cho phep bang nhau (hanh vi cu tu Phase 4; giu lai vi du lieu that co
-                    truong hop 2 event lien tiep roi vao cung 1 keyframe khi keyframe thua).
+        event_hits: event_hits[i] = list ứng viên (từ fast_retrieve_for_video, đã sắp xếp giảm dần
+                    theo score) cho event thứ i.
+        strict:     True (mặc định, BẢN ĐẶC TẢ §5.2 "Strict Monotonic") = frame_idx phải TĂNG NGHIÊM
+                    NGẶT (f_1 < f_2 < ... < f_N) — 2 mốc khác nhau không được trỏ về cùng 1 frame.
+                    False = cho phép bằng nhau (hành vi cũ từ Phase 4; giữ lại vì dữ liệu thật có
+                    trường hợp 2 event liên tiếp rơi vào cùng 1 keyframe khi keyframe thưa).
 
     Returns:
         list[dict] do dai == len(event_hits), 1 hit/event, frame_idx tang dan, tong score lon nhat
-        co the; None neu KHONG TON TAI chuoi hop le nao (video nay bi loai hoan toan).
+        có thể; None nếu KHÔNG TỒN TẠI chuỗi hợp lệ nào (video này bị loại hoàn toàn).
     """
     n = len(event_hits)
     if n == 0 or any(not candidates for candidates in event_hits):
         return None
 
     NEG_INF = float("-inf")
-    # dp[i][j] = tong score lon nhat cua chuoi ket thuc bang ung vien j cua event i
+    # dp[i][j] = tổng score lớn nhất của chuỗi kết thúc bằng ứng viên j của event i
     dp: list[list[float]] = [[NEG_INF] * len(candidates) for candidates in event_hits]
     back: list[list[Optional[int]]] = [[None] * len(candidates) for candidates in event_hits]
 
@@ -52,9 +52,9 @@ def find_best_increasing_chain(
             for k, prev_hit in enumerate(event_hits[i - 1]):
                 if strict:
                     if prev_hit["frame_idx"] >= hit["frame_idx"]:
-                        continue  # phai TANG NGHIEM NGAT — 2 moc khong duoc trung 1 frame
+                        continue  # phải TĂNG NGHIÊM NGẶT — 2 mốc không được trùng 1 frame
                 elif prev_hit["frame_idx"] > hit["frame_idx"]:
-                    continue  # che do noi long: chi cam lui ve truoc
+                    continue  # chế độ nới lỏng: chỉ cấm lùi về trước
                 if dp[i - 1][k] == NEG_INF:
                     continue
                 candidate_score = dp[i - 1][k] + hit["score"]
@@ -79,12 +79,12 @@ def find_best_increasing_chain(
 
 def rule_plausibility(event_queries_en: list[str], chain: list[dict]) -> float:
     """
-    Cong loc nhanh rule-based (§5.3): do khop tu khoa giua Objects JSON cua tung frame trong chuoi
-    va mo ta event tuong ung. Tra ve [0.0, 1.0] = trung binh ti le tu khoa event tim thay trong
-    objects cua frame do.
+    Cổng lọc nhanh rule-based (§5.3): độ khớp từ khoá giữa Objects JSON của từng frame trong chuỗi
+    và mô tả event tương ứng. Trả về [0.0, 1.0] = trung bình tỉ lệ từ khoá event tìm thấy trong
+    objects của frame đó.
 
-    Khong goi API, khong doc anh — chay duoc cho ca 20 video candidate. Frame khong co objects JSON
-    duoc tinh 0 cho event do (khong doan bua), nhung khong lam ca chuoi bi loai.
+    Không gọi API, không đọc ảnh — chạy được cho cả 20 video candidate. Frame không có objects JSON
+    được tính 0 cho event đó (không đoán bừa), nhưng không làm cả chuỗi bị loại.
     """
     from scripts.agent.tools.sparse_index import tokenize
 

@@ -1,17 +1,17 @@
 """
-temporal_nms.py — Khu trung lap thoi gian (Temporal Non-Maximum Suppression) cho danh sach keyframe.
+temporal_nms.py — Khử trùng lặp thời gian (Temporal Non-Maximum Suppression) cho danh sách keyframe.
 
-Van de: keyframe lien tiep trong cung 1 canh gan nhu giong het nhau ve noi dung, nen SigLIP cham
-diem chung gan bang nhau. Khong loc thi top-100 dong nop bai co the bi 10-20 dong cua CUNG 1 canh
-chiem cho — lang phi dung luong 100 dong ma khong tang co hoi trung (R@k tinh max tren k dong dau,
-2 dong sat nhau cung sai thi van sai).
+Vấn đề: keyframe liên tiếp trong cùng 1 cảnh gần như giống hệt nhau về nội dung, nên SigLIP chấm
+điểm chúng gần bằng nhau. Không lọc thì top-100 dòng nộp bài có thể bị 10-20 dòng của CÙNG 1 cảnh
+chiếm chỗ — lãng phí dung lượng 100 dòng mà không tăng cơ hội trúng (R@k tính max trên k dòng đầu,
+2 dòng sát nhau cùng sai thì vẫn sai).
 
-Nguyen ly (BAN DAC TA §3.2): duyet hits theo diem giam dan, giu 1 keyframe lam "dinh cuc bo"
-(local peak), loai moi keyframe CUNG VIDEO cach dinh do duoi MIN_TIME_GAP giay; toi da
-MAX_PEAKS_PER_VIDEO dinh cho 1 video.
+Nguyên lý (BẢN ĐẶC TẢ §3.2): duyệt hits theo điểm giảm dần, giữ 1 keyframe làm "đỉnh cục bộ"
+(local peak), loại mọi keyframe CÙNG VIDEO cách đỉnh đó dưới MIN_TIME_GAP giây; tối đa
+MAX_PEAKS_PER_VIDEO đỉnh cho 1 video.
 
-Module THUAN (pure): khong doc index/model/file — dung chung duoc cho ca duong production
-(rerank.py) lan nhanh eval (tests/eval/run_eval.py), khong keo theo viec nap SigLIP.
+Module THUẦN (pure): không đọc index/model/file — dùng chung được cho cả đường production
+(rerank.py) lẫn nhánh eval (tests/eval/run_eval.py), không kéo theo việc nạp SigLIP.
 
 Usage:
     from scripts.agent.tools.temporal_nms import temporal_nms
@@ -19,13 +19,13 @@ Usage:
 """
 from __future__ import annotations
 
-# Khoang cach thoi gian toi thieu giua 2 keyframe duoc giu trong CUNG 1 video (giay) — BAN DAC TA
-# §3.2. 3.0s bam theo buoc lay keyframe thuc te cua BTC (map-keyframes: pts_time cach nhau ~2.5-3s
-# o phan lon video) nen thuc chat loai "keyframe ke ben", khong loai canh khac.
+# Khoảng cách thời gian tối thiểu giữa 2 keyframe được giữ trong CÙNG 1 video (giây) — BẢN ĐẶC TẢ
+# §3.2. 3.0s bám theo bước lấy keyframe thực tế của BTC (map-keyframes: pts_time cách nhau ~2.5-3s
+# ở phần lớn video) nên thực chất loại "keyframe kế bên", không loại cảnh khác.
 MIN_TIME_GAP = 3.0
 
-# So dinh cuc bo toi da giu lai cho 1 video — trung voi rerank.SPREAD_MAX_PER_VIDEO (che do trai
-# rui ro). None = khong gioi han (chi loc theo khoang cach thoi gian).
+# Số đỉnh cục bộ tối đa giữ lại cho 1 video — trùng với rerank.SPREAD_MAX_PER_VIDEO (chế độ trải
+# rủi ro). None = không giới hạn (chỉ lọc theo khoảng cách thời gian).
 MAX_PEAKS_PER_VIDEO = 3
 
 
@@ -36,25 +36,25 @@ def temporal_nms(
     score_key: str = "score",
 ) -> list:
     """
-    Loc hits: giu dinh cuc bo, bo keyframe lan can trong cung video.
+    Lọc hits: giữ đỉnh cục bộ, bỏ keyframe lân cận trong cùng video.
 
     Args:
-        hits:          list[dict] tu fast_retrieve() — can co 'video_id', 'pts_time', score_key.
-                       KHONG bat buoc da sap xep: ham tu sap xep giam dan theo score truoc khi duyet.
-        min_gap:       Khoang cach thoi gian toi thieu (giay) giua 2 keyframe duoc giu trong 1 video.
-        max_per_video: So dinh toi da moi video (None = khong gioi han).
-        score_key:     Ten truong diem dung de sap xep (mac dinh 'score'; dung 'rrf_score' khi loc
-                       ket qua da qua dung hop RRF).
+        hits:          list[dict] từ fast_retrieve() — cần có 'video_id', 'pts_time', score_key.
+                       KHÔNG bắt buộc đã sắp xếp: hàm tự sắp xếp giảm dần theo score trước khi duyệt.
+        min_gap:       Khoảng cách thời gian tối thiểu (giây) giữa 2 keyframe được giữ trong 1 video.
+        max_per_video: Số đỉnh tối đa mỗi video (None = không giới hạn).
+        score_key:     Tên trường điểm dùng để sắp xếp (mặc định 'score'; dùng 'rrf_score' khi lọc
+                       kết quả đã qua dung hợp RRF).
 
     Returns:
-        list[dict] — cac hit duoc giu, sap xep giam dan theo score_key. Khong sua doi dict dau vao.
-        Hit thieu 'pts_time' (None) duoc giu nguyen, khong bi loc (khong du thong tin de so sanh).
+        list[dict] — các hit được giữ, sắp xếp giảm dần theo score_key. Không sửa đổi dict đầu vào.
+        Hit thiếu 'pts_time' (None) được giữ nguyên, không bị lọc (không đủ thông tin để so sánh).
     """
     if not hits:
         return hits
 
     ordered = sorted(hits, key=lambda h: -float(h.get(score_key, 0.0)))
-    kept_times: dict = {}   # video_id -> list[pts_time] cua cac dinh da giu
+    kept_times: dict = {}   # video_id -> list[pts_time] của các đỉnh đã giữ
     kept: list = []
 
     for hit in ordered:
@@ -66,7 +66,7 @@ def temporal_nms(
         if pts is not None:
             pts = float(pts)
             if any(abs(pts - t) < min_gap for t in times):
-                continue  # sat 1 dinh da giu -> cung canh, bo
+                continue  # sát 1 đỉnh đã giữ -> cùng cảnh, bỏ
             times.append(pts)
         kept.append(hit)
 

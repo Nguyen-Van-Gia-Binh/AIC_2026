@@ -1,21 +1,21 @@
 """
-rerank.py — Risk-aware re-ranking hau xu ly cho KIS/QA, chay sau khi fast_retrieve tra ve top-K.
+rerank.py — Risk-aware re-ranking hậu xử lý cho KIS/QA, chạy sau khi fast_retrieve trả về top-K.
 
-Y tuong (PLAN.md Phase 3): quan sat "margin" giua video ung vien manh nhat va video ung vien manh
-nhi trong danh sach hits (so sanh best score moi video).
-  - Margin lon (1 video noi bat han so voi phan con lai) -> che do "dat cuoc": danh nhieu dong ket
-    qua hon cho dung video do (dao sau hon trong video do bang fast_retrieve_for_video neu can), tang
-    co hoi trung R@1/R@5.
-  - Margin nho (khong video nao noi bat ro) -> che do "trai rui ro": gioi han so dong toi da tren 1
-    video trong danh sach, ep ket qua trai rong hon nhieu video, tang co hoi trung R@50/R@100.
+Ý tưởng (PLAN.md Phase 3): quan sát "margin" giữa video ứng viên mạnh nhất và video ứng viên mạnh
+nhì trong danh sách hits (so sánh best score mỗi video).
+  - Margin lớn (1 video nổi bật hẳn so với phần còn lại) -> chế độ "đặt cược": dành nhiều dòng kết
+    quả hơn cho đúng video đó (đào sâu hơn trong video đó bằng fast_retrieve_for_video nếu cần), tăng
+    cơ hội trúng R@1/R@5.
+  - Margin nhỏ (không video nào nổi bật rõ) -> chế độ "trải rủi ro": giới hạn số dòng tối đa trên 1
+    video trong danh sách, ép kết quả trải rộng hơn nhiều video, tăng cơ hội trúng R@50/R@100.
 
-Khong goi LLM (PLAN.md Phase 3: "khong can LLM"). Chi phu thuoc fast_retrieve_for_video khi can dao
-sau them trong video dang "dat cuoc" — khong tu doc/ghi index, khong doi retrieve.py.
+Không gọi LLM (PLAN.md Phase 3: "không cần LLM"). Chỉ phụ thuộc fast_retrieve_for_video khi cần đào
+sâu thêm trong video đang "đặt cược" — không tự đọc/ghi index, không đợi retrieve.py.
 
-MARGIN_THRESHOLD / BET_VIDEO_SHARE / SPREAD_MAX_PER_VIDEO la gia tri khoi diem, da can chinh so bo
-bang du lieu that (xem docs/superpowers/plans/2026-08-24-phase2-3-rewrite-negation-risk-ranking.md) —
-se tinh chinh tiep o Phase 6 checkpoint bang benchmark that (tests/e2e/test_phase3_rerank.py),
-khong phai doan mo hinh.
+MARGIN_THRESHOLD / BET_VIDEO_SHARE / SPREAD_MAX_PER_VIDEO là giá trị khởi điểm, đã căn chỉnh sơ bộ
+bằng dữ liệu thật (xem docs/superpowers/plans/2026-08-24-phase2-3-rewrite-negation-risk-ranking.md) —
+sẽ tinh chỉnh tiếp bằng benchmark thật (tests/e2e/test_phase3_rerank.py),
+không phải đoán mò hình.
 
 Usage:
     from scripts.agent.tools.rerank import apply_risk_aware_ranking
@@ -26,45 +26,47 @@ from __future__ import annotations
 import os
 from scripts.agent.tools.temporal_nms import temporal_nms, MIN_TIME_GAP
 
-# Nguong chenh lech score (cosine similarity CLIP, thuong ~0.28-0.31 cho query that) de coi video #1
-# la "noi bat ro rang" so voi video #2.
+# Ngưỡng chênh lệch score để coi video #1 là "nổi bật rõ ràng" so với video #2.
+# ⚠️ Căn chỉnh trên thang cosine của clip_vitb32 (~0.28-0.31) — model ĐÃ RETIRE 2026-08-28. Cosine
+# SigLIP hẹp hơn 2-3 lần (~0.05-0.15) nên giá trị này chưa được hiệu chỉnh lại đúng thang đo hiện
+# hành: đo thật 2026-08-31 cho thấy margin điển hình 0.0039-0.0528. Xem PLAN.md mục P2.7.
 MARGIN_THRESHOLD = 0.012
 
-# Nguong margin TUONG DOI (ti le) dung khi xep hang theo diem RRF thay vi cosine (hybrid retrieval —
-# xem retrieve.hybrid_retrieve). Diem RRF co thang do rat khac (w/(k+rank), ~0.012 o hang 1 va giam
-# rat cham), nen mot nguong TUYET DOI nhu MARGIN_THRESHOLD se khong bao gio dat -> luon roi vao che do
-# trai rui ro. Dung ti le so voi diem cao nhat de giu dung y nghia "video #1 noi bat hon han #2".
+# Ngưỡng margin TƯƠNG ĐỐI (tỉ lệ) dùng khi xếp hạng theo điểm RRF thay vì cosine (hybrid retrieval —
+# xem hybrid.hybrid_retrieve). Điểm RRF có thang đo rất khác (w/(k+rank), ~0.012 ở hạng 1 và giảm
+# rất chậm), nên một ngưỡng TUYỆT ĐỐI như MARGIN_THRESHOLD sẽ không bao giờ đạt -> luôn rơi vào chế độ
+# trải rủi ro. Dùng tỉ lệ so với điểm cao nhất để giữ đúng ý nghĩa "video #1 nổi bật hơn hẳn #2".
 MARGIN_RATIO_RRF = 0.05
 
-# Che do "dat cuoc": ti le toi da so dong (tren top_k) danh cho video noi bat nhat.
+# Chế độ "đặt cược": tỉ lệ tối đa số dòng (trên top_k) dành cho video nổi bật nhất.
 BET_VIDEO_SHARE = 0.5
 
-# Che do "trai rui ro": so dong toi da cho 1 video khi khong co video nao noi bat.
+# Chế độ "trải rủi ro": số dòng tối đa cho 1 video khi không có video nào nổi bật.
 SPREAD_MAX_PER_VIDEO = 3
 
-# So ung vien tho can lay tu fast_retrieve TRUOC KHI rerank/cat ve top_k submission. Lon hon han so voi
-# top_k thuc te (thuong 100) vi chan doan thuc te tren eval_ground_truth.json cho thay GT frame chi nam
-# trong top-100 o 12/23 cau nhung nam trong top-500 o 20/23 cau (xem
-# docs/superpowers/plans/2026-08-24-phase3-effective-rerank.md) — trong khi chi phi tinh gan nhu mien
-# phi (fast_retrieve da nhan full ma tran 177K keyframe, chi argsort cat nhieu hon).
+# Số ứng viên thô cần lấy từ fast_retrieve TRƯỚC KHI rerank/cắt về top_k submission. Lớn hơn hẳn so với
+# top_k thực tế (thường 100) vì chẩn đoán thực tế trên eval_ground_truth.json cho thấy GT frame chỉ nằm
+# trong top-100 ở 12/23 câu nhưng nằm trong top-500 ở 20/23 câu (xem
+# docs/superpowers/plans/2026-08-24-phase3-effective-rerank.md) — trong khi chi phí tính gần như miễn
+# phí (fast_retrieve đã nhận full ma trận 177K keyframe, chỉ argsort cắt nhiều hơn).
 RETRIEVAL_POOL_SIZE = 500
 
-# So dong DAU danh sach do rerank toan quyen quyet dinh. Tu dong (RECALL_HEAD_N + 1) tro di, danh
-# sach duoc lap lai theo DUNG THU TU RETRIEVAL GOC (xem _preserve_recall_tail).
+# Số dòng ĐẦU danh sách do rerank toàn quyền quyết định. Từ dòng (RECALL_HEAD_N + 1) trở đi, danh
+# sách được lặp lại theo ĐÚNG THỨ TỰ RETRIEVAL GỐC (xem _preserve_recall_tail).
 #
-# Vi sao: do that tren 18 cau KIS cua eval_ground_truth.json cho thay hau xu ly KHONG hon retrieval
-# thuan o bat ky moc nao, va THUA ro tu hang 20 tro di:
+# Vì sao: đo thật trên 18 câu KIS của eval_ground_truth.json cho thấy hậu xử lý KHÔNG hơn retrieval
+# thuần ở bất kỳ mốc nào, và THUA rõ từ hạng 20 trở đi:
 #     retrieval thuan (run_eval.py) : R@1 0.389  R@5 0.611  R@20 0.833  R@50 0.889  R@100 1.000
 #     pipeline that (score_pipelines): R@1 0.389  R@5 0.611  R@20 0.722  R@50 0.778  R@100 0.833
-# Nguyen nhan: _bet_mode bo qua (`continue`) moi hit cua video dat cuoc vuot tran BET_VIDEO_SHARE, va
-# _spread_mode chi lay SPREAD_MAX_PER_VIDEO hit/video roi `break` — ca hai deu VUT HAN ung vien ma
-# retrieval da tim ra, thay bang dong khac.
+# Nguyên nhân: _bet_mode bỏ qua (`continue`) mọi hit của video đặt cược vượt trần BET_VIDEO_SHARE, và
+# _spread_mode chỉ lấy SPREAD_MAX_PER_VIDEO hit/video rồi `break` — cả hai đều VỨT HẲN ứng viên mà
+# retrieval đã tìm ra, thay bằng dòng khác.
 #
-# Lap luan (khong phu thuoc co mau eval nho): Final Score chi tinh CU TRUNG DAU TIEN
-# (R@k = max trong k dong dau), va dong 21-100 chi dang 0.4/0.2 diem. Nen XOA mot ung vien retrieval
-# de nhuong cho cho dong khac o phan duoi khong bao gio co loi — cung lam la hoa. Day dong do xuong
-# cuoi thi vua giu duoc cai loi cua rerank o dau, vua khong mat gi o duoi. Do la mot lua chon thiet
-# ke BI TROI HOAN TOAN (strictly dominated), khong phai chuyen tinh chinh tham so.
+# Lập luận (không phụ thuộc cỡ mẫu eval nhỏ): Final Score chỉ tính CÚ TRÚNG ĐẦU TIÊN
+# (R@k = max trong k dòng đầu), và dòng 21-100 chỉ đáng 0.4/0.2 điểm. Nên XOÁ một ứng viên retrieval
+# để nhường chỗ cho dòng khác ở phần dưới không bao giờ có lợi — cùng lắm là hoà. Đẩy dòng đó xuống
+# cuối thì vừa giữ được cái lợi của rerank ở đầu, vừa không mất gì ở dưới. Đó là một lựa chọn thiết
+# kế BỊ TRỘI HOÀN TOÀN (strictly dominated), không phải chuyện tinh chỉnh tham số.
 RECALL_HEAD_N = 20
 
 
@@ -80,37 +82,37 @@ def apply_risk_aware_ranking(
     preserve_recall_tail: bool | None = None,
     head_n: int | None = None,
 ) -> list[dict]:
-    """Sap xep lai hits theo chien luoc "dat cuoc" hoac "trai rui ro" tuy margin giua cac video.
+    """Sắp xếp lại hits theo chiến lược "đặt cược" hoặc "trải rủi ro" tuỳ margin giữa các video.
 
     Args:
-        hits: Ket qua da co tu fast_retrieve/hybrid_retrieve, da sap xep giam dan theo score_key.
-        top_k: So dong toi da tra ve (gioi han submission — xem build_submission.py).
-        query_text: Query da rewrite (tieng Anh) dung de dao sau them trong video "dat cuoc" khi can.
-                    None = chi sap xep lai hits san co, khong goi them fast_retrieve_for_video.
-        score_key: Truong dung de XEP HANG. "score" (mac dinh) = cosine similarity nhu truoc gio;
-                   "rrf_score" khi hits den tu retrieve.hybrid_retrieve (Dense+BM25 da dung hop).
-        margin_key: Truong dung de QUYET DINH dat cuoc/trai rui ro — mac dinh "score" (cosine) DU
-                   cho xep hang bang rrf_score. Ly do: MARGIN_THRESHOLD duoc can chinh bang benchmark
-                   that tren thang cosine; do margin tren thang RRF (w/(k+rank), khoang cach giua cac
-                   hang rat nho va deu) lam che do dat cuoc bat sai nhieu hon han — do that tren 18
+        hits: Kết quả đã có từ fast_retrieve/hybrid_retrieve, đã sắp xếp giảm dần theo score_key.
+        top_k: Số dòng tối đa trả về (giới hạn submission — xem build_submission.py).
+        query_text: Query đã rewrite (tiếng Anh) dùng để đào sâu thêm trong video "đặt cược" khi cần.
+                    None = chỉ sắp xếp lại hits sẵn có, không gọi thêm fast_retrieve_for_video.
+        score_key: Trường dùng để XẾP HẠNG. "score" (mặc định) = cosine similarity như trước giờ;
+                   "rrf_score" khi hits đến từ hybrid.hybrid_retrieve (Dense+BM25 đã dung hợp).
+        margin_key: Trường dùng để QUYẾT ĐỊNH đặt cược/trải rủi ro — mặc định "score" (cosine) DÙ
+                   cho xếp hạng bằng rrf_score. Lý do: MARGIN_THRESHOLD được căn chỉnh bằng benchmark
+                   thật trên thang cosine; đo margin trên thang RRF (w/(k+rank), khoảng cách giữa các
+                   hạng rất nhỏ và đều) làm chế độ đặt cược bật sai nhiều hơn hẳn — đo thật trên 18
                    cau KIS: Final 0.656 (margin cosine) vs 0.633 (margin RRF).
-        apply_nms: Bat Temporal NMS (BAN DAC TA §3.2) — loai keyframe lan can trong cung video de
-                   khong lang phi dong nop bai cho cung 1 canh. Mac dinh TAT de duong goi cu
-                   (pipeline_qa) giu nguyen hanh vi da benchmark; pipeline_kis bat tuong minh.
-        nms_min_gap: Khoang cach thoi gian toi thieu (giay) giua 2 keyframe duoc giu trong 1 video.
-        preserve_recall_tail: Giu phan duoi danh sach theo dung thu tu retrieval goc, de hau xu ly
-                    khong vut mat ung vien ma retrieval da tim ra (xem ghi chu o RECALL_HEAD_N).
-                    Mac dinh BAT. Dat False de tai hien hanh vi cu khi can do truoc-sau.
-        head_n: So dong dau do rerank toan quyen quyet dinh khi preserve_recall_tail=True.
+        apply_nms: Bật Temporal NMS (BẢN ĐẶC TẢ §3.2) — loại keyframe lân cận trong cùng video để
+                   không lãng phí dòng nộp bài cho cùng 1 cảnh. Mặc định TẮT để đường gọi cũ
+                   (pipeline_qa) giữ nguyên hành vi đã benchmark; pipeline_kis bật tường minh.
+        nms_min_gap: Khoảng cách thời gian tối thiểu (giây) giữa 2 keyframe được giữ trong 1 video.
+        preserve_recall_tail: Giữ phần dưới danh sách theo đúng thứ tự retrieval gốc, để hậu xử lý
+                    không vứt mất ứng viên mà retrieval đã tìm ra (xem ghi chú ở RECALL_HEAD_N).
+                    Mặc định BẬT. Đặt False để tái hiện hành vi cũ khi cần đo trước-sau.
+        head_n: Số dòng đầu do rerank toàn quyền quyết định khi preserve_recall_tail=True.
 
     Returns:
-        list[dict] cung dinh dang voi hits dau vao, do dai <= top_k.
+        list[dict] cùng định dạng với hits đầu vào, độ dài <= top_k.
     """
     if not hits:
         return hits
 
-    # None = doc tu env (tien le AIC_RETRIEVE_MODEL/AIC_MODE: env var, mac dinh giu hanh vi tot nhat
-    # da do, doi duoc tuong minh khi can benchmark truoc-sau ma khong phai sua code).
+    # None = đọc từ env (tiền lệ AIC_RETRIEVE_MODEL/AIC_MODE: env var, mặc định giữ hành vi tốt nhất
+    # đã đo, đổi được tường minh khi cần benchmark trước-sau mà không phải sửa code).
     if preserve_recall_tail is None:
         preserve_recall_tail = os.getenv("AIC_RERANK_TAIL", "1").strip() not in ("0", "false", "False")
     if head_n is None:
@@ -132,8 +134,8 @@ def apply_risk_aware_ranking(
     else:
         margin = ranked_videos[0][1] - ranked_videos[1][1]
 
-    # Nguong: tuyet doi tren thang cosine (da can chinh bang benchmark that), tuong doi neu ai do
-    # co tinh do margin tren thang RRF (khong phai mac dinh — xem docstring margin_key).
+    # Ngưỡng: tuyệt đối trên thang cosine (đã căn chỉnh bằng benchmark thật), tương đối nếu ai đó
+    # cố tình đo margin trên thang RRF (không phải mặc định — xem docstring margin_key).
     if margin_key == "score":
         threshold = MARGIN_THRESHOLD
     else:
@@ -157,8 +159,8 @@ def apply_risk_aware_ranking(
     n_cuu = len({(h["video_id"], h["frame_idx"]) for h in kept}
                 - {(h["video_id"], h["frame_idx"]) for h in ranked})
     if n_cuu:
-        print(f"[rerank] giu duoi theo thu tu retrieval goc (head_n={head_n}) -> cuu lai {n_cuu} "
-              f"ung vien bi hau xu ly loai")
+        print(f"[rerank] giữ đuôi theo thứ tự retrieval gốc (head_n={head_n}) -> cứu lại {n_cuu} "
+              f"ứng viên bị hậu xử lý loại")
     return kept
 
 
@@ -172,24 +174,24 @@ def _preserve_recall_tail(
     nms_min_gap: float = MIN_TIME_GAP,
     score_key: str = "score",
 ) -> list[dict]:
-    """Giu nguyen `head_n` dong dau do rerank quyet dinh, phan con lai lap lai theo THU TU UU TIEN.
+    """Giữ nguyên `head_n` dòng đầu do rerank quyết định, phần còn lại lặp lại theo THỨ TỰ ƯU TIÊN.
 
-    Muc dich: khong de hau xu ly VUT HAN ung vien ma retrieval da tim ra (xem ghi chu o RECALL_HEAD_N),
-    nhung cung khong lang phi dong nop cho frame trung canh.
+    Mục đích: không để hậu xử lý VỨT HẲN ứng viên mà retrieval đã tìm ra (xem ghi chú ở RECALL_HEAD_N),
+    nhưng cũng không lãng phí dòng nộp cho frame trùng cảnh.
 
-    Thu tu uu tien khi lap phan duoi — day la XEP HANG, khong phai chon mot trong hai, nen khong bao
-    gio bo phi mot dong nao:
-      1. Dinh cuc bo cua `pool` (sau Temporal NMS) chua co trong phan dau — gia tri cao nhat.
-      2. Frame bi NMS nen xuong (trung canh voi mot dinh o tren) — gia tri thap vi gan nhu chac chan
-         sai/dung CUNG LUC voi dinh cua no, nhung van hon de trong dong.
-      3. Phan con lai cua `ranked` (vd frame dao sau tu fast_retrieve_for_video — KHONG nam trong pool).
+    Thứ tự ưu tiên khi lặp phần dưới — đây là XẾP HẠNG, không phải chọn một trong hai, nên không bao
+    giờ bỏ phí một dòng nào:
+      1. Đỉnh cục bộ của `pool` (sau Temporal NMS) chưa có trong phần đầu — giá trị cao nhất.
+      2. Frame bị NMS nén xuống (trùng cảnh với một đỉnh ở trên) — giá trị thấp vì gần như chắc chắn
+         sai/đúng CÙNG LÚC với đỉnh của nó, nhưng vẫn hơn để trống dòng.
+      3. Phần còn lại của `ranked` (vd frame đào sâu từ fast_retrieve_for_video — KHÔNG nằm trong pool).
 
-    Vi sao muc 2 dung sau muc 1 chu khong bi loai han: R@k chi tinh CU TRUNG DAU TIEN, nen 2 frame sat
-    nhau trong cung 1 canh gan nhu hoan toan tuong quan — frame thu hai dang ~0. Nhung dong 21-100
-    cung chi dang 0.4/0.2 diem, va neu pool da het ung vien da dang thi giu no van hon bo trong.
+    Vì sao mục 2 đứng sau mục 1 chứ không bị loại hẳn: R@k chỉ tính CÚ TRÚNG ĐẦU TIÊN, nên 2 frame sát
+    nhau trong cùng 1 cảnh gần như hoàn toàn tương quan — frame thứ hai đáng ~0. Nhưng dòng 21-100
+    cũng chỉ đáng 0.4/0.2 điểm, và nếu pool đã hết ứng viên đa dạng thì giữ nó vẫn hơn bỏ trống.
 
-    Khoa chong trung la (video_id, frame_idx): `frame_idx` chi duy nhat TRONG 1 video (index cuc bo,
-    xem index.py) nen bat buoc phai ghep voi video_id, khong dung frame_idx mot minh.
+    Khoá chống trùng là (video_id, frame_idx): `frame_idx` chỉ duy nhất TRONG 1 video (index cục bộ,
+    xem index_store.py) nên bắt buộc phải ghép với video_id, không dùng frame_idx một mình.
     """
     head: list[dict] = ranked[:head_n] if head_n > 0 else []
     _key = lambda h: (h["video_id"], h["frame_idx"])
@@ -227,14 +229,14 @@ def _bet_mode(
     apply_nms: bool = False,
     nms_min_gap: float = MIN_TIME_GAP,
 ) -> list[dict]:
-    """"Dat cuoc" = ADD them ung vien dao sau tu video dang thang, de chung canh tranh cong bang
-    theo score that voi phan con lai — KHONG ep chung len dau danh sach bat ke score (lam vay se
-    day cac hit dung tu video khac xuong duoi mot cach vo ly, gay regression R@20/R@50 — xem
+    """"Đặt cược" = THÊM ứng viên đào sâu từ video đang thắng, để chúng cạnh tranh công bằng
+    theo score thật với phần còn lại — KHÔNG ép chúng lên đầu danh sách bất kể score (làm vậy sẽ
+    đẩy các hit đúng từ video khác xuống dưới một cách vô lý, gây regression R@20/R@50 — xem
     docs/superpowers/plans/2026-08-24-phase2-3-rewrite-negation-risk-ranking.md).
 
-    Voi Temporal NMS bat: sau khi sap xep, loai keyframe sat nhau trong cung video, roi ap TRAN
-    BET_VIDEO_SHARE (mac dinh 50% so dong) cho chinh video dat cuoc — BAN DAC TA §3.2. Khong co tran
-    nay thi khi 1 video ap dao, no co the chiem gan het 100 dong bang cac frame gan giong nhau.
+    Với Temporal NMS bật: sau khi sắp xếp, loại keyframe sát nhau trong cùng video, rồi áp TRẦN
+    BET_VIDEO_SHARE (mặc định 50% số dòng) cho chính video đặt cược — BẢN ĐẶC TẢ §3.2. Không có trần
+    này thì khi 1 video áp đảo, nó có thể chiếm gần hết 100 dòng bằng các frame gần giống nhau.
     """
     n_target = max(1, int(top_k * BET_VIDEO_SHARE))
     top_video_hits = [h for h in hits if h["video_id"] == top_video_id]
@@ -242,16 +244,16 @@ def _bet_mode(
     if query_text and len(top_video_hits) < n_target:
         from scripts.agent.tools.retrieve import fast_retrieve_for_video
         deeper = fast_retrieve_for_video(query_text, top_video_id, top_k=n_target)
-        # Chi loai trung voi frame_idx CUA CHINH top_video_id — frame_idx la index cuc bo trong tung
-        # video (khong globally unique, xem index.py), so voi ca "hits" (nhieu video) se xoa nham cac
-        # ung vien dao sau hop le chi vi trung frame_idx voi 1 video khac hoan toan.
+        # Chỉ loại trùng với frame_idx CỦA CHÍNH top_video_id — frame_idx là index cục bộ trong từng
+        # video (không globally unique, xem index_store.py), so với cả "hits" (nhiều video) sẽ xoá nhầm
+        # các ứng viên đào sâu hợp lệ chỉ vì trùng frame_idx với 1 video khác hoàn toàn.
         seen_frame_idx = {h["frame_idx"] for h in top_video_hits}
         extra = [d for d in deeper if d["frame_idx"] not in seen_frame_idx]
         if score_key != "score":
-            # Ung vien dao sau KHONG nam trong pool dense ban dau (neu nam thi da bi dedup o tren) ->
-            # thu hang dense toan cuc cua chung chac chan sau pool. Gan diem theo dung cong thuc RRF
-            # voi thu hang uoc luong do, thay vi de trong (se thanh 0 va bi day xuong cuoi mot cach
-            # tuy tien) hay gan bua diem cao (se vuot mat ung vien pool that su tot hon).
+            # Ứng viên đào sâu KHÔNG nằm trong pool dense ban đầu (nếu nằm thì đã bị dedup ở trên) ->
+            # thứ hạng dense toàn cục của chúng chắc chắn sau pool. Gán điểm theo đúng công thức RRF
+            # với thứ hạng ước lượng đó, thay vì để trống (sẽ thành 0 và bị đẩy xuống cuối một cách
+            # tuỳ tiện) hay gán bừa điểm cao (sẽ vượt mặt ứng viên pool thật sự tốt hơn).
             from scripts.agent.tools.fusion import RRF_K, W_DENSE
             base_rank = len(hits) + 1
             for i, d in enumerate(sorted(extra, key=lambda h: -h["score"])):
@@ -262,7 +264,7 @@ def _bet_mode(
     if apply_nms:
         result = temporal_nms(result, min_gap=nms_min_gap, max_per_video=None, score_key=score_key)
 
-    # Tran cho video dat cuoc: van uu tien no manh (50% so dong) nhung khong de no nuot ca danh sach.
+    # Trần cho video đặt cược: vẫn ưu tiên nó mạnh (50% số dòng) nhưng không để nó nuốt cả danh sách.
     capped: list[dict] = []
     n_top_video = 0
     for h in result:
@@ -283,23 +285,23 @@ def _spread_mode(
     apply_nms: bool = False,
     nms_min_gap: float = MIN_TIME_GAP,
 ) -> list[dict]:
-    """"Trai rui ro" = uu tien theo THU HANG CUA VIDEO (best score/video), lay het dan (den
-    SPREAD_MAX_PER_VIDEO) cho tung video truoc khi chuyen sang video ke — KHONG round-robin dan deu.
+    """"Trải rủi ro" = ưu tiên theo THỨ HẠNG CỦA VIDEO (best score/video), lấy hết dần (đến
+    SPREAD_MAX_PER_VIDEO) cho từng video trước khi chuyển sang video kế — KHÔNG round-robin dàn đều.
 
-    Da thu round-robin (1 hit/video/vong) truoc — bi loi: khi pool rong (vd 250+ video khac nhau,
-    xem docs/superpowers/plans/2026-08-24-phase3-effective-rerank.md), vong 0 mot minh da chiem het
-    top_k cho MOI video 1 hit, nen video dung (dang o hang tot, vd #44/255) chi duoc 1 hit dau (co the
-    khong phai frame dung) ma khong con luot vong 1/2 de lay frame dung sau do — mat han ket qua da co
-    truoc khi rerank (regression). Fix: xu ly video theo thu tu diem tot nhat, MOI video duoc lay du
-    (toi da SPREAD_MAX_PER_VIDEO) hit CUA CHINH NO truoc khi xet video ke tiep — video dung thuong nam
-    trong nhom diem kha tot (khong can toan bo hang dau), duoc dam bao co du kien de frame dung (khong
-    nhat thiet la frame diem cao nhat cua video) van lot vao top_k.
+    Đã thử round-robin (1 hit/video/vòng) trước — bị lỗi: khi pool rộng (vd 250+ video khác nhau,
+    xem docs/superpowers/plans/2026-08-24-phase3-effective-rerank.md), vòng 0 một mình đã chiếm hết
+    top_k cho MỌI video 1 hit, nên video đúng (đang ở hạng tốt, vd #44/255) chỉ được 1 hit đầu (có thể
+    không phải frame đúng) mà không còn lượt vòng 1/2 để lấy frame đúng sau đó — mất hẳn kết quả đã có
+    trước khi rerank (regression). Fix: xử lý video theo thứ tự điểm tốt nhất, MỖI video được lấy đủ
+    (tối đa SPREAD_MAX_PER_VIDEO) hit CỦA CHÍNH NÓ trước khi xét video kế tiếp — video đúng thường nằm
+    trong nhóm điểm khá tốt (không cần toàn bộ hạng đầu), được đảm bảo có đủ kiện để frame đúng (không
+    nhất thiết là frame điểm cao nhất của video) vẫn lọt vào top_k.
     """
     by_video: dict[str, list[dict]] = {}
     video_best_score: dict[str, float] = {}
     for h in hits:
         vid = h["video_id"]
-        by_video.setdefault(vid, []).append(h)  # hits() da sort giam dan -> list nay cung giam dan
+        by_video.setdefault(vid, []).append(h)  # hits() đã sort giảm dần -> list này cũng giảm dần
         val = float(h.get(score_key, 0.0))
         if vid not in video_best_score or val > video_best_score[vid]:
             video_best_score[vid] = val
@@ -309,8 +311,8 @@ def _spread_mode(
     result: list[dict] = []
     for vid in videos_by_score:
         if apply_nms:
-            # Lay dinh cuc bo (local peak) thay vi SPREAD_MAX_PER_VIDEO frame dau danh sach — cac
-            # frame dau thuong sat nhau trong cung 1 canh, chiem cho ma khong tang co hoi trung.
+            # Lấy đỉnh cục bộ (local peak) thay vì SPREAD_MAX_PER_VIDEO frame đầu danh sách — các
+            # frame đầu thường sát nhau trong cùng 1 cảnh, chiếm chỗ mà không tăng cơ hội trúng.
             picked = temporal_nms(
                 by_video[vid], min_gap=nms_min_gap,
                 max_per_video=SPREAD_MAX_PER_VIDEO, score_key=score_key,

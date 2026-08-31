@@ -20,9 +20,9 @@ from scripts.agent.tools import index_store
 
 
 def get_neighbor_frames(video_id: str, frame_idx: int, window: int = 5) -> list[dict]:
-    """Tra ve toi da 2*window+1 keyframe LIEN TIEP (theo frame_idx) trong CUNG 1 video, xung quanh
-    frame_idx duoc chi dinh — dung cho man chi tiet keyframe (dai frame lan can, mockup man 1c).
-    Khong tinh score (khong phai ket qua truy van) — chi tra ve video_id/frame_id/frame_idx/pts_time.
+    """Trả về tối đa 2*window+1 keyframe LIÊN TIẾP (theo frame_idx) trong CÙNG 1 video, xung quanh
+    frame_idx được chỉ định — dùng cho màn chi tiết keyframe (dải frame lân cận).
+    Không tính score (không phải kết quả truy vấn) — chỉ trả về video_id/frame_id/frame_idx/pts_time.
     """
     _, _META, _ = index_store.get_index()
     mask = _META["video_id"] == video_id
@@ -41,16 +41,16 @@ def get_neighbor_frames(video_id: str, frame_idx: int, window: int = 5) -> list[
         results.append({
             "video_id":  row["video_id"],
             "frame_idx": fidx,
-            "frame_id":  fidx + 1,   # BTC dem frame tu 1 — quy doi CHI o day (xem CLAUDE.md)
+            "frame_id":  fidx + 1,   # BTC đếm frame từ 1 — cùng quy ước index_store.row_to_hit()
             "pts_time":  float(row["pts_time"]),
         })
     return results
 
 def get_all_frames(video_id: str) -> list[dict]:
-    """Tra ve TOAN BO keyframe cua 1 video (sap theo frame_idx tang dan) — dung cho dai luot
-    keyframe day du o man chi tiet KIS (cuon ngang tu frame dau den frame cuoi, thay cho
-    get_neighbor_frames chi lay +/- vai frame). Khong tinh score (khong phai ket qua truy van).
-    Moi phan tu: {video_id, frame_idx, frame_id, pts_time}.
+    """Trả về TOÀN BỘ keyframe của 1 video (sắp theo frame_idx tăng dần) — dùng cho dải lướt
+    keyframe đầy đủ ở màn chi tiết KIS (cuộn ngang từ frame đầu đến frame cuối, thay cho
+    get_neighbor_frames chỉ lấy +/- vài frame). Không tính score (không phải kết quả truy vấn).
+    Mỗi phần tử: {video_id, frame_idx, frame_id, pts_time}.
     """
     _, _META, _ = index_store.get_index()
     mask = _META["video_id"] == video_id
@@ -63,15 +63,15 @@ def get_all_frames(video_id: str) -> list[dict]:
         results.append({
             "video_id":  row["video_id"],
             "frame_idx": fidx,
-            "frame_id":  fidx + 1,   # BTC dem frame tu 1 — quy doi CHI o day (xem CLAUDE.md)
+            "frame_id":  fidx + 1,   # BTC đếm frame từ 1 — cùng quy ước index_store.row_to_hit()
             "pts_time":  float(row["pts_time"]),
         })
     return results
 
 def get_keyframe_path(video_id: str, frame_idx: int) -> Optional[str]:
-    """Tra ve duong dan file .jpg cua keyframe (video_id, frame_idx) — hoac None neu khong co dong
-    tuong ung / anh chua giai nen. jpg_path da duoc tinh san luc build index (xem scripts/index.py),
-    o day chi tra cuu lai. Dung cho router serve anh (scripts/api/routers/images.py)."""
+    """Trả về đường dẫn file .jpg của keyframe (video_id, frame_idx) — hoặc None nếu không có dòng
+    tương ứng / ảnh chưa giải nén. jpg_path đã được tính sẵn lúc nạp index (xem index_store.py),
+    ở đây chỉ tra cứu lại. Dùng cho router serve ảnh (scripts/api/routers/images.py)."""
     _, _META, _ = index_store.get_index()
     mask = (_META["video_id"] == video_id) & (_META["frame_idx"] == frame_idx)
     if not mask.any():

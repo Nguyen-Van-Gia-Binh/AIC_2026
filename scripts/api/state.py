@@ -1,14 +1,14 @@
 """
-state.py — Session state trong RAM cho backend API (Phase 1 skeleton).
+state.py — Session state trong RAM cho backend API.
 
-KHONG dung database (xem CLAUDE.md / docs/superpowers/specs/2026-08-27-...-design.md §3) — moi
-session (session_id do frontend tu sinh, xem frontend/src/session.ts) co 1 danh sach cac query da
-"Them vao hang doi", giu trong dict toan cuc trong tien trinh backend. Mat khi restart backend —
-chap nhan duoc o Phase 1 (chua can persist qua nhieu lan chay).
+KHÔNG dùng database (xem CLAUDE.md / docs/superpowers/specs/2026-08-27-...-design.md §3) — mọi
+session (session_id do frontend tự sinh, xem frontend/src/session.ts) có 1 danh sách các query đã
+"Thêm vào hàng đợi", giữ trong dict toàn cục trong tiến trình backend. Mất khi restart backend —
+chấp nhận được ở giai đoạn này (chưa cần persist qua nhiều lần chạy).
 
-Thread-safety: uvicorn dev (1 worker) chay cac route FastAPI dong bo (khong co await xen giua luc
-sua dict trong file nay) -> khong co race dieu kien thuc su. Neu sau nay chay nhieu worker/process,
-phai doi sang store khac.
+Thread-safety: uvicorn dev (1 worker) chạy các route FastAPI đồng bộ (không có await xen giữa lúc
+sửa dict trong file này) -> không có race điều kiện thực sự. Nếu sau này chạy nhiều worker/process,
+phải đổi sang store khác.
 """
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ def get_queue(session_id: str) -> list[dict[str, Any]]:
 
 
 def add_to_queue(session_id: str, item: dict[str, Any]) -> None:
-    """Them 1 query vao hang doi — neu query_id da ton tai thi THAY THE (giong scripts/app.py cu)."""
+    """Thêm 1 query vào hàng đợi — nếu query_id đã tồn tại thì THAY THẾ."""
     queue = get_queue(session_id)
     queue[:] = [q for q in queue if q["query_id"] != item["query_id"]]
     queue.append(item)

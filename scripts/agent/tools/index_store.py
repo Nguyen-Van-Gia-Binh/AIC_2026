@@ -133,21 +133,21 @@ def preload() -> None:
     _ensure_qa_loaded()
 
 def _row_to_hit(meta: pd.DataFrame, idx: int, score: float) -> dict:
-    """Dung 1 hit dict chuan tu 1 dong meta — dinh dang giong het fast_retrieve()."""
+    """Dựng 1 hit dict chuẩn từ 1 dòng meta — định dạng dùng chung cho mọi hàm retrieve."""
     row = meta.iloc[idx]
     frame_idx = int(row["frame_idx"])
     return {
         "video_id":  row["video_id"],
         "n":         int(row["n"]),
         "frame_idx": frame_idx,
-        "frame_id":  frame_idx + 1,   # BTC dem frame tu 1 — quy doi CHI o day (xem CLAUDE.md)
+        "frame_id":  frame_idx + 1,   # BTC đếm frame từ 1 — QUY ĐỔI CHỈ Ở ĐÂY (xem CLAUDE.md)
         "pts_time":  float(row["pts_time"]),
         "score":     float(score),
         "jpg_path":  row["jpg_path"] if isinstance(row["jpg_path"], str) else None,
     }
 
 def _get_key_index(qa: bool = False) -> dict:
-    """{(video_id, n): vi tri dong} cho model tuong ung — build 1 lan/process."""
+    """{(video_id, n): vị trí dòng} cho model tương ứng — build 1 lần/process."""
     global _KEY_INDEX, _QA_KEY_INDEX
     if qa:
         _ensure_qa_loaded()
@@ -165,17 +165,17 @@ def _get_key_index(qa: bool = False) -> dict:
     return _KEY_INDEX
 
 def _encode_mean(texts: list[str], qa: bool = False) -> np.ndarray:
-    """Encode nhieu cach dien dat cua CUNG 1 truy van roi lay trung binh + chuan hoa L2 —
+    """Encode nhiều cách diễn đạt của CÙNG 1 truy vấn rồi lấy trung bình + chuẩn hoá L2 —
     q_final = Normalize((q_1 + ... + q_m) / m), BAN DAC TA §3.1 (Multi-Aspect Prompt Expansion).
 
-    Chuan hoa lai la BAT BUOC: ma tran embedding da chuan hoa san (xem index.py), diem so o day la
-    dot product = cosine CHI KHI vector truy van cung co norm 1 — trung binh 2 vector don vi khong
+    Chuẩn hoá lại là BẮT BUỘC: ma trận embedding đã chuẩn hoá sẵn, điểm số ở đây là
+    dot product = cosine CHỈ KHI vector truy vấn cũng có norm 1 — trung bình 2 vector đơn vị không
     con norm 1.
     """
     encode_fn = _QA_ENCODE_FN if qa else _ENCODE_FN
     vecs = [encode_fn(t) for t in texts if t and t.strip()]
     if not vecs:
-        raise ValueError("[retrieve] _encode_mean: khong co text nao hop le de encode")
+        raise ValueError("[index_store] encode_mean: không có text nào hợp lệ để encode")
     q_vec = np.mean(np.stack(vecs, axis=0), axis=0).astype(np.float32)
     norm = float(np.linalg.norm(q_vec))
     return q_vec / norm if norm > 0 else q_vec

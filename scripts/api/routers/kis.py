@@ -1,6 +1,6 @@
 """
-routers/kis.py — Bridge sang HTTP cho rewrite + KIS search + frame lan can (man chi tiet keyframe).
-KHONG chua logic retrieval/rerank — chi goi thang cac ham co san.
+routers/kis.py — Bridge sang HTTP cho rewrite + KIS search + frame lân cận (màn chi tiết keyframe).
+KHÔNG chứa logic retrieval/rerank — chỉ gọi thẳng các hàm có sẵn.
 """
 from __future__ import annotations
 
@@ -21,7 +21,7 @@ _HIT_KEYS = {"video_id", "frame_id", "frame_idx", "pts_time", "score"}
 
 
 def _strip_extra(hits: list[dict]) -> list[dict]:
-    """Bo cac key khong thuoc schema (vd. jpg_path, n) truoc khi ep kieu Pydantic."""
+    """Bỏ các key không thuộc schema (vd. jpg_path, n) trước khi ép kiểu Pydantic."""
     return [{k: v for k, v in h.items() if k in _HIT_KEYS} for h in hits]
 
 
@@ -35,7 +35,7 @@ def rewrite(req: RewriteRequest) -> RewriteResponse:
 
 @router.post("/translate_raw", response_model=TranslateRawResponse)
 def translate_raw_endpoint(req: TranslateRawRequest) -> TranslateRawResponse:
-    """Dich tho VN->EN, khong qua LLM — de doi chieu voi ban rewrite da qua LLM toi uu."""
+    """Dịch thô VN->EN, không qua LLM — để đối chiếu với bản rewrite đã qua LLM tối ưu."""
     if not req.query.strip():
         raise HTTPException(400, "query rong")
     try:
@@ -61,8 +61,8 @@ def keyframe_neighbors(video_id: str, frame_idx: int, window: int = 5) -> list[N
 
 @router.get("/keyframes/{video_id}/all", response_model=list[NeighborFrame])
 def keyframe_all(video_id: str) -> list[NeighborFrame]:
-    """Toan bo keyframe cua 1 video — dai luot ngang o man chi tiet KIS."""
+    """Toàn bộ keyframe của 1 video — dải lướt ngang ở màn chi tiết KIS."""
     frames = get_all_frames(video_id)
     if not frames:
-        raise HTTPException(404, f"khong co keyframe cho {video_id}")
+        raise HTTPException(404, f"không có keyframe cho {video_id}")
     return [NeighborFrame(**f) for f in frames]

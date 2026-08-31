@@ -18,11 +18,11 @@ MAX_ANSWER_CHARS = 100
 
 _STANDALONE_INTEGER = re.compile(r"(?<![\d.,])\d+(?![\d.,])")
 
-# Answer dai hon nguong nay (theo so tu) moi goi LLM rut gon — answer ngan san thi chi can lam sach
-# bang rule, khong ton them 1 luot goi API.
+# Answer dài hơn ngưỡng này (theo số từ) mới gọi LLM rút gọn — answer ngắn sẵn thì chỉ cần làm sạch
+# bằng rule, không tốn thêm 1 lượt gọi API.
 CANONICAL_MAX_WORDS = 5
 
-# Van phong giao tiep can cat bo o dau answer (rule, khong ton LLM).
+# Văn phong giao tiếp cần cắt bỏ ở đầu answer (rule, không tốn LLM).
 _CONVERSATIONAL_PREFIX = re.compile(
     r"^\s*(?:"
     r"(?:the\s+)?(?:answer|color|number|name)\s+(?:is|shown\s+is)|"
@@ -34,7 +34,7 @@ _CONVERSATIONAL_PREFIX = re.compile(
     re.IGNORECASE,
 )
 
-# Dau hieu VLM/OCR KHONG doc duoc — khong duoc bien thanh 1 dap an "co ve dung" (chong ao giac §4.2).
+# Dấu hiệu VLM/OCR KHÔNG đọc được — không được biến thành 1 đáp án "có vẻ đúng" (chống ảo giác §4.2).
 _NON_ANSWER_HINTS = re.compile(
     r"(cannot\s+(?:be\s+)?(?:determine|tell|read|see)|can't\s+(?:tell|read|see)|not\s+visible|"
     r"not\s+legible|unable\s+to|no\s+visible|unclear|khong\s+(?:nhìn|thấy|rõ|xác\s+định|đọc)|"
@@ -48,21 +48,21 @@ def extract_visual_count(response: str) -> str | None:
     return matches[0] if len(matches) == 1 else None
 
 def is_non_answer(answer: str) -> bool:
-    """True neu answer thuc chat la "khong doc/nhin duoc" — cong chong ao giac (§4.2): khong duoc
-    dem chuoi nay di nop nhu 1 dap an, va phai keo confidence xuong."""
+    """True nếu answer thực chất là "không đọc/nhìn được" — cổng chống ảo giác (§4.2): không được
+    đem chuỗi này đi nộp như 1 đáp án, và phải kéo confidence xuống."""
     return bool(_NON_ANSWER_HINTS.search(answer or "")) or not (answer or "").strip()
 
 def canonicalize_answer(raw_answer: str, question: str = "", use_llm: bool = True) -> str:
     """
-    Canonical Extractor (§4.2): dua answer ve 1-3 tu khoa trong tam, bo van phong giao tiep.
+    Canonical Extractor (§4.2): đưa answer về 1-3 từ khoá trọng tâm, bỏ văn phong giao tiếp.
 
-    Vi sao can: cham diem BTC so khop answer voi dap an mau; 1 cau tra loi dung y nhung boc trong
+    Vì sao cần: chấm điểm BTC so khớp answer với đáp án mẫu; 1 câu trả lời đúng ý nhưng bọc trong
     cau van ("Trong hinh co mot chiec xe mau trang") de truot so voi dap an mau ("màu trắng").
 
-    2 tang, uu tien re truoc:
-      1. Rule — bo tien to giao tiep, bo dau cau thua. Chay luon, khong goi API.
-      2. LLM — chi khi sau buoc 1 answer VAN dai hon CANONICAL_MAX_WORDS tu. Loi LLM -> giu ket qua
-         buoc 1 (khong bao gio crash, khong bao gio tra ve rong).
+    2 tầng, ưu tiên rẻ trước:
+      1. Rule — bỏ tiền tố giao tiếp, bỏ dấu câu thừa. Chạy luôn, không gọi API.
+      2. LLM — chỉ khi sau bước 1 answer VẪN dài hơn CANONICAL_MAX_WORDS từ. Lỗi LLM -> giữ kết quả
+         bước 1 (không bao giờ crash, không bao giờ trả về rỗng).
     """
     answer = normalize_answer(raw_answer)
     if not answer or is_non_answer(answer):
@@ -81,19 +81,19 @@ def canonicalize_answer(raw_answer: str, question: str = "", use_llm: bool = Tru
             model="text", temperature=0.0, max_tokens=40,
         )
     except Exception as error:
-        print(f"[answer_qa] Canonical extractor loi ({type(error).__name__}: {error}) — giu answer rule-based")
+        print(f"[qa_normalize] Canonical extractor lỗi ({type(error).__name__}: {error}) — giữ answer rule-based")
         return answer
 
     short = normalize_answer(short)
     short = _CONVERSATIONAL_PREFIX.sub("", short).strip(" \t\"'.,;:")
-    # Chi nhan ban rut gon neu no THUC SU ngan hon va khong rong — tranh LLM tra ve loi giai thich.
+    # Chỉ nhận bản rút gọn nếu nó THỰC SỰ ngắn hơn và không rỗng — tránh LLM trả về lời giải thích.
     if short and len(short.split()) < len(answer.split()):
         print(f"[answer_qa] Canonical: {answer!r} -> {short!r}")
         return short
     return answer
 
 def normalize_answer(raw_answer: str) -> str:
-    """Giu answer 1 dong, ngan gon, va khong vuot gioi han BTC."""
+    """Giữ answer 1 dòng, ngắn gọn, và không vượt giới hạn BTC."""
     answer = " ".join(str(raw_answer).replace("\r", " ").replace("\n", " ").split())
     answer = re.sub(r"^(answer|final answer|câu trả lời)\s*:\s*", "", answer, flags=re.IGNORECASE)
     answer = answer.strip(" \t\"'")

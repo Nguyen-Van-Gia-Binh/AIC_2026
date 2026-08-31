@@ -9,11 +9,11 @@ Không cần gọi API. Trả về danh sách object detect được trong 1 key
 Dùng để cross-check answer Q&A và rerank KIS.
 
 Data path: data/extracted/objects/{video_id}/{n:03d}.json
-  n: so thu tu keyframe (cot "n" trong map-keyframes CSV, bat dau tu 1)
+  n: số thứ tự keyframe (cột "n" trong map-keyframes CSV, bắt đầu từ 1)
 
 JSON format:
-  detection_class_entities: list[str]  — ten object (tieng Anh)
-  detection_scores:         list[str]  — confidence score (dang string)
+  detection_class_entities: list[str]  — tên object (tiếng Anh)
+  detection_scores:         list[str]  — confidence score (dạng string)
   detection_boxes:          list[list] — bounding box [y1,x1,y2,x2] normalized
 """
 from __future__ import annotations
@@ -38,16 +38,16 @@ def get_objects(
     score_threshold: float = DEFAULT_SCORE_THRESHOLD,
 ) -> list[str]:
     """
-    Tra ve danh sach object detect duoc trong 1 keyframe.
+    Trả về danh sách object detect được trong 1 keyframe.
 
     Args:
-        video_id:        Vi du "L21_V001"
-        keyframe_n:      So thu tu keyframe (cot "n" trong map-keyframes, bat dau tu 1)
-        score_threshold: Chi giu object co confidence >= nguong nay
+        video_id:        Ví dụ "L21_V001"
+        keyframe_n:      Số thứ tự keyframe (cột "n" trong map-keyframes, bắt đầu từ 1)
+        score_threshold: Chỉ giữ object có confidence >= ngưỡng này
 
     Returns:
-        list[str]: Ten cac object (unique, sap xep theo score giam dan).
-                   Tra ve [] neu khong co file JSON.
+        list[str]: Tên các object (unique, sắp xếp theo score giảm dần).
+                   Trả về [] nếu không có file JSON.
     """
     json_path = OBJECTS_DIR / video_id / f"{keyframe_n:03d}.json"
     if not json_path.exists():
@@ -61,7 +61,7 @@ def get_objects(
     scores   = [float(s) for s in data.get("detection_scores", [])]
     entities = data.get("detection_class_entities", [])
 
-    # Loc theo nguong confidence, giu unique
+    # Lọc theo ngưỡng confidence, giữ unique
     seen = set()
     result = []
     for entity, score in zip(entities, scores):
@@ -77,18 +77,18 @@ def get_objects_for_hits(
     score_threshold: float = DEFAULT_SCORE_THRESHOLD,
 ) -> dict[int, list[str]]:
     """
-    Lay objects cho nhieu hit cung luc (dung sau khi retrieve).
+    Lấy objects cho nhiều hit cùng lúc (dùng sau khi retrieve).
 
     Args:
-        hits: list[dict] tu fast_retrieve(), moi item can co 'video_id' va 'n'
+        hits: list[dict] từ fast_retrieve(), mỗi item cần có 'video_id' và 'n'
 
     Returns:
-        dict: {hit_index: list[str]} — objects theo thu tu hit
+        dict: {hit_index: list[str]} — objects theo thứ tự hit
     """
     result = {}
     for i, hit in enumerate(hits):
         vid = hit.get("video_id", "")
-        n   = hit.get("n")  # so thu tu keyframe trong map-keyframes (cot "n")
+        n   = hit.get("n")  # số thứ tự keyframe trong map-keyframes (cột "n")
         if vid and n is not None:
             result[i] = get_objects(vid, int(n), score_threshold)
         else:
@@ -98,8 +98,8 @@ def get_objects_for_hits(
 
 def objects_contain_keywords(objects: list[str], keywords: list[str]) -> bool:
     """
-    Kiem tra xem danh sach object co chua bat ky keyword nao khong.
-    So sanh case-insensitive.
+    Kiểm tra xem danh sách object có chứa bất kỳ keyword nào không.
+    So sánh case-insensitive.
     """
     obj_lower = {o.lower() for o in objects}
     return any(kw.lower() in obj_lower or
@@ -110,12 +110,12 @@ def objects_contain_keywords(objects: list[str], keywords: list[str]) -> bool:
 # ─── CLI test ──────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     import os, sys
-    # Test voi L21_V001, keyframe n=1
+    # Thử với L21_V001, keyframe n=1
     objs = get_objects("L21_V001", 1)
     print(f"[objects_lookup] L21_V001 keyframe 001: {len(objs)} objects")
     print(f"  {objs[:10]}")
 
-    # Test voi vai video khac
+    # Thử với vài video khác
     for vid in ["L22_V001", "L23_V001", "L25_V001"]:
         objs2 = get_objects(vid, 1)
         print(f"  {vid}/001: {objs2[:5]}")

@@ -79,12 +79,12 @@ def run_kis(
     pool_size = max(top_k, RETRIEVAL_POOL_SIZE)
     aspects = expand_aspects(query_text) if use_expansion else [query_text]
     if len(aspects) > 1:
-        print(f"[kis] Multi-aspect: {len(aspects)} goc nhin cho cung 1 truy van")
+        print(f"[kis] Multi-aspect: {len(aspects)} góc nhìn cho cùng 1 truy vấn")
 
     results = hybrid_retrieve(
         query_text, top_k=pool_size, aspects=aspects, use_sparse=use_hybrid
     )
-    print(f"[kis] Lay {len(results)} ung vien tho (pool={pool_size}), rerank cat ve top_k={top_k}")
+    print(f"[kis] Lấy {len(results)} ứng viên thô (pool={pool_size}), rerank cắt về top_k={top_k}")
 
     results = apply_risk_aware_ranking(
         results, top_k=top_k, query_text=query_text,
@@ -92,7 +92,7 @@ def run_kis(
     )
 
     if use_ocr_rerank and query_likely_has_readable_text(query_text):
-        print(f"[kis] Query co dau hieu chua chu/so cu the -> chay rerank_by_ocr() tren top ung vien")
+        print("[kis] Query có dấu hiệu chứa chữ/số cụ thể -> chạy rerank_by_ocr() trên top ứng viên")
         results = rerank_by_ocr(
             results, query_text, top_n_ocr=min(20, len(results)), score_key="rrf_score",
         )
