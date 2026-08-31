@@ -147,6 +147,7 @@ def answer_from_hits(
     question: str,
     hits: list[dict],
     top_n: int = 5,
+    max_tier: int = 2,
 ) -> dict:
     """
     Trích xuất answer từ danh sách candidate hits.
@@ -155,6 +156,7 @@ def answer_from_hits(
         question: Câu hỏi (tiếng Việt hoặc Anh).
         hits:     list[dict] từ fast_retrieve(), đã có trường 'n' từ map-keyframes.
         top_n:    So hit dau can xem xet.
+        max_tier: 1 = chỉ chạy Tầng 1 Objects JSON (rẻ, nhanh); 2 = chạy đủ Tầng 1 + Tầng 2 Vision.
 
     Returns:
         dict:
@@ -213,7 +215,15 @@ def answer_from_hits(
                     "method":     "objects",
                 }
 
-    # --- Tầng 2: Vision (chỉ khi có ảnh) ---
+    if max_tier == 1:
+        # Dừng sau Tầng 1 — không vào Tầng 2 Vision, không chạy OCR
+        return {
+            "answer": "",
+            "best_hit": candidates[0] if candidates else {},
+            "confidence": 0.0,
+            "method": "fallback",
+        }
+
     # --- Tầng 2: Vision với evidence bundle ---
     # Gửi top-10 candidate và mọi nguồn bằng chứng để LLM tự đánh giá mức độ liên quan.
     vision_hits = [h for h in candidates if h.get("jpg_path") and Path(h["jpg_path"]).exists()][:QA_EVIDENCE_TOP_N]

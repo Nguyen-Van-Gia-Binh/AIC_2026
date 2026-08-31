@@ -85,3 +85,21 @@ def test_ocr_direct_overwrite_rat_chat() -> None:
         "Cau hoi DEM vat the khong duoc de OCR ghi de"
     )
     assert ocr_direct_answer("Biển số xe là gì?", {}) is None
+
+
+def test_answer_from_hits_max_tier_1_skips_vision(monkeypatch) -> None:
+    calls = []
+    def _mock_call(prompt, model="auto", **kwargs):
+        calls.append((prompt, model))
+        return "ANSWER: quả bóng màu đỏ"
+
+    monkeypatch.setattr(answer_qa, "call_llm", _mock_call)
+    monkeypatch.setattr(answer_qa, "get_objects", lambda vid, n: ["sports ball", "person"])
+    monkeypatch.setattr(answer_qa, "get_transcript", lambda vid, pts, window=7.5: "")
+
+    res = answer_from_hits("Quả bóng màu gì?", [_HIT], top_n=1, max_tier=1)
+    assert res["method"] == "objects"
+    assert res["answer"] == "quả bóng màu đỏ"
+    # Chỉ gọi text LLM, không gọi vision
+    assert all(model != "vision" for prompt, model in calls)
+

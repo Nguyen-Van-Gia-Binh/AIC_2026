@@ -26,7 +26,7 @@ def test_gom_cum_theo_video_xep_theo_diem() -> None:
 def test_moi_cum_video_co_answer_rieng(monkeypatch) -> None:
     calls: list = []
 
-    def _fake_answer(question, cluster_hits, top_n=5):
+    def _fake_answer(question, cluster_hits, top_n=5, max_tier=2):
         vid = cluster_hits[0]["video_id"]
         calls.append(vid)
         conf = {"A": 0.4, "B": 0.9, "C": 0.2}[vid]
@@ -43,7 +43,7 @@ def test_moi_cum_video_co_answer_rieng(monkeypatch) -> None:
 def test_max_clusters_gioi_han_chi_phi_llm(monkeypatch) -> None:
     calls: list = []
 
-    def _fake_answer(question, cluster_hits, top_n=5):
+    def _fake_answer(question, cluster_hits, top_n=5, max_tier=2):
         vid = cluster_hits[0]["video_id"]
         calls.append(vid)
         return {"answer": f"answer-{vid}", "best_hit": cluster_hits[0],
@@ -52,3 +52,23 @@ def test_max_clusters_gioi_han_chi_phi_llm(monkeypatch) -> None:
     monkeypatch.setattr(pipeline_qa, "answer_from_hits", _fake_answer)
     answers, _ = answer_by_video_cluster("q?", _hits(), max_clusters=2)
     assert calls == ["A", "B"] and set(answers) == {"A", "B"}, f"max_clusters=2: {calls}"
+
+
+def test_cluster_tier_assignment(monkeypatch) -> None:
+    """3 cụm đầu nhận tier 2 (full), các cụm tiếp theo nhận tier 1 (cheap)."""
+    tiers_called: list[tuple[str, int]] = []
+
+    def _fake_answer(question, cluster_hits, top_n=5, max_tier=2):
+        vid = cluster_hits[0]["video_id"]
+        tiers_called.append((vid, max_tier))
+        return {"answer": f"ans-{vid}", "best_hit": cluster_hits[0], "confidence": 0.5, "method": "objects"}
+
+    monkeypatch.setattr(pipeline_qa, "answer_from_hits", _fake_answer)
+
+    hits_5_vids = [
+        _hit("V1", 1, 0.5), _hit("V2", 2, 0.4), _hit("V3", 3, 0.3),
+        _hit("V4", 4, 0.2), _hit("V5", 5, 0.1),
+    ]
+    answer_by_video_cluster("q?", hits_5_vids, max_clusters=5)
+    assert tiers_called == [("V1", 2), ("V2", 2), ("V3", 2), ("V4", 1), ("V5", 1)]
+

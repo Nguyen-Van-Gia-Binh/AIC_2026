@@ -39,10 +39,12 @@ from scripts.agent.tools.rerank import apply_risk_aware_ranking, RETRIEVAL_POOL_
 
 CONFIDENCE_THRESHOLD = 0.5  # Dưới ngưỡng này: thử lại vòng 2
 
-# Số cụm video (top theo điểm) được trích xuất answer RIÊNG (§4.1 "Top 3-5 cụm video"). Mỗi cụm tốn
-# thêm 1-3 lượt gọi LLM (Tier 1/Tier 2 + crosscheck) nên đây là đánh đổi chi phí/độ phủ: 3 cụm bao
-# phủ được phần lớn trường hợp video đúng không phải top-1, vẫn giữ chi phí ở mức chấp nhận được.
-MAX_ANSWER_CLUSTERS = 3
+# Số cụm video (top theo điểm) được trích xuất answer RIÊNG (§4.1):
+# - 3 cụm đầu: chạy đủ Tầng 1 + Tầng 2 Vision (VLM/OCR).
+# - 12 cụm tiếp theo: chỉ chạy Tầng 1 Objects JSON (rẻ, nhanh, 1 lượt text LLM, 0 Vision).
+FULL_ANSWER_CLUSTERS = 3
+CHEAP_ANSWER_CLUSTERS = 12
+MAX_ANSWER_CLUSTERS = FULL_ANSWER_CLUSTERS + CHEAP_ANSWER_CLUSTERS  # 15 cụm
 
 # Số keyframe tốt nhất CỦA MỖI CỤM đưa vào answer_from_hits().
 CLUSTER_TOP_FRAMES = 5
@@ -79,10 +81,11 @@ def answer_by_video_cluster(
     answers: dict[str, str] = {}
     best: dict = {"answer": "", "best_hit": {}, "confidence": 0.0, "method": "fallback"}
 
-    for vid, cluster_hits in clusters:
-        result = answer_from_hits(question, cluster_hits, top_n=CLUSTER_TOP_FRAMES)
+    for idx, (vid, cluster_hits) in enumerate(clusters):
+        tier = 2 if idx < FULL_ANSWER_CLUSTERS else 1
+        result = answer_from_hits(question, cluster_hits, top_n=CLUSTER_TOP_FRAMES, max_tier=tier)
         answers[vid] = result["answer"]
-        print(f"[qa]   Cum {vid}: answer={result['answer']!r} conf={result['confidence']:.2f} "
+        print(f"[qa]   Cum {vid} (tier={tier}): answer={result['answer']!r} conf={result['confidence']:.2f} "
               f"method={result['method']}")
         if result["confidence"] > best["confidence"]:
             best = result

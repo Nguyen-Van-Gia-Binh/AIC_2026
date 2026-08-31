@@ -181,4 +181,24 @@ Hai test mới khoá cả hai chiều: không báo động giả khi chạy từ
 
 **Kết luận:** Giữ. Video không còn bị loại bỏ oan khi các mốc rơi vào cùng keyframe do lấy mẫu thưa, đồng thời đảm bảo không làm tụt thứ hạng của các video có chuỗi tăng nghiêm ngặt chuẩn xác.
 
+---
+
+## P2.6 — Q&A trích xuất answer cho nhiều cụm hơn (3 full + 12 cheap)
+
+`answer_qa.py` thêm tham số `max_tier: int = 2`. Khi `max_tier == 1`, hàm dừng ngay sau Tầng 1 (Objects JSON + 1 prompt text LLM), không vào Tầng 2 Vision và không gọi OCR. `pipeline_qa.py` mở rộng từ 3 cụm lên 15 cụm: 3 cụm đầu chạy Full Tầng 1+2, 12 cụm tiếp theo chạy Cheap Tầng 1.
+
+| | trước (P2.1) | sau (P2.6) |
+|---|---|---|
+| **QA Final** | 0.160 | **0.360** (+0.200) |
+| QA R@1 | 0.000 | **0.200** |
+| QA R@5 | 0.200 | **0.200** |
+| QA R@20 | 0.200 | **0.400** |
+| QA R@50 | 0.200 | **0.400** |
+| QA R@100 | 0.200 | **0.600** |
+| golden digest (KIS) | `48fd64fc41f776d8` | `48fd64fc41f776d8` — **không đổi** |
+| pytest | 83 | 85 passed |
+
+**Kết luận:** Giữ. Độ phủ answer độc lập của từng video tăng mạnh (từ 10 dòng lên 28–45 dòng trên top 100), giúp R@1/R@20/R@100 đều tăng vọt và Final Score Q&A đạt **0.360** (tăng gấp 9 lần so với baseline xuất phát 0.040) mà không phát sinh thêm chi phí Vision VLM.
+
+
 
