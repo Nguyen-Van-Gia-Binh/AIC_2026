@@ -875,7 +875,9 @@
         "text_en": "The last moment the măng tây is removed from the oil in the pan and placed on the plate.",
         "gt_frame_start": "5796",
         "gt_frame_end": "5806"
-=======
+      }]
+  },
+  {
     "query_id": "query-p2-1-kis",
     "type": "KIS",
     "text_vi": "Nhóm 5 người đang chơi đùa bên cạnh một con vật màu vàng. Một trong số đó đã mang một vật trông như trái bí đỏ đi giấu. Người đàn ông thức dậy không thấy quả bí đỏ đâu nên đánh thức con vật dậy.",
@@ -1142,12 +1144,10 @@
         "text_en": "Scene 4: A close-up shot of the noodle boxes stacked on a truck.",
         "gt_frame_start": 2227,
         "gt_frame_end": 2237
->>>>>>> 6c05c336b6ab2dddf0dd2e67edd961d9c56b1c37
       }
     ]
   },
   {
-<<<<<<< HEAD
     "query_id": "e-trake-thunghiem-002",
     "type": "TRAKE",
     "text_vi": "Đoạn video múa lân một con lân màu vàng đen trắng, tìm các sự kiện sau:",
@@ -1214,7 +1214,6 @@
         "gt_frame_end": "3838"
       }
     ]
-=======
     "query_id": "query-p2-22-kis",
     "type": "KIS",
     "text_vi": "Trong video nấu ăn, một loại nguyên liệu hải sản màu trắng được khứa theo những đường thẳng vuông góc nhau, trên cả 2 bề mặt của nguyên liệu này. Nguyên liệu sau đó được cắt thành từng que và cho vào tô, trước khi được trộn đều với các gia vị gồm rượu, tiêu và hạt nêm.",
@@ -1318,6 +1317,5 @@
     "gt_frame_end": 1121,
     "gt_answer": "Nghêu",
     "gt_answers": []
->>>>>>> 6c05c336b6ab2dddf0dd2e67edd961d9c56b1c37
   }
 ]
