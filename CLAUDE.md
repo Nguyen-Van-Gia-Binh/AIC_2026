@@ -115,9 +115,20 @@ boundary is wrong, not that a new folder is needed.
   Node/JS-free.
 - `transformers` — text encoder for **siglip** (`google/siglip-so400m-patch14-384`) and **siglip2**
   (`google/siglip2-so400m-patch14-384`); loaded through `tests/eval/multi_index.py`.
-- `torch` (CPU build) · `pandas` / `numpy` — the metadata table and embedding matrix.
-- `litellm` — routes all text and vision LLM calls through OpenRouter; model configured by
-  `OPENROUTER_MODEL` / `OPENROUTER_MODEL_CONTEST` and `AIC_MODE`.
+- `torch` (CUDA build `2.8.0+cu129`; the machine has an RTX 5050 Laptop, sm_120, **8 GB VRAM**) ·
+  `pandas` / `numpy` — the metadata table and embedding matrix.
+- `litellm` — routes every text and vision LLM call; provider chosen by `AIC_MODE`:
+
+  | `AIC_MODE` | Provider | Use it for | Cost |
+  |---|---|---|---|
+  | `local` | LM Studio (`LM_STUDIO_BASE`, `LM_STUDIO_MODEL`) | smoke tests, edit-run loops | free |
+  | `test` | Gemini free tier → OpenRouter (`OPENROUTER_MODEL`) | **every number you compare** | cheap |
+  | `contest` | OpenRouter (`OPENROUTER_MODEL_CONTEST`) | the real submission | expensive |
+
+  **Never take a comparison number from `AIC_MODE=local`.** 8 GB VRAM means a quantized ~7B VLM,
+  materially worse than the contest model at reading a scene — tuning a parameter against a local
+  score optimizes for the wrong model. `local` has no paid fallback on purpose: if LM Studio is
+  down it fails loudly rather than silently spending money.
 - `fastapi` + `uvicorn` (`scripts/api/`) · `pytest` (`tests/unit/`).
 - Frontend is React + Vite under `frontend/`.
 - No database, no ORM, no message queue — everything is files under `data/`, `tests/`, `submissions/`;
@@ -169,11 +180,17 @@ boundary is wrong, not that a new folder is needed.
   time budget before the contest is tight (see [PLAN.md](PLAN.md)).
 - ❌ Don't let a pipeline run an unbounded LLM loop — reflection/retry loops need a hard cap
   (`MAX_AGENT_LOOPS` in `config.py`).
-- ❌ Don't precompute OCR/VLM descriptions for all 177K keyframes — new evidence signals run
-  **on-demand**, only on already-retrieved candidates. (Encoding text that already exists is fine;
-  the ban is on *generating* content at that scale.)
-- ❌ Don't change tuned thresholds (`MARGIN_THRESHOLD`, `RECALL_HEAD_N`, TRAKE `GATE_MARGIN`) without
-  re-measuring with `tests/eval/run_eval.py` first.
+- ❌ Don't run OCR/VLM generation over all 177K keyframes **on the query path or on the dev machine**
+  — new evidence signals run **on-demand**, only on already-retrieved candidates. (Encoding text
+  that already exists is fine. A deliberate offline shard job on Kaggle/Colab is also fine — that's
+  what `scripts/offline/ocr/run_ocr_shard_local.py` and `colab_jobs/06_paddleocr_vietocr_shard*/`
+  exist for. The ban is on doing it inline, not on doing it at all.)
+- ❌ Don't change tuned thresholds without re-measuring **on a harness that actually reaches the code
+  you changed** — check with grep before trusting one:
+  - `MARGIN_THRESHOLD`, `RECALL_HEAD_N`, `SPREAD_MAX_PER_VIDEO` live in `rerank.py`, which
+    `run_eval.py` **never imports**. Use `tests/e2e/score_pipelines.py --types kis` (real `run_kis()`,
+    no LLM, free).
+  - `run_eval.py` measures backbone retrieval only, through `multi_index.py`.
 - ❌ Don't force-push or rewrite git history on `main`.
 
 ## Ignoring files

@@ -1,10 +1,17 @@
 """Cấu hình LLM tập trung cho toàn project AIC2026.
 
-Mọi lời gọi LLM đi qua LiteLLM. Ở AIC_MODE=test, ưu tiên gọi thẳng Google AI
-Studio (Gemini) bằng các key trong GEMINI_API_KEY, xoay vòng qua nhiều model
-Flash để tận dụng free tier, rồi mới fallback sang OpenRouter. Ở AIC_MODE=
-contest, chỉ dùng OpenRouter (OPENROUTER_MODEL_CONTEST) để ổn định. Cùng một
-model được dùng cho cả text và vision trong từng provider — xem PROVIDER_CHAIN.
+Mọi lời gọi LLM đi qua LiteLLM. Ba chế độ, chọn bằng biến môi trường AIC_MODE:
+
+  local   — chỉ LM Studio trên máy (lm_studio/, mặc định http://localhost:1234/v1). 0 đồng.
+            Dùng cho smoke test và vòng lặp sửa code. KHÔNG có fallback trả phí — cố ý, để
+            không bao giờ âm thầm tiêu tiền khi tưởng đang chạy miễn phí.
+            ⚠️ KHÔNG dùng để lấy số đo so sánh — xem CLAUDE.md.
+  test    — ưu tiên gọi thẳng Google AI Studio (Gemini) bằng các key trong GEMINI_API_KEY,
+            xoay vòng qua nhiều model Flash để tận dụng free tier, rồi mới fallback OpenRouter.
+            Đây là chế độ dùng để ĐO.
+  contest — chỉ OpenRouter (OPENROUTER_MODEL_CONTEST), ưu tiên ổn định lúc nộp thật.
+
+Cùng một model được dùng cho cả text và vision trong từng provider — xem PROVIDER_CHAIN.
 """
 from __future__ import annotations
 
@@ -40,12 +47,24 @@ OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "google/gemini-2.5-flash").stri
 if OPENROUTER_MODEL.startswith("openrouter/"):
     OPENROUTER_MODEL = OPENROUTER_MODEL[len("openrouter/"):]
 
-# AIC_MODE chọn model theo chế độ: "test" (rẻ, dùng khi dev) hoặc "contest" (mạnh hơn, dùng lúc nộp
-# thật). Không đổi signature call_llm() — chỉ đổi model nào được PROVIDER_CHAIN trỏ tới.
+# AIC_MODE chọn model theo chế độ. Không đổi signature call_llm() — chỉ đổi model nào được
+# PROVIDER_CHAIN trỏ tới.
+#
+#   local   — LM Studio chạy trên máy, 0 đồng. Dùng cho smoke test và vòng lặp sửa code.
+#             ⚠️ KHÔNG BAO GIỜ dùng để lấy số đo so sánh: VRAM máy đích 8 GB nên model local là
+#             VLM ~7B lượng tử hoá, kém hẳn model thi ở việc đọc cảnh. Tối ưu tham số theo số đo
+#             local là tự lừa mình. Xem CLAUDE.md và spec Pha 2 §4.
+#   test    — Gemini free tier trực tiếp, fallback OpenRouter. Rẻ. ĐÂY là chế độ để đo.
+#   contest — chỉ OpenRouter (OPENROUTER_MODEL_CONTEST). Mạnh nhất, đắt nhất, dùng lúc nộp thật.
 AIC_MODE = os.getenv("AIC_MODE", "test").strip().lower()
-if AIC_MODE not in ("test", "contest"):
-    print(f"[config] WARNING: AIC_MODE='{AIC_MODE}' không hợp lệ, dùng 'test' hoặc 'contest'. Mặc định: 'test'")
+if AIC_MODE not in ("local", "test", "contest"):
+    print(f"[config] WARNING: AIC_MODE='{AIC_MODE}' không hợp lệ, dùng 'local'/'test'/'contest'. Mặc định: 'test'")
     AIC_MODE = "test"
+
+# LM Studio phơi ra endpoint tương thích OpenAI. LiteLLM gọi qua tiền tố lm_studio/ nên KHÔNG cần
+# thêm phụ thuộc mới và KHÔNG phá luật "chỉ config.py gọi LLM".
+LM_STUDIO_BASE = os.getenv("LM_STUDIO_BASE", "http://localhost:1234/v1").strip()
+LM_STUDIO_MODEL = os.getenv("LM_STUDIO_MODEL", "qwen2.5-vl-7b-instruct").strip()
 
 # Nhiều key Google AI Studio (gọi thẳng Gemini, không qua OpenRouter) — chỉ dùng ở AIC_MODE=test để
 # tận dụng free tier trước khi tốn tiền OpenRouter. Cú pháp nhiều key: xem _parse_key_list ở trên
@@ -98,22 +117,35 @@ MAX_AGENT_LOOPS = 2
 # Ở AIC_MODE=contest: chỉ dùng OpenRouter — ưu tiên ổn định, không phụ thuộc free tier có thể bị
 # rate-limit giữa lúc thi thật.
 PROVIDER_CHAIN = []
-if AIC_MODE == "test" and GEMINI_API_KEYS:
-    PROVIDER_CHAIN.extend(
-        {
-            "name": f"gemini_direct:{model_id}",
-            "model_text": f"gemini/{model_id}",
-            "model_vision": f"gemini/{model_id}",
-            "api_keys": GEMINI_API_KEYS,
-        }
-        for model_id in GEMINI_DIRECT_MODELS
-    )
-PROVIDER_CHAIN.append({
-    "name": "openrouter",
-    "model_text": f"openrouter/{_SELECTED_MODEL}",
-    "model_vision": f"openrouter/{_SELECTED_MODEL}",
-    "api_keys": OPENROUTER_API_KEYS,
-})
+if AIC_MODE == "local":
+    # CHỈ MỘT provider, KHÔNG có lưới an toàn trả phí. Cố ý: nếu LM Studio chưa bật mà chain lại
+    # rơi xuống OpenRouter thì người dùng tưởng đang chạy 0 đồng nhưng thật ra đang tiêu tiền.
+    # Thà hỏng to còn hơn tiêu tiền âm thầm. api_keys là chuỗi giả — LM Studio không kiểm tra key,
+    # nhưng call_llm() bỏ qua provider có danh sách key rỗng nên phải có một phần tử.
+    PROVIDER_CHAIN.append({
+        "name": "lm_studio",
+        "model_text": f"lm_studio/{LM_STUDIO_MODEL}",
+        "model_vision": f"lm_studio/{LM_STUDIO_MODEL}",
+        "api_keys": ["lm-studio"],
+        "api_base": LM_STUDIO_BASE,
+    })
+else:
+    if AIC_MODE == "test" and GEMINI_API_KEYS:
+        PROVIDER_CHAIN.extend(
+            {
+                "name": f"gemini_direct:{model_id}",
+                "model_text": f"gemini/{model_id}",
+                "model_vision": f"gemini/{model_id}",
+                "api_keys": GEMINI_API_KEYS,
+            }
+            for model_id in GEMINI_DIRECT_MODELS
+        )
+    PROVIDER_CHAIN.append({
+        "name": "openrouter",
+        "model_text": f"openrouter/{_SELECTED_MODEL}",
+        "model_vision": f"openrouter/{_SELECTED_MODEL}",
+        "api_keys": OPENROUTER_API_KEYS,
+    })
 
 MODEL_TEXT = PROVIDER_CHAIN[0]["model_text"]
 MODEL_VISION = PROVIDER_CHAIN[0]["model_vision"]
@@ -153,13 +185,16 @@ def _build_messages(prompt: str, image_paths: list[str] | None):
     return [{"role": "user", "content": content}]
 
 
-def _call_one(model: str, api_key: str, messages, temperature: float, max_tokens: int) -> str:
+def _call_one(model: str, api_key: str, messages, temperature: float, max_tokens: int,
+              api_base: str | None = None) -> str:
+    """api_base chỉ khác None với provider chạy trên máy (LM Studio) — litellm bỏ qua khi là None."""
     response = litellm.completion(
         model=model,
         messages=messages,
         temperature=temperature,
         max_tokens=max_tokens,
         api_key=api_key,
+        api_base=api_base,
         stream=False,
     )
     content = response.choices[0].message.content
@@ -170,6 +205,7 @@ def _call_one(model: str, api_key: str, messages, temperature: float, max_tokens
             temperature=temperature,
             max_tokens=max_tokens * 2,
             api_key=api_key,
+            api_base=api_base,
             stream=False,
         )
         content = response.choices[0].message.content
@@ -202,11 +238,18 @@ def call_llm(
         for key_index, api_key in _rotate_keys(api_keys):
             try:
                 print(f"[config] {provider['name']} model={chosen_model} key {key_index}/{len(api_keys)} ({'vision' if is_vision else 'text'})")
-                return _call_one(chosen_model, api_key, messages, temperature, actual_max)
+                return _call_one(chosen_model, api_key, messages, temperature, actual_max,
+                                 api_base=provider.get("api_base"))
             except Exception as error:
                 print(f"[config] {provider['name']} key {key_index}/{len(api_keys)} loi {type(error).__name__}: {error}")
                 last_error = error
 
+    if AIC_MODE == "local":
+        raise RuntimeError(
+            f"Không gọi được LM Studio ở {LM_STUDIO_BASE} (model={LM_STUDIO_MODEL}). Kiểm tra: "
+            f"LM Studio đã bật server chưa, model đã nạp chưa, và LM_STUDIO_MODEL trong .env có "
+            f"khớp tên model đang nạp không. AIC_MODE=local KHÔNG tự rơi sang provider trả phí."
+        ) from last_error
     raise RuntimeError(
         "Tất cả provider đều thất bại — kiểm tra GEMINI_API_KEY/OPENROUTER_API_KEY và model trong .env."
     ) from last_error
