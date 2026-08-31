@@ -1,0 +1,75 @@
+{
+  "entries": [
+    {
+      "query_id": "kis-001",
+      "type": "KIS",
+      "query_text": "Nhóm 5 người đang chơi đùa bên cạnh một con vật màu vàng. Một trong số đó đã mang một vật trông như trái bí đỏ đi giấu. Người đàn ông thức dậy không thấy quả bí đỏ đâu nên đánh thức con vật dậy.",
+      "difficulty_tags": [],
+      "gt_video_id": "L24_V035",
+      "gt_frame": 305
+    },
+    {
+      "query_id": "qa-001",
+      "type": "QA",
+      "query_text": "Đoạn clip được quay từ bên trong một chiếc xe ô tô tự lái, có thể thấy rõ vô lăng được xoay để chiếc xe rẽ sang phải. Sau đó, góc quay chuyển ra ngoài, bắt trọn cảnh chiếc xe màu trắng rẽ trái, và ở góc trên khung hình có một dưới một biển hiệu đỏ gồm 6 ký tự chữ Hán. ",
+      "question": "Con số được viết trên phần hông xe màu trắng là số mấy?",
+      "difficulty_tags": [
+        "counting"
+      ],
+      "gt_video_id": "L21_V009",
+      "gt_frame": 21053,
+      "gt_answers": ["1204"]
+    },
+    {
+      "query_id": "qa-002",
+      "type": "QA",
+      "query_text": "Câu hỏi môn Sinh học nằm ở số thứ tự 11 trong đề thi THPTQG 2022. Trong câu hỏi có một biểu đồ đưa ra sự so sánh tốc độ sinh trưởng của các loài thực vật trong các hệ sinh thái ven biển.",
+      "question": "Hãy cho biết loài cây (II) đạt được tốc độ sinh trưởng tốt nhất khi môi trường sống có độ mặn là bao nhiêu phần nghìn?",
+      "difficulty_tags": [
+        "graph interpretation"
+      ],
+      "gt_video_id": "L25_V012",
+      "gt_frame": 15719,
+      "gt_answers": ["20 phần nghìn"]
+    },
+    {
+      "query_id": "qa-003",
+      "type": "QA",
+      "query_text": "Một cô gái đeo tạp dề màu trắng, bên cạnh là một lọ hoa riềng tía. Sau đó cô gái này đặt lên 1 dĩa trắng 4 con X, được biết X là nguyên liệu cho món ăn trong tập này. Sau đó người này lại cầm lên 2 con X. Sau đó người này đối thoại với một người đối diện để xem hôm nay nấu món gì. ",
+      "question": "Hỏi X là con gì?",
+      "difficulty_tags": [
+        "too many similar candidates, needs more prompting"
+      ],
+      "gt_video_id": "L26_V254",
+      "gt_frame": 1111,
+      "gt_answers": ["Nghêu"]
+    },
+    {
+      "query_id": "trake-001",
+      "type": "TRAKE",
+      "query_text": "4 cảnh này xảy ra liên tiếp nhau. ",
+      "difficulty_tags": [
+        "temporal_order"
+      ],
+      "gt_video_id": "L30_V031",
+      "events": [
+        {
+          "text_en": "Hai người phụ nữ cùng nhau dán niêm phong một thùng carton.",
+          "gt_frame": 2075
+        },
+        {
+          "text_en": "Các thùng mì tôm và bọc bánh mì được sắp xếp ngay ngắn.",
+          "gt_frame": 2129
+        },
+        {
+          "text_en": "Một người đàn ông nhấc thùng mì tôm lên và xếp lên trên chồng thùng mì.",
+          "gt_frame": 2215
+        },
+        {
+          "text_en": "Cảnh quay cận cảnh các thùng mì được xếp chồng trên xe tải.",
+          "gt_frame_start": 2227
+        }
+      ]
+    }
+  ]
+}
