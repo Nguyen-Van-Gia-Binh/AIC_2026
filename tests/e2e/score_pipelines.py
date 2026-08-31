@@ -192,8 +192,21 @@ def check_regression(
 
     base_finals = baseline.get("finals", {})
     print(f"\n[score_pipelines] === Regression Guard (baseline {baseline.get('saved_at', '?')}) ===")
+
+    # ALL cua lan chay nay chi so sanh duoc voi ALL cua baseline khi CUNG mot tap loai truy van.
+    # Chay --types qa roi so ALL (chi 5 cau QA) voi ALL cua baseline (38 cau ca 3 loai) se luon
+    # bao suy thoai gia — da xay ra that o P2.1 ngay 2026-08-31.
+    types_now = {g for g in finals if g != "ALL"}
+    types_base = {g for g in base_finals if g != "ALL"}
+    bo_qua_all = types_now != types_base
+    if bo_qua_all and "ALL" in finals:
+        print(f"  ALL  : {finals['ALL']:.3f}  (BO QUA so sanh — lan nay chay {sorted(types_now)} "
+              f"con baseline gom {sorted(types_base)}; hai con so ALL khong cung don vi)")
+
     regressed = False
     for group, value in finals.items():
+        if group == "ALL" and bo_qua_all:
+            continue
         if group not in base_finals:
             print(f"  {group:5s}: {value:.3f}  (baseline chua co nhom nay)")
             continue

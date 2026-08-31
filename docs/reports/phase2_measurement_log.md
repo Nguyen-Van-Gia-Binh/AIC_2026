@@ -97,3 +97,48 @@ Hai lỗi tiềm ẩn gỡ được kèm theo:
    sau khi chuyển thì trỏ sang `scripts/data/extracted/` (không tồn tại). Sửa thành `parents[3]`.
    **`golden_kis_snapshot.py` bắt được ngay lần chạy đầu** — nếu chỉ dựa vào `pytest tests/unit`
    thì lỗi này lọt qua, vì unit test không nạp index thật.
+
+---
+
+## P2.1 — Q&A dùng `siglip2` thay vì `siglip`
+
+`index_store.py:_QA_MODEL_TAG`: `"siglip"` → `"siglip2"`. Một dòng.
+
+| | trước | sau |
+|---|---|---|
+| **QA Final** | 0.040 | **0.160** |
+| QA R@1 | 0.000 | 0.000 |
+| QA R@5..R@100 | 0.000 / 0.000 / 0.000 / 0.200 | 0.200 / 0.200 / 0.200 / 0.200 |
+| golden digest (KIS) | `48fd64fc41f776d8` | `48fd64fc41f776d8` — **không đổi** |
+| pytest | 79 | 81 passed |
+
+Digest KIS không đổi là bằng chứng hai đường model thật sự tách rời: `_MODEL_TAG` (KIS/TRAKE) và
+`_QA_MODEL_TAG` (Q&A) không lẫn vào nhau.
+
+### Chất lượng bằng chứng — đọc kỹ trước khi tin con số
+
+| câu | trước (siglip) | sau (siglip2) | ghi chú |
+|---|---|---|---|
+| `e-qa-ai-004` | 0.000 | **0.800** | đáp án vốn đã đúng, giờ video mới lọt top-100 |
+| `e-qa-ai-001` | 0.200 | **0.000** | retrieval đổi ⇒ frame khác vào Vision ⇒ đáp án `2` → `1` (sai) |
+| `e-qa-ai-002/003/005` | 0.000 | 0.000 | không đổi |
+
+**Toàn bộ mức tăng đến từ một câu, bị một câu khác trừ bớt.** Trên n=5 đây là 2 điểm dữ liệu —
+tự nó KHÔNG đủ sức thuyết phục.
+
+Cái biện minh cho thay đổi này là chứng cứ **độc lập với phép đo trên**:
+
+1. Bake-off 33 câu retrieval-only (không có nhiễu LLM): siglip2 = 0,440 vs siglip = 0,120.
+2. Giá trị `siglip` lọt vào do **tai nạn merge** (`ab0ab32`), không phải một quyết định có đo đạc.
+3. Mọi tài liệu (`ARCHITECTURE.md`, docstring `pipeline_qa.py`) đều đã ghi `siglip2`.
+
+Nói cách khác: đây là **khôi phục giá trị đúng**, không phải tinh chỉnh tham số. Con số n=5 chỉ
+đóng vai trò kiểm tra không có hồi quy thảm hoạ.
+
+### Sửa kèm: Regression Guard báo động giả ở mọi phép đo từng phần
+
+`check_regression()` so `ALL` của lần chạy `--types qa` (5 câu QA) với `ALL` của baseline (38 câu
+cả 3 loại) ⇒ luôn báo "CO SUY THOAI" dù QA vừa tốt lên 4 lần. Hai con số `ALL` đó không cùng đơn vị.
+
+Nay bỏ qua so sánh `ALL` khi tập loại truy vấn của lần chạy khác tập của baseline, in rõ lý do.
+Hai test mới khoá cả hai chiều: không báo động giả khi chạy từng phần, vẫn báo khi tụt thật.

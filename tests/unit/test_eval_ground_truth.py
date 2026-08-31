@@ -62,3 +62,36 @@ def test_difficulty_tags_nam_trong_danh_sach_chuan():
         f"tag ngoai danh sach chuan: {la}. Them vao TAG_CHUAN neu that su can dang moi, "
         f"dung dat tag tu do."
     )
+
+
+# ─── Regression Guard ──────────────────────────────────────────────────────────
+
+def test_regression_guard_khong_bao_dong_gia_khi_chay_tung_phan(tmp_path, capsys):
+    """Chạy --types qa rồi so ALL (5 câu QA) với ALL của baseline (38 câu cả 3 loại) sẽ luôn báo
+    suy thoái giả. Đã xảy ra thật khi đo P2.1 ngày 2026-08-31."""
+    import json as _json
+
+    from tests.e2e.score_pipelines import check_regression
+
+    baseline = tmp_path / "baseline.json"
+    baseline.write_text(_json.dumps({
+        "saved_at": "test",
+        "finals": {"ALL": 0.456, "KIS": 0.643, "QA": 0.040, "TRAKE": 0.233},
+    }), encoding="utf-8")
+
+    # Chỉ chạy QA: QA tốt lên (0.040 -> 0.160), ALL thấp hơn baseline nhưng KHÔNG cùng đơn vị.
+    regressed = check_regression({"ALL": 0.160, "QA": 0.160}, baseline)
+    assert regressed is False, "so ALL cua lan chay tung phan voi ALL day du = bao dong gia"
+    assert "BO QUA so sanh" in capsys.readouterr().out
+
+
+def test_regression_guard_van_bao_khi_that_su_tut(tmp_path):
+    import json as _json
+
+    from tests.e2e.score_pipelines import check_regression
+
+    baseline = tmp_path / "baseline.json"
+    baseline.write_text(_json.dumps({
+        "saved_at": "test", "finals": {"ALL": 0.456, "QA": 0.400},
+    }), encoding="utf-8")
+    assert check_regression({"ALL": 0.100, "QA": 0.100}, baseline) is True

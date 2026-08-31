@@ -7,7 +7,7 @@ xong còn bẩn hơn trước. Ở đây state có đúng một chủ, ba module
 
 Hai không gian embedding độc lập, nạp lười, mỗi cái đúng một lần trong một tiến trình:
     KIS / TRAKE → tag từ AIC_RETRIEVE_MODEL (mặc định "siglip")
-    Q&A         → tag từ AIC_QA_MODEL       (mặc định "siglip")
+    Q&A         → tag từ AIC_QA_MODEL       (mặc định "siglip2")
 Tag hợp lệ: xem MODEL_REGISTRY trong scripts/agent/tools/multi_index.py.
 
 QUAN TRỌNG — row_to_hit() là ĐIỂM DUY NHẤT trong toàn repo quy đổi frame_id = frame_idx + 1.
@@ -49,7 +49,12 @@ _META = None
 _ENCODE_FN: Optional[Callable[[str], np.ndarray]] = None
 
 # ─── Singleton Q&A ───────────────────────────────────────────────────────────
-_QA_MODEL_TAG = os.environ.get("AIC_QA_MODEL", "").strip() or "siglip"
+# siglip2, KHÔNG phải siglip. Bake-off 33 câu (2026-08-28): QA Final siglip2 = 0,440 so với
+# siglip = 0,120 — chênh 3,7 lần. Mặc định này từng bị lật về "siglip" ở commit ab0ab32 (nhánh
+# song song, merge vào SAU khi baseline được chốt) và sống 3 ngày không ai thấy, vì không có phép
+# đo nào phủ Q&A: golden snapshot chỉ phủ KIS, còn run_eval.py không đi qua pipeline Q&A thật.
+# Đo lại 2026-08-31 xác nhận: QA Final tụt 0,200 -> 0,040 đúng vì dòng này. Xem PLAN.md P2.1.
+_QA_MODEL_TAG = os.environ.get("AIC_QA_MODEL", "").strip() or "siglip2"
 
 _QA_MATRIX: Optional[np.ndarray] = None
 _QA_META = None
@@ -114,7 +119,7 @@ def _ensure_loaded() -> None:
 
 
 def _ensure_qa_loaded() -> None:
-    """Nạp model Q&A (siglip) nếu chưa nạp."""
+    """Nạp model Q&A (siglip2) nếu chưa nạp."""
     global _QA_MATRIX, _QA_META, _QA_ENCODE_FN
     if _QA_MATRIX is not None:
         return
@@ -123,7 +128,7 @@ def _ensure_qa_loaded() -> None:
 
 def preload() -> None:
     """Nạp sẵn index + model cho CẢ HAI task ngay bây giờ (không đợi lần gọi đầu tiên).
-    KIS/TRAKE và Q&A dùng siglip. app.py gọi hàm này lúc khởi động để UI sẵn sàng
+    KIS/TRAKE dùng siglip, Q&A dùng siglip2. app.py gọi hàm này lúc khởi động để UI sẵn sàng
     truy xuất ngay từ lần search đầu, thay vì người dùng đầu tiên phải chờ load model.
     """
     _ensure_loaded()

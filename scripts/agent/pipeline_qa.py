@@ -15,9 +15,10 @@ Workflow (BẢN ĐẶC TẢ §4):
 100 dòng. Nếu video top-1 sai nhưng video đúng nằm ở hạng 7, dòng của video hạng 7 vẫn mang đáp án
 đúng của chính nó -> R@20/R@50/R@100 không bị về 0 vì "answer sai".
 
-Model embedding Q&A: xem index_store.py (env AIC_QA_MODEL). ⚠️ Mặc định trong code hiện là `siglip`,
-trong khi bake-off 33 query (2026-08-28) cho QA-retrieval Final = 0.440 với `siglip2` so với 0.120
-với `siglip` — chênh lệch x3.7. Sai lệch giữa code và tài liệu này CHƯA được xử lý: xem PLAN.md P2.1.
+Model embedding Q&A: `siglip2` (xem index_store.py, ghi đè bằng env AIC_QA_MODEL). Khác với
+KIS/TRAKE dùng `siglip` — bake-off 33 query (2026-08-28) cho QA-retrieval Final = 0,440 với
+`siglip2` so với 0,120 với `siglip`, chênh 3,7 lần. Mặc định này từng bị lật nhầm về `siglip` ở
+commit ab0ab32 và đã sửa lại ở Pha 2 (P2.1) — xem docs/reports/phase2_measurement_log.md.
 
 Output: list[dict] {video_id, frame_id, answer, score} đã sắp xếp
 """
