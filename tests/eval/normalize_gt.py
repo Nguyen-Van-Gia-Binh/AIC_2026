@@ -25,8 +25,8 @@ Usage:
     # Chuyển sang format harness
     .venv\\Scripts\\python.exe tests\\eval\\normalize_gt.py <v2.json> --out <v1.json>
 
-    # Chuyển rồi nối thẳng vào bộ eval chính (báo lỗi nếu trùng query_id)
-    .venv\\Scripts\\python.exe tests\\eval\\normalize_gt.py <v2.json> --merge tests\\eval\\eval_ground_truth.json
+    # Chuyển rồi nối thẳng vào các file con KIS/QA/TRAKE (tự động phân loại)
+    .venv\\Scripts\\python.exe tests\\eval\\normalize_gt.py <v2.json> --merge tests\\eval
 
     # Không gọi mạng (dịch máy) — dùng khi chỉ muốn kiểm tra cấu trúc
     ... --no-translate
@@ -41,6 +41,8 @@ from pathlib import Path
 _ROOT = Path(__file__).resolve().parents[2]  # tests/eval/ -> repo root
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
+
+from tests.eval.gt_loader import get_gt_path, save_ground_truth, _EVAL_DIR
 
 _MAP_KEYFRAMES = _ROOT / "data" / "extracted" / "map-keyframes"
 
@@ -279,14 +281,32 @@ def main() -> int:
     print(f"[normalize_gt] Da chuyen {len(converted)} entry sang format harness.")
 
     if args.merge:
-        existing = load_entries(args.merge)
-        seen = {e.get("query_id") for e in existing}
-        trung = sorted({c["query_id"] for c in converted if c["query_id"] in seen})
-        if trung:
-            raise SystemExit(f"[normalize_gt] query_id da ton tai trong {args.merge.name}: {trung}")
-        merged = existing + converted
-        args.merge.write_text(json.dumps(merged, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-        print(f"[normalize_gt] Da noi vao {args.merge} -> tong {len(merged)} cau.")
+        target = Path(args.merge)
+        if target.is_dir() or str(target).endswith(("/", "\\")):
+            by_type: dict[str, list[dict]] = {}
+            for c in converted:
+                t = str(c.get("type", "")).upper()
+                by_type.setdefault(t, []).append(c)
+
+            for t, items in by_type.items():
+                sub_path = get_gt_path(t, target)
+                existing = load_entries(sub_path) if sub_path.exists() else []
+                seen = {e.get("query_id") for e in existing}
+                trung = sorted({c["query_id"] for c in items if c["query_id"] in seen})
+                if trung:
+                    raise SystemExit(f"[normalize_gt] query_id da ton tai trong {sub_path.name}: {trung}")
+                merged = existing + items
+                save_ground_truth(merged, t, target)
+                print(f"[normalize_gt] Da noi {len(items)} cau vao {sub_path.name} -> tong {len(merged)} cau.")
+        else:
+            existing = load_entries(target) if target.exists() else []
+            seen = {e.get("query_id") for e in existing}
+            trung = sorted({c["query_id"] for c in converted if c["query_id"] in seen})
+            if trung:
+                raise SystemExit(f"[normalize_gt] query_id da ton tai trong {target.name}: {trung}")
+            merged = existing + converted
+            target.write_text(json.dumps(merged, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+            print(f"[normalize_gt] Da noi vao {target} -> tong {len(merged)} cau.")
 
     if args.out:
         args.out.write_text(json.dumps(converted, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

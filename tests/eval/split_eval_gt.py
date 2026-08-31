@@ -64,12 +64,12 @@ def split_ground_truth(
 
 def main() -> None:
     sys.stdout.reconfigure(encoding="utf-8")
-    parser = argparse.ArgumentParser(description="Tách eval_ground_truth.json thành 3 file KIS/QA/TRAKE.")
+    parser = argparse.ArgumentParser(description="Tách file ground truth v1 thành 3 file KIS/QA/TRAKE.")
     parser.add_argument(
         "--source",
         type=Path,
-        default=Path(__file__).resolve().parent / "eval_ground_truth.json",
-        help="Đường dẫn file eval_ground_truth.json nguồn",
+        required=True,
+        help="Đường dẫn file ground truth nguồn (JSON array)",
     )
     parser.add_argument(
         "--out-dir",
