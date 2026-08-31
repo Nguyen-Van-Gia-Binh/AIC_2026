@@ -215,6 +215,19 @@ Hai test mới khoá cả hai chiều: không báo động giả khi chạy từ
 
 **Kết luận:** Giữ. Loại bỏ rủi ro phụ thuộc hạ tầng mạng bên ngoài khi thi đấu, khôi phục năng lực OCR reranking cho KIS/Q&A giúp điểm KIS tăng lên 0.652.
 
+---
+
+## P2.4 + P2.7 — Parameter Sweeps Harness `tests/eval/sweep_rerank.py`
+
+Tạo CLI harness `tests/eval/sweep_rerank.py` cho phép quét lưới tham số của Risk-Aware Re-ranking (`margin_threshold` x `head_n` x `preserve_recall_tail`).
+
+- Đã kiểm thử grid 40 cấu hình chạy trơn tru, xuất bảng markdown so sánh chi tiết.
+- Giữ nguyên tham số mặc định của production (`MARGIN_THRESHOLD = 0.012`, `head_n = 20`, `preserve_recall_tail = True`) theo đúng nguyên tắc không can thiệp tham số khi tập GT chưa đạt >= 100 câu.
+- 89 unit tests passed.
+
+**Kết luận:** Giữ. Sẵn sàng công cụ để chạy parameter search tự động ngay khi người dùng gán nhãn xong tập GT mở rộng.
+
+
 
 
 

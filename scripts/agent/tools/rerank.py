@@ -77,6 +77,7 @@ def apply_risk_aware_ranking(
     *,
     score_key: str = "score",
     margin_key: str = "score",
+    margin_threshold: float | None = None,
     apply_nms: bool = False,
     nms_min_gap: float = MIN_TIME_GAP,
     preserve_recall_tail: bool | None = None,
@@ -96,6 +97,7 @@ def apply_risk_aware_ranking(
                    thật trên thang cosine; đo margin trên thang RRF (w/(k+rank), khoảng cách giữa các
                    hạng rất nhỏ và đều) làm chế độ đặt cược bật sai nhiều hơn hẳn — đo thật trên 18
                    cau KIS: Final 0.656 (margin cosine) vs 0.633 (margin RRF).
+        margin_threshold: Ngưỡng margin tuỳ chỉnh (float). Nếu None, dùng MARGIN_THRESHOLD mặc định.
         apply_nms: Bật Temporal NMS (BẢN ĐẶC TẢ §3.2) — loại keyframe lân cận trong cùng video để
                    không lãng phí dòng nộp bài cho cùng 1 cảnh. Mặc định TẮT để đường gọi cũ
                    (pipeline_qa) giữ nguyên hành vi đã benchmark; pipeline_kis bật tường minh.
@@ -137,9 +139,9 @@ def apply_risk_aware_ranking(
     # Ngưỡng: tuyệt đối trên thang cosine (đã căn chỉnh bằng benchmark thật), tương đối nếu ai đó
     # cố tình đo margin trên thang RRF (không phải mặc định — xem docstring margin_key).
     if margin_key == "score":
-        threshold = MARGIN_THRESHOLD
+        threshold = margin_threshold if margin_threshold is not None else MARGIN_THRESHOLD
     else:
-        threshold = MARGIN_RATIO_RRF * abs(ranked_videos[0][1])
+        threshold = margin_threshold if margin_threshold is not None else (MARGIN_RATIO_RRF * abs(ranked_videos[0][1]))
 
     if margin >= threshold:
         print(f"[rerank] margin={margin:.4f} >= {threshold:.4f} ({margin_key}) -> che do DAT CUOC "
