@@ -65,6 +65,7 @@ TAG_CHUAN = {
     "negation",              # câu phủ định/loại trừ ("cảnh không có người")
     "local_dialect",         # từ địa phương/viết tắt (thử sức rewrite.py)
     "chart_reading",         # phải đọc biểu đồ/đồ thị
+    "mistranslation",        # bẫy dịch sai thuật ngữ chuyên môn hoặc từ đồng âm
 }
 
 
