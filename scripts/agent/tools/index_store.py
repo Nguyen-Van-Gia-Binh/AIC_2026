@@ -65,7 +65,7 @@ def _add_jpg_paths(meta: pd.DataFrame) -> pd.DataFrame:
     """Bổ sung cột jpg_path cho meta trả về từ multi_index.get_index() (không có sẵn cột này —
     multi_index.py chỉ phục vụ so điểm retrieval, không cần ảnh preview).
 
-    Tái dùng ĐÚNG logic build_index() ở scripts/index.py dòng ~68-79 (thử đường dẫn lồng batch
+    Tái dùng ĐÚNG logic build_index() ở index_store._add_jpg_paths() (thử đường dẫn lồng batch
     data/extracted/keyframes/{batch}/{video_id}/{n}.jpg trước, fallback đường dẫn phẳng cũ
     .../{video_id}/{n}.jpg). Đặt hàm dùng chung ở đây (không sửa index.py — file baseline production,
     không được đụng) để KIS/Q&A/TRAKE vẫn hiện được ảnh preview khi test model khác baseline.

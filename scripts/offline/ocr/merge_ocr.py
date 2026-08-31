@@ -1,5 +1,5 @@
 """
-scripts/preprocess/ocr/merge_ocr.py — Hợp nhất & kiểm định kết quả OCR (PaddleOCR detect + VietOCR recognize) từ
+scripts/offline/ocr/merge_ocr.py — Hợp nhất & kiểm định kết quả OCR (PaddleOCR detect + VietOCR recognize) từ
 3 shard Colab (colab_jobs/06_paddleocr_vietocr_shard{0,1,2}/notebook.ipynb).
 
 Quy trình:

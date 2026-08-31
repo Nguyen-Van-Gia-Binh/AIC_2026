@@ -2,7 +2,7 @@
 Load embedding index + text encoder cho NHIỀU model khác nhau (clip_vitb32 / vitl14 / siglip /
 dfn / ...), phục vụ tests/eval/run_eval.py (Phase 6 — so baseline retrieval).
 
-Cố ý KHÔNG import/sửa scripts/index.py hay scripts/agent/tools/retrieve.py (đường dẫn production
+Cố ý KHÔNG import/sửa scripts/agent/tools/index_store.py (đường dẫn production
 KIS/QA/TRAKE, đang được dùng tập dượt thật trong Vòng thử nghiệm) — chấp nhận trùng ~20 dòng logic
 build-index để đổi lấy rủi ro bằng 0 cho pipeline sản xuất. Xem PLAN.md Phase 6.
 
@@ -34,7 +34,7 @@ _MAPKF_DIR = _DATA_DIR / "map-keyframes"
 
 
 def load_feature_index(features_dir: Path) -> tuple[np.ndarray, pd.DataFrame]:
-    """Lặp lại logic build_index() của scripts/index.py, nhận features_dir tuỳ ý thay vì hardcode
+    """Lặp lại logic logic nạp index của scripts/agent/tools/index_store.py, nhận features_dir tuỳ ý thay vì hardcode
     clip-features-32 — xem docstring module."""
     npy_files = sorted(features_dir.glob("*.npy"))
     if not npy_files:

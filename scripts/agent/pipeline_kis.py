@@ -11,7 +11,7 @@ Workflow (BẢN ĐẶC TẢ §3):
 
 Câu hỏi tiếng Việt: kết quả sẽ thấp hơn vì SigLIP hiểu tiếng Anh tốt hơn.
 Cố ý KHÔNG tự dịch VN→EN ở đây — quyết định kiến trúc đã chốt: KIS là workflow tuyến tính, không
-LLM (xem ARCHITECTURE.md §3). Dịch VN→EN được đặt ở tầng UI (`scripts/app.py`, checkbox
+LLM (xem ARCHITECTURE.md §3). Dịch VN→EN được đặt ở tầng UI (`frontend/` gọi `/api/rewrite`, chip gợi ý
 auto-translate gọi `agent/tools/rewrite.py`), không phải trong pipeline này. Vì lý do đó,
 Multi-Aspect Expansion ở đây dùng template tất định (`query_expand.expand_aspects`), KHÔNG gọi
 `expand_aspects_llm()`.

@@ -1,5 +1,5 @@
 """
-scripts/preprocess/captions/run_caption_shard_local.py — Chạy 1 shard caption Vintern-1B-v3.5 NGAY TRÊN MÁY LOCAL (GPU
+scripts/offline/captions/run_caption_shard_local.py — Chạy 1 shard caption Vintern-1B-v3.5 NGAY TRÊN MÁY LOCAL (GPU
 riêng), thay vì đẩy lên Kaggle qua kaggle_jobs/07_vintern_caption_shard{N}/.
 
 Lý do có file này: logic xử lý (dynamic_preprocess/load_image/caption_frame/...) giống HỆT

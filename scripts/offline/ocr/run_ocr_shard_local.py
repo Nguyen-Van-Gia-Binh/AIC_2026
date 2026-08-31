@@ -1,5 +1,5 @@
 """
-scripts/preprocess/ocr/run_ocr_shard_local.py — BIỆN PHÁP BACKUP: chạy tiếp (hoặc chạy mới) 1 shard OCR NGAY TRÊN
+scripts/offline/ocr/run_ocr_shard_local.py — BIỆN PHÁP BACKUP: chạy tiếp (hoặc chạy mới) 1 shard OCR NGAY TRÊN
 MÁY LOCAL (GPU riêng), dùng khi 1 trong 3 tài khoản Colab (colab_jobs/06_paddleocr_vietocr_shard{N}/)
 không chạy xong kịp trong giới hạn phiên/quota GPU miễn phí.
 

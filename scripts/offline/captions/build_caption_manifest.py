@@ -1,5 +1,5 @@
 """
-scripts/preprocess/captions/build_caption_manifest.py — Lọc keyframe theo Semantic Similarity & Chia đều 3 Shard cho 3 tài khoản Kaggle.
+scripts/offline/captions/build_caption_manifest.py — Lọc keyframe theo Semantic Similarity & Chia đều 3 Shard cho 3 tài khoản Kaggle.
 
 Thuật toán lọc:
   1. Luôn giữ frame đầu tiên (n=1, index 0).

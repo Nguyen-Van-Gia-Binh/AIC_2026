@@ -37,7 +37,7 @@ hỏng), phần còn lại dồn vào các dạng **lắt léo** sau (nên có �
 3. Chạy `lookup_frame.py` để ra `frame_id` gần nhất + gợi ý khoảng `[gt_frame_start, gt_frame_end]`:
 
    ```
-   .venv\Scripts\python.exe test_eval\Eval\lookup_frame.py L21_V001 25.0
+   .venv\Scripts\python.exe tests\eval\lookup_frame.py L21_V001 25.0
    ```
 
    Khoảng gợi ý mặc định khá rộng (tới keyframe lân cận) — nên tự thu hẹp lại bằng mắt (xem ảnh in
@@ -83,7 +83,7 @@ Field chung cho cả 3 loại: `query_id` (duy nhất, ví dụ `"e-kis-001"`), 
   "gt_video_id": "L22_V010",
   "gt_frame_start": 100,
   "gt_frame_end": 120,
-  "gt_answers": ["3", "ba", "three"]   // MẢNG các cách diễn đạt chấp nhận được. test_eval/Test/
+  "gt_answers": ["3", "ba", "three"]   // MẢNG các cách diễn đạt chấp nhận được. tests/e2e/
                                         // score_pipelines.py chấm answer theo §2.1.2: answer pipeline
                                         // sinh ra được tính đúng nếu (sau chuẩn hoá) TRÙNG / CHỨA / là
                                         // CON của bất kỳ phần tử nào ở đây. run_eval.py (backbone
@@ -119,5 +119,5 @@ Không cần đợi ghi đủ hết mới chạy thử — `run_eval.py` chạy 
 `eval_ground_truth.json` mới có vài dòng, hữu ích để phát hiện lỗi format sớm:
 
 ```
-.venv\Scripts\python.exe test_eval\Eval\run_eval.py
+.venv\Scripts\python.exe tests\eval\run_eval.py
 ```

@@ -1,7 +1,7 @@
 """
 Công cụ tra cứu frame_id từ timestamp — hỗ trợ NGƯỜI ghi ground truth cho bộ eval Phase 6.
 
-Không đụng gì tới scripts/index.py hay scripts/agent/tools/retrieve.py (pipeline sản xuất) — chỉ
+Không đụng gì tới scripts/agent/tools/index_store.py (pipeline sản xuất) — chỉ
 đọc thẳng data/extracted/map-keyframes/{video_id}.csv, độc lập hoàn toàn. Xem PLAN.md Phase 6 và
 tests/eval/EVAL_GUIDE.md để biết quy trình ghi ground truth đầy đủ.
 
@@ -47,7 +47,7 @@ def _load_map(video_id: str) -> pd.DataFrame:
 
 def _jpg_hint(video_id: str, n: int) -> str:
     # Cấu trúc thật: data/extracted/keyframes/{batch}/{video_id}/{n}.jpg (xem fix cùng ngày trong
-    # scripts/index.py — trước đó cả 2 chỗ đều giả định nhầm .../{video_id}/{n}.jpg, không lồng batch).
+    # scripts/agent/tools/index_store.py — trước đó cả 2 chỗ đều giả định nhầm .../{video_id}/{n}.jpg, không lồng batch).
     batch = video_id.split("_")[0]
     jpg_path = _KEYFRAMES_DIR / batch / video_id / f"{n:03d}.jpg"
     return str(jpg_path) if jpg_path.exists() else "(chưa có ảnh jpg cục bộ)"

@@ -1,4 +1,4 @@
-# scripts/preprocess/
+# scripts/offline/
 
 Các script **tiền xử lý ngoại tuyến** (offline preprocessing) — chạy **trước** pipeline truy vấn realtime.
 Chia thành 3 nhóm con độc lập theo loại dữ liệu xử lý.
@@ -7,7 +7,7 @@ Chia thành 3 nhóm con độc lập theo loại dữ liệu xử lý.
 
 ## Cấu trúc
 
-\scripts/preprocess/
+\scripts/offline/
 ├── captions/          # Sinh & gộp caption Vintern-1B cho keyframe
 ├── ocr/               # Chạy & gộp OCR (PaddleOCR + VietOCR) cho keyframe
 └── shards/            # Quản lý hạ tầng shard (Kaggle / Colab)

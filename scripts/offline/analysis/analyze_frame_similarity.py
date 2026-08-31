@@ -77,7 +77,7 @@ def _load_video(video_id: str) -> tuple[np.ndarray, np.ndarray]:
     emb = np.load(FEATURES_DIR / f"{video_id}.npy").astype(np.float32)
     norms = np.linalg.norm(emb, axis=1, keepdims=True)
     norms[norms == 0] = 1.0
-    emb = emb / norms  # re-normalize phòng sai số float16, cùng quy ước scripts/index.py
+    emb = emb / norms  # re-normalize phòng sai số float16, cùng quy ước index_store.py
     df = pd.read_csv(MAPKF_DIR / f"{video_id}.csv")
     if len(df) != emb.shape[0]:
         raise RuntimeError(f"{video_id}: số dòng map-keyframes ({len(df)}) != số vector embedding "

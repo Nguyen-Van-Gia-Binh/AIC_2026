@@ -12,7 +12,7 @@ Phạm vi (đã chốt trong PLAN.md Phase 6/7 — xem đó để biết đầy 
   - TRAKE: proxy retrieval-only bám §2.1.3 — dựng danh sách ỨNG VIÊN có xếp hạng (mỗi ứng viên = 1
     video_id + N frame_id, chuỗi frame_idx không giảm bằng DP), áp CỔNG VIDEO (video sai → R-Score
     0), rồi R@k = max trên k ứng viên đầu. KHÔNG có LLM crosscheck (không phụ thuộc backbone).
-  - Không đụng scripts/index.py / scripts/agent/tools/retrieve.py — xem tests/eval/multi_index.py.
+  - Không đụng scripts/agent/tools/index_store.py — xem tests/eval/multi_index.py.
 
 Ngoài bake-off backbone, file này còn là **Tầng 1 của Regression Guard** (BẢN ĐẶC TẢ §6): các bước
 thuật toán mới (RRF hybrid, Multi-Aspect Expansion, Temporal NMS, DP tăng nghiêm ngặt, Multi-Event
@@ -56,7 +56,7 @@ if str(_REPO_ROOT) not in sys.path:
 
 # 3 module THUẦN (không nạp index/model, không gọi LLM) dùng chung với đường production — nhập ở đây
 # để KHÔNG chép lại thuật toán RRF/NMS/expansion thành phiên bản thứ 2 dễ lệch. Quy ước "eval không
-# import scripts/index.py + scripts/agent/tools/retrieve.py" (xem docstring multi_index.py) vẫn giữ
+# import scripts/agent/tools/index_store.py" (xem docstring multi_index.py) vẫn giữ
 # nguyên: multi_index.py vẫn tự nạp index/encoder riêng.
 from scripts.agent.tools.fusion import reciprocal_rank_fusion, W_DENSE, W_SPARSE  # noqa: E402
 from scripts.agent.tools.temporal_nms import temporal_nms, MIN_TIME_GAP  # noqa: E402
@@ -120,7 +120,7 @@ def _r_at_k_from_rank(rank: Optional[int]) -> dict[int, float]:
 
 
 # ─── Tuỳ chọn thuật toán mới (BẢN ĐẶC TẢ §2/§3) — mặc định TẮT ────────────────────────────────
-# Tắt hết = kết quả y hệt các lần chạy trước (số trong docs/eval_baseline_comparison.md vẫn so sánh
+# Tắt hết = kết quả y hệt các lần chạy trước (số trong docs/reports/eval_baseline_comparison.md vẫn so sánh
 # được). Bật từng cờ để đo riêng đóng góp của từng bước, hoặc bật hết để xem trần của cả §2+§3.
 class EvalOptions:
     def __init__(self, hybrid=False, expand=False, nms=False, strict_dp=False, coverage_pool=False,

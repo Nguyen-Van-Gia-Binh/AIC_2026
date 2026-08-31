@@ -16,7 +16,7 @@ tìm kiếm/lọc metadata. Có 3 chế độ:
      thể bỏ trống nếu muốn index OCR trước, bổ sung caption sau bằng cách chạy lại (không skip vì
      `frame_exists` coi doc đã có là xong — xem ghi chú --no-skip-existing bên dưới nếu cần ghi đè).
 
-Đây là BATCH JOB riêng, chạy tay khi cần (re)build lại index OCR/caption — giống scripts/index.py
+Đây là BATCH JOB riêng, chạy tay khi cần (re)build lại index OCR/caption — giống index_store.py
 (build index CLIP) về vai trò, nhưng KHÔNG import/sửa index.py: script này không cần ma trận
 embedding CLIP, chỉ cần metadata keyframe (video_id/n/frame_idx/pts_time/đường dẫn ảnh), nên tự
 quét map-keyframes/ + keyframes/ trực tiếp để tránh tải thừa .npy nặng.
@@ -67,7 +67,7 @@ KEYFRAMES_DIR = DATA_DIR / "keyframes"
 
 def _iter_keyframes(video_id_filter: str | None = None):
     """Quét map-keyframes/*.csv + keyframes/ — cùng quy ước dò đường dẫn ảnh (lồng batch trước,
-    fallback phẳng) như scripts/index.py:build_index(), viết lại riêng ở đây vì script này không
+    fallback phẳng) như index_store.load_model(), viết lại riêng ở đây vì script này không
     cần ma trận embedding. Yield dict: {video_id, n, frame_idx, pts_time, jpg_path}."""
     csv_files = sorted(MAPKF_DIR.glob("*.csv"))
     if video_id_filter:

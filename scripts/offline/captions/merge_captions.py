@@ -1,5 +1,5 @@
 """
-scripts/preprocess/captions/merge_captions.py — Hợp nhất & Kiểm định kết quả Caption từ 3 Shard Kaggle.
+scripts/offline/captions/merge_captions.py — Hợp nhất & Kiểm định kết quả Caption từ 3 Shard Kaggle.
 
 Quy trình:
   1. Quét các thư mục / zip output tải về từ 3 tài khoản Kaggle:
