@@ -7,7 +7,13 @@ from __future__ import annotations
 import pytest
 
 from scripts.agent import pipeline_trake
-from scripts.agent.pipeline_trake import DEFAULT_LLM_CROSSCHECK_SCORE, _llm_crosscheck_chain
+from scripts.agent.pipeline_trake import DEFAULT_LLM_CROSSCHECK_SCORE, _llm_crosscheck_chain, run_trake
+import inspect
+
+
+def test_run_trake_default_top_k_video_is_100() -> None:
+    sig = inspect.signature(run_trake)
+    assert sig.parameters["top_k_video"].default == 100
 
 
 def _fake_hit(video_id: str, frame_idx: int, score: float) -> dict:

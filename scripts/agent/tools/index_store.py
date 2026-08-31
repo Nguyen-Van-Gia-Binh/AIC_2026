@@ -103,10 +103,15 @@ def _load_model(tag: str) -> tuple[np.ndarray, object, Callable[[str], np.ndarra
     n_kf = len(meta)
     n_vid = meta["video_id"].nunique()
     print(f"[retrieve] '{tag}': index ready — {n_kf} keyframe / {n_vid} video")
-    encoder = get_encoder(tag)
-    encode_fn: Callable[[str], np.ndarray] = (
-        lambda text: encoder([text])[0].astype(np.float32)  # noqa: E731
-    )
+    from functools import lru_cache
+
+    raw_encoder = get_encoder(tag)
+
+    @lru_cache(maxsize=512)
+    def _cached_encode(text: str) -> np.ndarray:
+        return raw_encoder([text])[0].astype(np.float32)
+
+    encode_fn: Callable[[str], np.ndarray] = _cached_encode
     return matrix, meta, encode_fn
 
 def _ensure_loaded() -> None:

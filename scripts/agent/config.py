@@ -195,6 +195,7 @@ def _call_one(model: str, api_key: str, messages, temperature: float, max_tokens
         max_tokens=max_tokens,
         api_key=api_key,
         api_base=api_base,
+        request_timeout=30.0,
         stream=False,
     )
     content = response.choices[0].message.content
@@ -206,6 +207,7 @@ def _call_one(model: str, api_key: str, messages, temperature: float, max_tokens
             max_tokens=max_tokens * 2,
             api_key=api_key,
             api_base=api_base,
+            request_timeout=30.0,
             stream=False,
         )
         content = response.choices[0].message.content

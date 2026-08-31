@@ -142,3 +142,23 @@ cả 3 loại) ⇒ luôn báo "CO SUY THOAI" dù QA vừa tốt lên 4 lần. Ha
 
 Nay bỏ qua so sánh `ALL` khi tập loại truy vấn của lần chạy khác tập của baseline, in rõ lý do.
 Hai test mới khoá cả hai chiều: không báo động giả khi chạy từng phần, vẫn báo khi tụt thật.
+
+---
+
+## P2.2 — TRAKE mở rộng `top_k_video=100`
+
+`pipeline_trake.py:top_k_video`: `20` → `100`. Kèm tối ưu `lru_cache` cho text encoder trong `index_store.py` và `request_timeout=30.0` trong `config.py`.
+
+| | trước | sau |
+|---|---|---|
+| **TRAKE Final** | 0.233 | **0.408** (+0.175) |
+| TRAKE R@1 | 0.100 | **0.258** |
+| TRAKE R@5 | 0.267 | **0.358** |
+| TRAKE R@20 | 0.267 | **0.475** |
+| TRAKE R@50 | 0.267 | **0.475** |
+| TRAKE R@100 | 0.267 | **0.475** |
+| golden digest (KIS) | `48fd64fc41f776d8` | `48fd64fc41f776d8` — **không đổi** |
+| pytest | 81 | 82 passed |
+
+**Kết luận:** Giữ. Điểm Final TRAKE tăng vọt từ 0.233 lên 0.408 (+75%) nhờ gỡ bỏ chặn cứng 20 ứng viên, R@1/R@5/R@20 đều tăng mạnh mà không phát sinh thêm chi phí LLM (cổng LLM vẫn giữ nguyên top-3 khi margin <= 0.02).
+

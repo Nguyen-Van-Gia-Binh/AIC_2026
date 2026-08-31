@@ -7,7 +7,7 @@ Giai doan 1 - Multi-Event Coverage Pooling (BAN DAC TA §5.1):
   rewrite global query VA ca N event query
   -> fast_retrieve(top_k=RETRIEVAL_POOL_SIZE) cho global query + cho TỪNG event
   -> Video_Score(V) = Sim_global(V) + sum_i max_{f in V} Sim(e_i, f)
-  -> xếp theo (số mốc video có mặt trong pool, tổng điểm) -> top_k_video candidate (mặc định 20)
+  -> xếp theo (số mốc video có mặt trong pool, tổng điểm) -> top_k_video candidate (mặc định 100)
   Ý nghĩa: video "phủ" đủ cả N mốc thắng video chỉ trùng bối cảnh chung — đúng điều TRAKE cần.
 
 Giai doan 2 - Strict Monotonic DP (§5.2):
@@ -117,7 +117,7 @@ def _llm_crosscheck_chain(query_en: str, event_queries_en: list[str], chain: lis
 def run_trake(
     query_text: str,
     events: list[str],
-    top_k_video: int = 20,
+    top_k_video: int = 100,
     top_k_frame: int = 20,
     query_en: str | None = None,
     strict_monotonic: bool = True,
@@ -129,7 +129,7 @@ def run_trake(
         query_text:  Mô tả tổng quát chuỗi sự kiện (để tìm video).
         events:      Danh sách mô tả từng khoảnh khắc theo thứ tự thời gian.
                      Ví dụ: ["athlete takes off", "athlete clears bar", "athlete lands"]
-        top_k_video: Số video candidate để thử alignment (default 20).
+        top_k_video: Số video candidate để thử alignment (default 100).
         top_k_frame: Số frame candidate mỗi event khi alignment (default 20).
         query_en:    Nếu có (vd. người dùng đã xem/sửa câu rewrite global query trong UI — xem
                      agent/tools/rewrite.py rewrite_query_candidates() + frontend/), bỏ qua
