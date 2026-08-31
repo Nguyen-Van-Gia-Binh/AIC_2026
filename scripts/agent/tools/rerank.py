@@ -45,7 +45,7 @@ BET_VIDEO_SHARE = 0.5
 SPREAD_MAX_PER_VIDEO = 3
 
 # Số ứng viên thô cần lấy từ fast_retrieve TRƯỚC KHI rerank/cắt về top_k submission. Lớn hơn hẳn so với
-# top_k thực tế (thường 100) vì chẩn đoán thực tế trên eval_ground_truth.json cho thấy GT frame chỉ nằm
+# top_k thực tế (thường 100) vì chẩn đoán thực tế trên ground truth cho thấy GT frame chỉ nằm
 # trong top-100 ở 12/23 câu nhưng nằm trong top-500 ở 20/23 câu (xem
 # docs/superpowers/plans/2026-08-24-phase3-effective-rerank.md) — trong khi chi phí tính gần như miễn
 # phí (fast_retrieve đã nhận full ma trận 177K keyframe, chỉ argsort cắt nhiều hơn).
@@ -54,7 +54,7 @@ RETRIEVAL_POOL_SIZE = 500
 # Số dòng ĐẦU danh sách do rerank toàn quyền quyết định. Từ dòng (RECALL_HEAD_N + 1) trở đi, danh
 # sách được lặp lại theo ĐÚNG THỨ TỰ RETRIEVAL GỐC (xem _preserve_recall_tail).
 #
-# Vì sao: đo thật trên 18 câu KIS của eval_ground_truth.json cho thấy hậu xử lý KHÔNG hơn retrieval
+# Vì sao: đo thật trên 18 câu KIS của eval_ground_truth_kis.json cho thấy hậu xử lý KHÔNG hơn retrieval
 # thuần ở bất kỳ mốc nào, và THUA rõ từ hạng 20 trở đi:
 #     retrieval thuan (run_eval.py) : R@1 0.389  R@5 0.611  R@20 0.833  R@50 0.889  R@100 1.000
 #     pipeline that (score_pipelines): R@1 0.389  R@5 0.611  R@20 0.722  R@50 0.778  R@100 0.833

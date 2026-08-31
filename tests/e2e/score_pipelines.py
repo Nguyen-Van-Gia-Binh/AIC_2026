@@ -1,6 +1,6 @@
 """
 score_pipelines.py — Final Score BTC THẬT của cả hệ thống: chạy trọn pipeline production
-(run_kis / run_qa / run_trake) trên tests/eval/eval_ground_truth.json rồi chấm đúng công thức
+(run_kis / run_qa / run_trake) trên bộ ground truth con qua tests/eval/gt_loader.py rồi chấm đúng công thức
 docs/Thong tin vong So tuyen AIC2026.md §2.1–2.2.
 
 Khác tests/eval/run_eval.py (bake-off backbone, retrieval-only, không LLM): file này đi qua

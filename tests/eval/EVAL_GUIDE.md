@@ -1,6 +1,6 @@
 # Hướng dẫn ghi ground truth
 
-> File dữ liệu chính: [eval_ground_truth.json](eval_ground_truth.json) (38 câu tính đến 2026-08-31).
+> File dữ liệu: 3 file con [eval_ground_truth_kis.json](eval_ground_truth_kis.json), [eval_ground_truth_qa.json](eval_ground_truth_qa.json), [eval_ground_truth_trake.json](eval_ground_truth_trake.json) (91 câu tính đến 2026-08-31).
 > Bối cảnh vì sao cần mở rộng: [PLAN.md](../../PLAN.md) §10.2 và
 > [spec Pha 2 §5](../../docs/superpowers/specs/2026-08-31-phase2-behavior-fixes-design.md).
 
@@ -33,8 +33,8 @@ bạn. **Bạn không cần tự dịch, không cần tự nghĩ ra khoảng.**
 # Kiểm tra trước (chạy sớm và chạy thường xuyên — đừng gán 50 câu rồi mới kiểm tra)
 .venv\Scripts\python.exe tests\eval\normalize_gt.py <file cua ban>.json --check
 
-# Chuyển rồi nối vào bộ eval chính
-.venv\Scripts\python.exe tests\eval\normalize_gt.py <file cua ban>.json --merge tests\eval\eval_ground_truth.json
+# Chuyển rồi tự động phân loại nối vào 3 file con tương ứng trong tests/eval/
+.venv\Scripts\python.exe tests\eval\normalize_gt.py <file cua ban>.json --merge tests\eval
 ```
 
 ### Vì sao schema có `text_en`

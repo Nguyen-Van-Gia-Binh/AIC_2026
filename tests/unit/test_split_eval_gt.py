@@ -10,7 +10,6 @@ import pytest
 from tests.eval.split_eval_gt import split_ground_truth
 
 _EVAL_DIR = Path(__file__).resolve().parents[1] / "eval"
-_MASTER_GT = _EVAL_DIR / "eval_ground_truth.json"
 _KIS_GT = _EVAL_DIR / "eval_ground_truth_kis.json"
 _QA_GT = _EVAL_DIR / "eval_ground_truth_qa.json"
 _TRAKE_GT = _EVAL_DIR / "eval_ground_truth_trake.json"
@@ -46,12 +45,8 @@ def test_split_ground_truth_preserves_all_records(tmp_path):
     assert loaded_kis == [mock_data[0]]
 
 
-def test_split_files_on_disk_match_master_eval_ground_truth():
-    """Kiểm tra 3 file con trên đĩa khớp 100% không thất thoát so với file master."""
-    if not _MASTER_GT.exists():
-        pytest.skip("Không tìm thấy eval_ground_truth.json")
-
-    master = json.loads(_MASTER_GT.read_text(encoding="utf-8"))
+def test_split_files_on_disk_match_expected_counts_and_types():
+    """Kiểm tra 3 file con trên đĩa đầy đủ 91 câu với đúng type tương ứng."""
     assert _KIS_GT.exists(), f"Thiếu file {_KIS_GT}"
     assert _QA_GT.exists(), f"Thiếu file {_QA_GT}"
     assert _TRAKE_GT.exists(), f"Thiếu file {_TRAKE_GT}"
@@ -64,21 +59,12 @@ def test_split_files_on_disk_match_master_eval_ground_truth():
     assert len(kis) == 59
     assert len(qa) == 17
     assert len(trake) == 15
-    assert len(kis) + len(qa) + len(trake) == len(master)
+    assert len(kis) + len(qa) + len(trake) == 91
 
     # 2. Type từng file
     assert all(d.get("type") == "KIS" for d in kis)
     assert all(d.get("type") == "QA" for d in qa)
     assert all(d.get("type") == "TRAKE" for d in trake)
-
-    # 3. Khớp 100% nội dung với master theo từng type
-    master_kis = [d for d in master if d.get("type") == "KIS"]
-    master_qa = [d for d in master if d.get("type") == "QA"]
-    master_trake = [d for d in master if d.get("type") == "TRAKE"]
-
-    assert kis == master_kis
-    assert qa == master_qa
-    assert trake == master_trake
 
 
 def test_split_ground_truth_invalid_inputs(tmp_path):

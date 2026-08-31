@@ -1,7 +1,7 @@
 """
 test_phase5_ocr.py — Benchmark truoc/sau cho OCR on-demand (Phase 5, answer_qa.py Tier 2).
 
-Dung 3 cau hoi tu tao, moi cau tro thang vao 1 frame GT co san trong eval_ground_truth.json ma mo ta
+Dung 3 cau hoi tu tao, moi cau tro thang vao 1 frame GT co san trong eval_ground_truth_kis.json ma mo ta
 ro chu/so nhin thay duoc (e-kis-ai-007/016/013) — KHONG goi fast_retrieve() de tranh phu thuoc chat
 luong retrieval, hit duy nhat duoc dung la dung video_id/n cua GT (giong tinh than Phase 4 Task2 fix
 round 1: khu nhieu benchmark bang cach co dinh dau vao, chi do dung 1 bien so — o day la co/khong OCR

@@ -1,7 +1,7 @@
 # Báo Cáo Kiểm Toán Bộ Dữ Liệu Ground Truth (AIC 2026)
 
 > **Ngày thực hiện:** 2026-08-31  
-> **Phạm vi:** Toàn bộ 91 câu trong [`tests/eval/eval_ground_truth.json`](eval_ground_truth.json) (59 KIS, 17 QA, 15 TRAKE).  
+> **Phạm vi:** Toàn bộ 91 câu trong 3 file ground truth con: [`eval_ground_truth_kis.json`](eval_ground_truth_kis.json) (59 câu), [`eval_ground_truth_qa.json`](eval_ground_truth_qa.json) (17 câu), [`eval_ground_truth_trake.json`](eval_ground_truth_trake.json) (15 câu).  
 > **Mục tiêu:** Rà soát tính chính xác của nhãn (type), chất lượng bản dịch `text_vi` vs `text_en`, tính nhất quán của câu hỏi/đáp án QA, chuỗi sự kiện TRAKE, và phát hiện các lỗi cấu trúc/dữ liệu.  
 > **Nguyên tắc:** **KHÔNG tự ý sửa nội dung file dữ liệu** trong quá trình phân tách; toàn bộ bất thường được ghi nhận tại đây để lập kế hoạch sửa lỗi sau khi người dùng phê duyệt.
 
@@ -81,4 +81,4 @@ Một số câu KIS mô tả hai mốc thời gian rõ rệt ("bắt đầu bằ
 
 1. **Bước 1:** Trình duyệt bảng sửa lỗi chi tiết (điền `gt_video_id` cho 2 câu TRAKE thử nghiệm, đảo ngược 2 khoảng frame, điền `question` & `gt_answers` cho 9 câu QA).
 2. **Bước 2:** Bổ sung `difficulty_tags` cho 35 câu chưa có tag.
-3. **Bước 3:** Chạy `normalize_gt.py` và cập nhật lại cả 3 file con lẫn file tổng thể `eval_ground_truth.json`.
+3. **Bước 3:** Chạy `normalize_gt.py` và cập nhật lại cả 3 file con `eval_ground_truth_kis.json`, `eval_ground_truth_qa.json`, `eval_ground_truth_trake.json`.

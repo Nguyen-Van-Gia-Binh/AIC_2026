@@ -158,10 +158,9 @@ def test_check_phat_hien_thieu_gt_frame():
 
 def test_tag_chuan_phu_het_tag_dang_dung_trong_bo_eval():
     """TAG_CHUAN là nguồn sự thật duy nhất — bộ eval thật không được có tag ngoài nó."""
-    from pathlib import Path
-    gt = Path(__file__).resolve().parents[1] / "eval" / "eval_ground_truth.json"
-    if not gt.exists():
-        pytest.skip("khong tim thay eval_ground_truth.json")
-    data = json.loads(gt.read_text(encoding="utf-8"))
+    from tests.eval.gt_loader import load_ground_truth
+    data = load_ground_truth()
+    if not data:
+        pytest.skip("khong tim thay du lieu ground truth")
     la = sorted({t for q in data for t in q.get("difficulty_tags", []) if t not in TAG_CHUAN})
     assert not la, f"tag ngoai TAG_CHUAN: {la}"

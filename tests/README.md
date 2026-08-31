@@ -36,8 +36,8 @@ vi đã đổi — không phải nhiễu. Đổi hành vi **có chủ đích** t
 - Test cần `data/` mà vẫn muốn nằm trong `unit/` thì tự `pytest.mark.skipif` khi thiếu dữ liệu
   (xem `unit/test_asr_lookup.py`) — để `pytest tests/unit` luôn xanh trên máy chỉ có source.
 
-Ground truth (`eval/eval_ground_truth.json`) là bộ **hand-label tự chấm** (một người xem video rồi
-ghi `video_id` + khoảng `frame_id` đúng), **không phải đề thi chính thức của BTC**. Quy trình ghi:
+Ground truth (`eval/eval_ground_truth_kis.json`, `eval_ground_truth_qa.json`, `eval_ground_truth_trake.json`) là bộ **hand-label tự chấm** (một người xem video rồi
+ghi `video_id` + khoảng `frame_id` đúng), **không phải đề thi chính thức của BTC**. Nạp thông qua module tập trung `tests/eval/gt_loader.py`. Quy trình ghi:
 [`eval/EVAL_GUIDE.md`](eval/EVAL_GUIDE.md).
 
 ## `e2e/` — harness đường production
@@ -60,10 +60,11 @@ ghi `video_id` + khoảng `frame_id` đúng), **không phải đề thi chính t
 | File | Dùng để | Lệnh |
 |---|---|---|
 | `run_eval.py` | So `clip_vitb32` vs `vitl14`/`siglip`/`dfn`/… bằng R@k + `Final`. KIS đúng §2.1.1; QA **chỉ retrieval** (không chấm answer — dùng `score_pipelines.py` cho việc đó); TRAKE proxy §2.1.3 (ứng viên có xếp hạng + cổng video + DP thứ tự, không LLM). Ghi `docs/reports/eval_baseline_comparison.md`. | `.venv\Scripts\python.exe tests\eval\run_eval.py [--models clip_vitb32,siglip]` |
+| `gt_loader.py` | Module nạp ground truth tập trung từ 3 file con KIS/QA/TRAKE | — |
 | `multi_index.py` | Index loader + text encoder cho từng model (features `.npy` từ `kaggle_jobs/`). Cố ý **không** import `index.py`/`retrieve.py`. | `.venv\Scripts\python.exe tests\eval\multi_index.py clip_vitb32` (smoke) |
 | `lookup_frame.py` | CLI tra `frame_id` từ `(video_id, giây)` khi ghi ground truth | `.venv\Scripts\python.exe tests\eval\lookup_frame.py L21_V001 25.0` |
 | `widen_gt_windows.py` | Nới các khoảng `gt_frame_start == gt_frame_end` (1 frame — quá chặt) ra keyframe lân cận từ `map-keyframes`; in bảng before→after để dò tay lại | `.venv\Scripts\python.exe tests\eval\widen_gt_windows.py [--dry-run]` |
-| `eval_ground_truth.json` | Bộ ground truth hand-label (KIS/QA/TRAKE). Schema: xem `EVAL_GUIDE.md`. | — |
+| `eval_ground_truth_kis.json` / `_qa.json` / `_trake.json` | 3 bộ ground truth hand-label theo dạng bài. Schema: xem `EVAL_GUIDE.md`. | — |
 | `eval_ground_truth_thunghiem_draft.json` | Bản nháp ground truth cho vòng thử nghiệm | — |
 | `EVAL_GUIDE.md` | Quy trình + schema ghi ground truth (gồm `gt_answers` cho QA) | — |
 

@@ -49,7 +49,7 @@ _MAP_KEYFRAMES = _ROOT / "data" / "extracted" / "map-keyframes"
 # Danh sách tag độ khó chuẩn — NGUỒN SỰ THẬT DUY NHẤT.
 # tests/unit/test_eval_ground_truth.py import lại từ đây, đừng chép thành bản thứ hai.
 #
-# 11 tag đầu đang được dùng trong eval_ground_truth.json (2026-08-31); 4 tag cuối là các dạng khó
+# 11 tag đầu đang được dùng trong bộ ground truth (2026-08-31); 4 tag cuối là các dạng khó
 # EVAL_GUIDE.md có nêu nhưng bộ hiện tại chưa có câu nào — để sẵn cho câu mới.
 TAG_CHUAN = {
     "temporal_order",        # mô tả phụ thuộc thứ tự thời gian ("trước khi X thì Y")

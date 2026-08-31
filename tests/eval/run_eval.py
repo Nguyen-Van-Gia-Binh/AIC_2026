@@ -1,7 +1,7 @@
 """
 So sánh baseline embedding (clip_vitb32 hiện tại vs vitl14/siglip/dfn/...) bằng công thức thi
 R@{1,5,20,50,100} (docs/Thong tin vong So tuyen AIC2026.md §2.1), chạy trên bộ eval ground-truth tự
-ghi (tests/eval/eval_ground_truth.json — xem tests/eval/EVAL_GUIDE.md để biết cách ghi tay).
+ghi (nạp qua tests/eval/gt_loader.py — xem tests/eval/EVAL_GUIDE.md để biết cách ghi tay).
 
 Phạm vi (đã chốt trong PLAN.md Phase 6/7 — xem đó để biết đầy đủ lý do, không lặp lại ở đây):
   - CHỈ đo chất lượng RETRIEVAL, KHÔNG gọi LLM, deterministic (bake-off backbone embedding).
@@ -20,11 +20,11 @@ Coverage Pooling) đều có cờ bật/tắt riêng, mặc định TẮT — ch
 thật của từng bước mà không tốn 1 đồng LLM nào.
 
 Usage:
-    .venv\\Scripts\\python.exe tests\\Eval\\run_eval.py
-    .venv\\Scripts\\python.exe tests\\Eval\\run_eval.py --models clip_vitb32,vitl14
-    .venv\\Scripts\\python.exe tests\\Eval\\run_eval.py --models siglip --all-features
-    .venv\\Scripts\\python.exe tests\\Eval\\run_eval.py --models siglip --hybrid --nms
-    .venv\\Scripts\\python.exe tests\\Eval\\run_eval.py --eval-set tests\\Eval\\eval_ground_truth.json --out docs\\eval_baseline_comparison.md
+    .venv\\Scripts\\python.exe tests\\eval\\run_eval.py
+    .venv\\Scripts\\python.exe tests\\eval\\run_eval.py --models clip_vitb32,vitl14
+    .venv\\Scripts\\python.exe tests\\eval\\run_eval.py --models siglip --all-features
+    .venv\\Scripts\\python.exe tests\\eval\\run_eval.py --models siglip --hybrid --nms
+    .venv\\Scripts\\python.exe tests\\eval\\run_eval.py --out docs\\reports\\eval_baseline_comparison.md
 """
 
 from __future__ import annotations

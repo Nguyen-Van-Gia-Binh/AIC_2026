@@ -1,6 +1,6 @@
 """
 widen_gt_windows.py — Noi khoang [gt_frame_start, gt_frame_end] cho cac entry dang single-frame
-(start == end) trong eval_ground_truth.json, suy tu keyframe lan can trong
+(start == end) trong cac file ground truth con, suy tu keyframe lan can trong
 data/extracted/map-keyframes/{video_id}.csv.
 
 Ly do: he thong chi tra ve duoc frame_id CUA KEYFRAME (khong phai frame video bat ky), nen

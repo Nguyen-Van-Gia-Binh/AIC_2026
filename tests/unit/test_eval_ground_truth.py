@@ -17,17 +17,15 @@ from pathlib import Path
 
 import pytest
 
-_GT_PATH = Path(__file__).resolve().parents[1] / "eval" / "eval_ground_truth.json"
-
-# TAG_CHUAN có nguồn sự thật duy nhất ở tests/eval/normalize_gt.py — import lại, đừng chép bản thứ
-# hai (hai bản sẽ lệch nhau ngay lần đầu ai đó thêm tag mới).
+from tests.eval.gt_loader import load_ground_truth, get_gt_path, GT_FILENAMES  # noqa: E402
 from tests.eval.normalize_gt import TAG_CHUAN  # noqa: E402
 
 
 def _load() -> list[dict]:
-    if not _GT_PATH.exists():
-        pytest.skip(f"khong tim thay {_GT_PATH}")
-    return json.loads(_GT_PATH.read_text(encoding="utf-8"))
+    data = load_ground_truth()
+    if not data:
+        pytest.skip("Khong tim thay du lieu ground truth trong tests/eval/")
+    return data
 
 
 def test_query_id_khong_duoc_trung():
@@ -66,13 +64,8 @@ def test_difficulty_tags_nam_trong_danh_sach_chuan():
 
 def test_sub_files_co_cau_truc_hop_le_va_khong_trung_id():
     """Kiểm tra cả 3 file con KIS, QA, TRAKE đều hợp lệ và không trùng query_id."""
-    eval_dir = _GT_PATH.parent
-    sub_files = {
-        "KIS": eval_dir / "eval_ground_truth_kis.json",
-        "QA": eval_dir / "eval_ground_truth_qa.json",
-        "TRAKE": eval_dir / "eval_ground_truth_trake.json",
-    }
-    for expected_type, path in sub_files.items():
+    for expected_type in GT_FILENAMES:
+        path = get_gt_path(expected_type)
         if not path.exists():
             continue
         items = json.loads(path.read_text(encoding="utf-8"))

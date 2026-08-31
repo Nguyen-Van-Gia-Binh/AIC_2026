@@ -1,5 +1,5 @@
 """
-split_eval_gt.py — Tách file eval_ground_truth.json thành 3 file con theo dạng bài KIS / QA / TRAKE.
+split_eval_gt.py — Tách file ground truth v1 thành 3 file con theo dạng bài KIS / QA / TRAKE.
 
 Đảm bảo nguyên tắc PHI HUỶ DIỆT (non-destructive):
 - Giữ nguyên 100% nội dung gốc của từng entry (không thay đổi giá trị, không tự sửa lỗi).

@@ -172,10 +172,10 @@ AIC2026/
 │   │   ├── score_pipelines.py      # Chấm Final Score BTC thật end-to-end
 │   │   ├── golden_kis_snapshot.py  # Ảnh chụp TẤT ĐỊNH của cả đường KIS (không cần API key)
 │   │   └── test_smoke_pipelines.py # Smoke test KIS, QA, TRAKE & Submission
-│   ├── eval/                       # So sánh backbone embedding (offline, không LLM)
-│   │   ├── run_eval.py             # So sánh backbone trên bộ 33 query
+│   │   ├── run_eval.py             # So sánh backbone trên bộ query
 │   │   ├── multi_index.py          # Index loader hỗ trợ nhiều model đồng thời
-│   │   └── eval_ground_truth.json  # Bộ ground truth 33 query mẫu
+│   │   ├── gt_loader.py            # Module nạp ground truth tập trung
+│   │   └── eval_ground_truth_*.json # 3 bộ ground truth hand-label KIS/QA/TRAKE
 │   └── data/                       # Dữ liệu query dùng chung (sample_queries, bộ đề BTC)
 │
 ├── data/                           # [git-ignored] Dữ liệu BTC & Vector Features

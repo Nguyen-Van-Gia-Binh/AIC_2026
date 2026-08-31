@@ -1,6 +1,6 @@
 """
 test_phase4_trake.py — Benchmark that cho pipeline_trake.py (Phase 4: DP tang dan + cross-check
-tang 3) tren cac cau TRAKE that trong tests/eval/eval_ground_truth.json.
+tang 3) tren cac cau TRAKE that trong tests/eval/eval_ground_truth_trake.json.
 
 Metric (khac KIS/QA — TRAKE la 1 phuong an tron ven cho ca chuoi N moc, khong phai 1 dong/moc):
   - video_rank:      video co gt_video_id dung nam o hang thu may trong results (None = khong xuat
@@ -8,12 +8,7 @@ Metric (khac KIS/QA — TRAKE la 1 phuong an tron ven cho ca chuoi N moc, khong 
   - events_matched:  CHI tinh cho cac cau video #1 (best) DUNG — trong so do, bao nhieu event co
                       frame_id du doan nam trong [gt_frame_start, gt_frame_end] cua chinh event do,
                       DUNG THU TU (khop tung phan tu cua danh sach du doan voi danh sach that).
-
-Chay 2 lan (2-pass) trong cung 1 process, tren cung dau vao da rewrite-bypass (xem comment ngay duoi
-day) — Pass 1 tat cross-check (TRAKE_CROSSCHECK_MARGIN=-1.0, gia lap hanh vi "chi co Task 1/DP"),
-Pass 2 bat cross-check that (margin=0.012, "Task 1 + Task 2"). Vi ca 2 pass dung chung 1 lan retrieval
-deterministic, phan chenh lech giua 2 pass co the quy thang cho cross-check, khong con lan voi bien
-thien cua LLM rewrite.
+  - So sanh:         pass 1 (DP only) vs pass 2 (DP + cross-check), cung 1 lan chay, in bang truoc/sau.
 
 Usage:
     .venv\\Scripts\\python.exe tests\\Test\\test_phase4_trake.py
@@ -28,11 +23,16 @@ _ROOT = Path(__file__).resolve().parents[2]  # tests/e2e/ -> repo root
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
+try:
+    sys.stdout.reconfigure(encoding="utf-8")
+except Exception:
+    pass
+
 from scripts.agent.pipeline_trake import run_trake
 import scripts.agent.pipeline_trake as _trake_module
 
 # Benchmark-only: rewrite_query() goi LLM (temperature=0.2, khong cache) ngay ca khi text da la tieng
-# Anh san (dung text_en tu eval_ground_truth.json) — gay bien thien ket qua retrieval giua cac lan
+# Anh san (dung text_en tu eval_ground_truth_trake.json) — gay bien thien ket qua retrieval giua cac lan
 # chay, lam so sanh "truoc/sau" khong con dang tin cay. Thay bang identity function CHI trong benchmark
 # nay (khong dung production code) — giong cach tests/e2e/test_phase3_rerank.py da tranh van de nay bang
 # cach goi fast_retrieve(text_en) truc tiep thay vi qua pipeline co rewrite.
