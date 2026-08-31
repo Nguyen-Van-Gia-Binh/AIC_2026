@@ -12,7 +12,7 @@ Phạm vi (đã chốt trong PLAN.md Phase 6/7 — xem đó để biết đầy 
   - TRAKE: proxy retrieval-only bám §2.1.3 — dựng danh sách ỨNG VIÊN có xếp hạng (mỗi ứng viên = 1
     video_id + N frame_id, chuỗi frame_idx không giảm bằng DP), áp CỔNG VIDEO (video sai → R-Score
     0), rồi R@k = max trên k ứng viên đầu. KHÔNG có LLM crosscheck (không phụ thuộc backbone).
-  - Không đụng scripts/agent/tools/index_store.py — xem tests/eval/multi_index.py.
+  - Không đụng scripts/agent/tools/index_store.py — xem scripts/agent/tools/multi_index.py.
 
 Ngoài bake-off backbone, file này còn là **Tầng 1 của Regression Guard** (BẢN ĐẶC TẢ §6): các bước
 thuật toán mới (RRF hybrid, Multi-Aspect Expansion, Temporal NMS, DP tăng nghiêm ngặt, Multi-Event
@@ -46,13 +46,15 @@ import numpy as np
 import pandas as pd
 
 _THIS_DIR = Path(__file__).resolve().parent
-if str(_THIS_DIR) not in sys.path:
-    sys.path.insert(0, str(_THIS_DIR))
-from multi_index import MODEL_REGISTRY, retrieve, get_index, get_encoder  # noqa: E402
-
 _REPO_ROOT = _THIS_DIR.parent.parent  # tests/eval/ -> repo root
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
+
+# multi_index.py da chuyen sang scripts/agent/tools/ (P2.8): production khong duoc phu thuoc code
+# test. Chieu phu thuoc gio la tests/ -> scripts/, dung mot chieu.
+from scripts.agent.tools.multi_index import (  # noqa: E402
+    MODEL_REGISTRY, retrieve, get_index, get_encoder,
+)
 
 # 3 module THUẦN (không nạp index/model, không gọi LLM) dùng chung với đường production — nhập ở đây
 # để KHÔNG chép lại thuật toán RRF/NMS/expansion thành phiên bản thứ 2 dễ lệch. Quy ước "eval không

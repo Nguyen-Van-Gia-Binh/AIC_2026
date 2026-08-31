@@ -13,7 +13,7 @@ k = 60 là giá trị chuẩn trong bài gốc (Cormack et al. 2009) — đủ l
 
 Module THUẦN (pure): không đọc index, không gọi model, không I/O — nên dùng được cả ở đường
 production (scripts/agent/tools/hybrid.py) lẫn ở nhánh eval (tests/eval/run_eval.py) mà không
-kéo theo việc nạp SigLIP/index (tests/eval/multi_index.py vẫn tự nạp index riêng như cũ).
+kéo theo việc nạp SigLIP/index (scripts/agent/tools/multi_index.py vẫn tự nạp index riêng như cũ).
 
 Usage:
     from scripts.agent.tools.fusion import reciprocal_rank_fusion

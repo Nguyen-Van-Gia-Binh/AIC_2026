@@ -61,7 +61,10 @@ cd frontend; npm run dev                                                        
   - `pipeline_kis.py` / `pipeline_qa.py` / `pipeline_trake.py` — one pipeline per query type.
   - `tools/`:
     - **Retrieval** — `index_store.py` (owns the embedding matrix + metadata + text encoder as a
-      process singleton; **the only place `frame_id = frame_idx + 1` happens**), `retrieve.py` (dense
+      process singleton; **the only place `frame_id = frame_idx + 1` happens**),
+      `multi_index.py` (`MODEL_REGISTRY`; builds an index + text encoder per backbone tag — lives
+      here, not under `tests/`, because production loads it; `tests/eval/run_eval.py` imports it
+      from here, never the reverse), `retrieve.py` (dense
       cosine queries), `hybrid.py` (dense + BM25 fused by RRF, multi-model RRF), `frames.py`
       (keyframe lookups for the UI layer), `sparse_index.py` (offline BM25 over Objects JSON +
       captions), `fusion.py` (pure RRF), `temporal_nms.py` (pure temporal dedup), `query_expand.py`
@@ -114,7 +117,7 @@ boundary is wrong, not that a new folder is needed.
 - Python via project `.venv` for everything under `scripts/` and `tests/`. This part of the repo stays
   Node/JS-free.
 - `transformers` — text encoder for **siglip** (`google/siglip-so400m-patch14-384`) and **siglip2**
-  (`google/siglip2-so400m-patch14-384`); loaded through `tests/eval/multi_index.py`.
+  (`google/siglip2-so400m-patch14-384`); loaded through `scripts/agent/tools/multi_index.py`.
 - `torch` (CUDA build `2.8.0+cu129`; the machine has an RTX 5050 Laptop, sm_120, **8 GB VRAM**) ·
   `pandas` / `numpy` — the metadata table and embedding matrix.
 - `litellm` — routes every text and vision LLM call; provider chosen by `AIC_MODE`:

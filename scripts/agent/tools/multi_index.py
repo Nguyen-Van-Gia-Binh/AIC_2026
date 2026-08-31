@@ -29,7 +29,10 @@ except Exception:
 import numpy as np
 import pandas as pd
 
-_DATA_DIR = Path(__file__).resolve().parent.parent.parent / "data" / "extracted"
+# scripts/agent/tools/multi_index.py -> repo root là parents[3], KHÔNG phải parents[2].
+# (File này từng nằm ở tests/eval/ nơi parents[2] mới là repo root — chuyển thư mục ở P2.8 làm
+# đường dẫn lệch sang scripts/data/extracted/. golden_kis_snapshot.py bắt được ngay.)
+_DATA_DIR = Path(__file__).resolve().parents[3] / "data" / "extracted"
 _MAPKF_DIR = _DATA_DIR / "map-keyframes"
 
 

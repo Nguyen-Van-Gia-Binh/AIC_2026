@@ -16,7 +16,7 @@ Lý do chọn model: benchmark 33 query (2026-08-28), xem docs/reports/eval_base
 Escape-hatch (dùng khi thử nghiệm, không phải production):
     AIC_RETRIEVE_MODEL=<tag>  đổi model cho KIS/TRAKE
     AIC_QA_MODEL=<tag>        đổi model cho Q&A
-  Tag hợp lệ: xem MODEL_REGISTRY trong tests/eval/multi_index.py
+  Tag hợp lệ: xem MODEL_REGISTRY trong scripts/agent/tools/multi_index.py
 
 Usage:
     from scripts.agent.tools.retrieve import fast_retrieve, fast_retrieve_qa

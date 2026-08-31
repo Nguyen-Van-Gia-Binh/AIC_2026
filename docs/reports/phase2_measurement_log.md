@@ -1,0 +1,99 @@
+# Nhật ký đo — Pha 2
+
+> Mỗi mục đổi hành vi phải có một khối ở đây **trước khi** commit. Quy tắc đo:
+> [spec Pha 2 §3](../superpowers/specs/2026-08-31-phase2-behavior-fixes-design.md).
+> Mọi số so sánh chạy ở `AIC_MODE=test`. **Không bao giờ** lấy số từ `AIC_MODE=local`.
+
+## Mốc xuất phát — 2026-08-31
+
+Đo bằng `score_pipelines.py --types kis,qa,trake --save-baseline`, `AIC_MODE=test`,
+trên bộ ground truth **38 câu** (23 KIS / 5 QA / 10 TRAKE).
+
+| nhóm | n | R@1 | R@5 | R@20 | R@50 | R@100 | **Final** |
+|---|---|---|---|---|---|---|---|
+| ALL | 38 | 0.237 | 0.412 | 0.465 | 0.544 | 0.623 | **0.456** |
+| KIS | 23 | 0.348 | 0.565 | 0.652 | 0.783 | 0.870 | **0.643** |
+| QA | 5 | 0.000 | 0.000 | 0.000 | 0.000 | 0.200 | **0.040** |
+| TRAKE | 10 | 0.100 | 0.267 | 0.267 | 0.267 | 0.267 | **0.233** |
+
+Golden snapshot KIS: `48fd64fc41f776d8` (23 câu).
+
+### Vì sao mốc này khác mốc 2026-08-28
+
+Mốc cũ (`ALL 0.488 · KIS 0.667 · QA 0.200 · TRAKE 0.312`) đo trên **33 câu**. Hai khác biệt:
+
+1. **Bộ eval to ra** 33 → 38 (thêm 5 câu KIS). Ba trong 5 câu mới được 0.000
+   (`e-kis-ai-019/020/021`) nên KIS tụt 0.667 → 0.643 thuần do mẫu khó hơn, không phải hồi quy.
+2. **QA tụt thật 0.200 → 0.040** — xem dưới.
+
+### 🔴 Phát hiện: QA tụt 5× là lỗi P2.1 đã đáp đất từ 2026-08-28
+
+Truy vết git:
+
+| commit | thời điểm | `_QA_MODEL_TAG` mặc định |
+|---|---|---|
+| `2b908ba` (nhánh đo baseline cũ) | 28/08 20:15 | `siglip2` |
+| `ab0ab32` "q&a improvement" (nhánh song song) | 28/08 11:44 | **`siglip`** ← lật ở đây |
+| baseline cũ `e2e_baseline.json` được lưu | 28/08 **20:01** | tức là còn `siglip2` |
+
+Nhánh `ab0ab32` merge vào sau đó, âm thầm hạ model Q&A xuống `siglip`. Không ai phát hiện vì
+**không ai chạy lại phép đo QA sau merge** — golden snapshot chỉ phủ KIS, và `run_eval.py` không
+đi qua pipeline Q&A thật.
+
+Bằng chứng đây là hỏng **retrieval** chứ không phải hỏng sinh đáp án:
+
+| câu | đáp án sinh ra | khớp? | Final |
+|---|---|---|---|
+| `e-qa-ai-001` | `2` | ✅ | 0.200 (chỉ trúng ở R@100) |
+| `e-qa-ai-004` | `Phú Sĩ (Ajinomoto)` | ✅ | **0.000** |
+| `e-qa-ai-002` | `0` | ❌ | 0.000 |
+| `e-qa-ai-003` | `Giáo dục` | ❌ | 0.000 |
+| `e-qa-ai-005` | `quầy` | ❌ | 0.000 |
+
+`e-qa-ai-004` trả lời **đúng** nhưng video đúng không hề xuất hiện trong 100 dòng. Đáp án đúng mà
+vẫn 0 điểm ⇒ nút thắt nằm ở retrieval, đúng thứ P2.1 nhắm tới.
+
+**Bài học:** một phép đo chỉ bảo vệ được thứ nó thật sự chạy qua. Golden snapshot phủ KIS nên KIS
+an toàn suốt Pha 1; Q&A không có phép đo tương đương nên hồi quy 5× sống 3 ngày không ai biết.
+
+---
+
+## Việc 0 — hạ tầng
+
+commit `7d5b495` · không đổi hành vi.
+
+- `AIC_MODE=local` (LM Studio) — `PROVIDER_CHAIN` chỉ một provider, **không** fallback trả phí.
+- `CLAUDE.md`: sửa "torch (CPU build)" → `2.8.0+cu129`, RTX 5050 sm_120, 8 GB VRAM.
+- `CLAUDE.md`: luật cấm precompute OCR viết lại cho đúng ý (cấm chạy inline, không cấm shard Kaggle).
+- `CLAUDE.md`: luật "đổi ngưỡng thì đo lại bằng `run_eval.py`" **sai** — `run_eval.py` không bao giờ
+  import `rerank.py`. Đổi sang `score_pipelines.py --types kis`.
+
+commit `<xem git log>` · sửa bộ eval, không đổi hành vi pipeline.
+
+- 5 câu KIS mới từ `origin/main` trùng `query_id` với câu cũ ⇒ golden snapshot **nuốt mất cả 5**.
+  Đổi tên thành `e-kis-ai-019..023`. Thêm rào chắn fail-loud + 4 test.
+- Golden snapshot chốt lại trên đủ 23 câu: `81448536a4f1245f` (18 câu) → `48fd64fc41f776d8` (23 câu).
+  Digest đổi vì **tập đầu vào** to ra, không phải vì hành vi đổi.
+- `tests/eval/normalize_gt.py` + `EVAL_GUIDE.md` viết lại (công cụ gán nhãn).
+
+---
+
+## P2.8 — production hết phụ thuộc `tests/`
+
+`multi_index.py`: `tests/eval/` → `scripts/agent/tools/`. `run_eval.py` import ngược lại.
+
+| | |
+|---|---|
+| golden digest | `48fd64fc41f776d8` → `48fd64fc41f776d8` — **KHỚP TUYỆT ĐỐI** (đúng yêu cầu: mục này thuần cấu trúc) |
+| pytest | 79 passed |
+| Final Score | không đo lại — hành vi không đổi, digest đã chứng minh |
+
+Hai lỗi tiềm ẩn gỡ được kèm theo:
+
+1. `index_store.py` đang chèn `_REPO_ROOT / "tests" / "Eval"` vào `sys.path` — **chữ E hoa**, đường
+   dẫn đó không còn tồn tại sau Pha 1. Chỉ chạy được nhờ Windows không phân biệt hoa/thường; trên
+   Linux sẽ gãy. Nay xoá hẳn khối `sys.path` đó — cũng là nguồn gốc của bug nạp index 2 bản.
+2. `multi_index.py` tính `_DATA_DIR` bằng `parent.parent.parent`, đúng khi ở `tests/eval/` nhưng
+   sau khi chuyển thì trỏ sang `scripts/data/extracted/` (không tồn tại). Sửa thành `parents[3]`.
+   **`golden_kis_snapshot.py` bắt được ngay lần chạy đầu** — nếu chỉ dựa vào `pytest tests/unit`
+   thì lỗi này lọt qua, vì unit test không nạp index thật.

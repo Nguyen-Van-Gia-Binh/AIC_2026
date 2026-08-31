@@ -8,7 +8,7 @@ xong còn bẩn hơn trước. Ở đây state có đúng một chủ, ba module
 Hai không gian embedding độc lập, nạp lười, mỗi cái đúng một lần trong một tiến trình:
     KIS / TRAKE → tag từ AIC_RETRIEVE_MODEL (mặc định "siglip")
     Q&A         → tag từ AIC_QA_MODEL       (mặc định "siglip")
-Tag hợp lệ: xem MODEL_REGISTRY trong tests/eval/multi_index.py.
+Tag hợp lệ: xem MODEL_REGISTRY trong scripts/agent/tools/multi_index.py.
 
 QUAN TRỌNG — row_to_hit() là ĐIỂM DUY NHẤT trong toàn repo quy đổi frame_id = frame_idx + 1.
 
@@ -88,10 +88,7 @@ def _load_model(tag: str) -> tuple[np.ndarray, object, Callable[[str], np.ndarra
     """Nạp index + encoder cho 1 model tag qua multi_index.py.
     Trả về (matrix, meta_with_jpg_paths, encode_fn).
     """
-    _eval_dir = _REPO_ROOT / "tests" / "Eval"
-    if str(_eval_dir) not in sys.path:
-        sys.path.insert(0, str(_eval_dir))
-    from multi_index import get_index, get_encoder, MODEL_REGISTRY  # noqa: E402
+    from scripts.agent.tools.multi_index import get_index, get_encoder, MODEL_REGISTRY
     if tag not in MODEL_REGISTRY:
         raise ValueError(
             f"[retrieve] Tag '{tag}' không hợp lệ — có sẵn: {list(MODEL_REGISTRY.keys())}"
