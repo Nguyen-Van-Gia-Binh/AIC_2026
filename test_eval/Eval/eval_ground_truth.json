@@ -1518,6 +1518,16 @@
     "gt_answers": []
   },
   {
+    "query_id": "query-p1-18-kis",
+    "type": "KIS",
+    "text_vi": "Cảnh quay cho thấy hành động trình bày món ăn sau khi hoàn thành giai đoạn chế biến. Bún được cho đầu tiên vào một chén rỗng, sau đó đầu bếp lần lượt cho từng vá nước dùng cùng các nguyên liệu như thịt gà, cà rốt, sả, nấm mèo vào chén bún, và kết thúc bằng việc thả một cọng ngò lên trên cùng. Cảnh quay tiếp theo là cảnh zoom xa dần chén bún, ta thấy bên cạnh chén bún còn có 1 chén nước chấm nhỏ với 2 miếng ớt.",
+    "text_en": "The shot shows the action of presenting the dish after the cooking stage is completed. The noodles are first placed into an empty bowl, then the chef sequentially adds ladles of broth along with ingredients such as chicken, carrots, lemongrass, and wood ear mushrooms into the bowl, finishing by placing a sprig of cilantro on top. The next shot zooms out from the bowl, showing a small dipping sauce bowl with two pieces of chili next to the noodle bowl.",
+    "difficulty_tags": [],
+    "gt_video_id": "L26_V389",
+    "gt_frame_start": 5968,
+    "gt_frame_end": 6244
+  },
+  {
     "query_id": "query-p1-19-kis",
     "type": "KIS",
     "text_vi": "Con lân do hai người điều khiển đang đứng thẳng và xoay vòng trên đỉnh cột. Sau vài giây nghỉ, con lân bất ngờ nhảy qua hai chiếc cột kế bên, chúi đầu xuống ngoạm lấy quả bí đỏ kèm bông hoa màu vàng. Cảnh quay kết thúc khi con lân tiếp tục nhảy sang các cột tiếp theo.",
