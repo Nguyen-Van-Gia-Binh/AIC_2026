@@ -36,6 +36,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Chỉ ghi log request cho các đường pipeline. Các route phục vụ ảnh/video/keyframe cho UI
+# (GET /api/images/..., /api/videos/..., /api/keyframes/..., /api/health) mỗi phiên gọi hàng
+# trăm lần và không có giá trị phân tích — bỏ khỏi file log, TRỪ khi lỗi hoặc chậm bất thường.
+_PIPELINE_PREFIXES = (
+    "/api/kis", "/api/qa", "/api/trake", "/api/queue", "/api/rewrite", "/api/translate_raw",
+)
+_SLOW_REQUEST_MS = 1000.0
+
+
+def _is_pipeline_path(path: str) -> bool:
+    return path.startswith(_PIPELINE_PREFIXES)
+
 
 @app.middleware("http")
 async def log_requests_middleware(request: Request, call_next):
@@ -46,11 +58,14 @@ async def log_requests_middleware(request: Request, call_next):
     query_str = f"?{query}" if query else ""
     client_ip = request.client.host if request.client else "unknown"
 
-    _http_logger.info(f"[REQ] {method} {path}{query_str} (client: {client_ip})")
+    log_this = _is_pipeline_path(path)
+    if log_this:
+        _http_logger.info(f"[REQ] {method} {path}{query_str} (client: {client_ip})")
     try:
         response: Response = await call_next(request)
         duration_ms = (time.perf_counter() - start_time) * 1000.0
-        _http_logger.info(f"[RES] {method} {path} -> {response.status_code} ({duration_ms:.1f}ms)")
+        if log_this or response.status_code >= 400 or duration_ms > _SLOW_REQUEST_MS:
+            _http_logger.info(f"[RES] {method} {path} -> {response.status_code} ({duration_ms:.1f}ms)")
         return response
     except Exception as exc:
         duration_ms = (time.perf_counter() - start_time) * 1000.0

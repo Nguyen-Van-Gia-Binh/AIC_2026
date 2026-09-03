@@ -85,6 +85,28 @@ def cleanup_old_logs(log_dir: Path, max_keep: int = 30) -> list[Path]:
     return deleted
 
 
+def cleanup_old_run_traces(log_dir: Path, max_days: int = 30) -> list[Path]:
+    """Xoá các thư mục logs/runs/<YYYYMMDD>/ cũ hơn max_days ngày gần nhất (giữ cả ngày incoming/)."""
+    import shutil
+
+    runs_dir = log_dir / "runs"
+    if not runs_dir.is_dir():
+        return []
+    day_dirs = sorted(
+        d for d in runs_dir.iterdir()
+        if d.is_dir() and d.name != "incoming" and d.name.isdigit() and len(d.name) == 8
+    )
+    deleted: list[Path] = []
+    if len(day_dirs) > max_days:
+        for d in day_dirs[: len(day_dirs) - max_days]:
+            try:
+                shutil.rmtree(d, ignore_errors=True)
+                deleted.append(d)
+            except Exception:
+                pass
+    return deleted
+
+
 def setup_logging(
     log_dir: str | Path = "logs",
     max_sessions: int = 30,
@@ -106,6 +128,7 @@ def setup_logging(
 
     # Dọn dẹp phiên cũ
     cleanup_old_logs(logs_path, max_keep=max_sessions)
+    cleanup_old_run_traces(logs_path, max_days=max_sessions)
 
     # Tạo tên file theo timestamp phiên
     session_id = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -151,7 +174,7 @@ def setup_logging(
     root_logger.addHandler(latest_handler)
 
     # Cấu hình loggers của Uvicorn & FastAPI để truyền tin về root logger
-    for logger_name in ("uvicorn", "uvicorn.error", "uvicorn.access", "fastapi", "api.http"):
+    for logger_name in ("uvicorn", "uvicorn.error", "fastapi", "api.http"):
         l = logging.getLogger(logger_name)
         l.setLevel(logging.INFO)
         l.propagate = True
@@ -163,6 +186,12 @@ def setup_logging(
                 except Exception:
                     pass
                 l.removeHandler(h)
+
+    # uvicorn.access lặp lại y hệt dòng [api.http] [REQ]/[RES] do middleware ghi — không đẩy
+    # xuống file handler của root nữa (vẫn hiện trên terminal qua handler riêng của uvicorn).
+    _access = logging.getLogger("uvicorn.access")
+    _access.setLevel(logging.INFO)
+    _access.propagate = False
 
     # Bọc stdout và stderr để bắt tất cả lệnh print()
     if capture_stdout:
