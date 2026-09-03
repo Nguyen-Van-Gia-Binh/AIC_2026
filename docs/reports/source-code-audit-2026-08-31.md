@@ -3021,7 +3021,7 @@ comment). Dữ liệu lấy từ `grep -rl` + đọc từng file test.
 | `tools/fusion.py` | `test_fusion.py`, `test_rrf_fusion.py` | `run_eval.py`, `golden_kis_snapshot.py` | `run_eval.py` (`W_DENSE`, `W_SPARSE`, `RRF_K`) |
 | `tools/temporal_nms.py` | `test_temporal_nms.py` | `run_eval.py`, `sweep_rerank.py`, `golden_kis_snapshot.py` | `run_eval.py` (`MIN_TIME_GAP`, `--nms-max-per-video`), `sweep_rerank.py` |
 | `tools/query_expand.py` | `test_query_expand.py` | `run_eval.py` (`expand_aspects`) | `run_eval.py` (`--expand`) |
-| `tools/rerank.py` | `test_rerank.py` (9 test) | `test_phase3_rerank.py`, `sweep_rerank.py`, `score_pipelines.py` | **`sweep_rerank.py`, `score_pipelines.py` — KHÔNG phải `run_eval.py`** |
+| `tools/rerank.py` | `test_rerank.py` (8 test) | `test_phase3_rerank.py`, `sweep_rerank.py`, `score_pipelines.py` | **`sweep_rerank.py`, `score_pipelines.py` — KHÔNG phải `run_eval.py`** |
 | `tools/sparse_index.py` | `test_sparse_index.py` | `run_eval.py` (`--hybrid`), `golden_kis_snapshot.py` | `run_eval.py`, `sweep_rerank.py` |
 | `tools/rewrite.py` | — (bị patch identity trong `score_pipelines.py`, `test_phase4`) | `test_smoke_tools.py` | — |
 | `tools/answer_qa.py` | `test_answer_qa.py`, `test_qa_answer_contract.py` | `test_phase5_ocr.py`, `score_pipelines.py` | `test_phase5_ocr.py` (before/after OCR) |
@@ -3050,7 +3050,7 @@ comment). Dữ liệu lấy từ `grep -rl` + đọc từng file test.
   [`tests/unit/test_rerank.py:64`](../../tests/unit/test_rerank.py#L64) dưới dạng bị
   `monkeypatch` (stub) để test `rerank`, tức là bị *tắt đi* chứ không bị *kiểm thử*. Ngược lại,
   3 module pure nhỏ (`fusion`, `temporal_nms`, `trake_align`) đều có file test riêng, và
-  `rerank.py` có 9 test. Xác nhận bằng `grep -rl` chạy thật (xem báo cáo task).
+  `rerank.py` có 8 test. Xác nhận bằng `grep -rl` chạy thật (xem báo cáo task).
 - **Vì sao bất hợp lý:** [tests/README.md](../../tests/README.md) tuyên bố `unit/` là "chỗ mặc
   định cho test mới" và phải "tất định, KHÔNG cần `data/`". Lõi truy hồi lại là phần **nhiều
   invariant nhất** (`frame_id = frame_idx + 1` — [CLAUDE.md](../../CLAUDE.md) gọi là "the only
@@ -3085,7 +3085,7 @@ Bảng lập từ việc đọc `import` đầu mỗi file và thân hàm:
   được nhắc trong [CLAUDE.md](../../CLAUDE.md) daily commands — import (đọc thật ở
   [run_eval.py:55-65](../../tests/eval/run_eval.py#L55)) chỉ `multi_index`, `fusion`,
   `temporal_nms`, `query_expand`, `sparse_index`. Nó **không import `rerank.py`**; chỗ duy nhất
-  nhắc `rerank` là comment [run_eval.py:146](../../tests/eval/run_eval.py#L146)
+  nhắc `rerank` là comment [run_eval.py:151](../../tests/eval/run_eval.py#L151)
   (`_POOL_SIZE = 500  # ~ rerank.RETRIEVAL_POOL_SIZE`). Trong khi đó `MARGIN_THRESHOLD`,
   `RECALL_HEAD_N`, `SPREAD_MAX_PER_VIDEO` sống ở
   [`scripts/agent/tools/rerank.py`](../../scripts/agent/tools/rerank.py).
@@ -3712,7 +3712,7 @@ làm ví dụ `--check`. Xem FINDING-7.9.
 
 ### ⚠️ FINDING-7.10 (Thấp) — `run_eval.py` sao chép thuật toán + hằng số từ production, không có test chống lệch
 
-- **Hiện trạng:** [`run_eval.py:146`](../../tests/eval/run_eval.py#L146) (`_POOL_SIZE = 500`),
+- **Hiện trạng:** [`run_eval.py:151`](../../tests/eval/run_eval.py#L151) (`_POOL_SIZE = 500`),
   [:233-235](../../tests/eval/run_eval.py#L233) (`_TRAKE_POOL = 500`, `_TRAKE_VIDEO_CANDIDATES = MAX_K`,
   `_TRAKE_FRAMES_PER_EVENT = 20`) là bản chép tay từ `rerank.RETRIEVAL_POOL_SIZE` và các tham số
   `pipeline_trake.run_trake()`. `_best_increasing_chain()` là bản chép của
