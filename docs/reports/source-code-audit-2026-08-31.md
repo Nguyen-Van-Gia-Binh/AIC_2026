@@ -87,6 +87,7 @@ từ tài liệu; khi code mâu thuẫn tài liệu thì chính điều đó là
   - [§10.3. Ba rủi ro cao nhất cho kết quả thi đấu](#103-ba-rủi-ro-cao-nhất-cho-kết-quả-thi-đấu)
   - [§10.4. Những gì hệ thống làm đúng](#104-những-gì-hệ-thống-làm-đúng)
   - [§10.5. Đề xuất kiểm chứng: `tests/unit/test_invariants.py`](#105-đề-xuất-kiểm-chứng-testsunittest_invariantspy)
+- [Phụ lục A — Hướng dẫn cập nhật báo cáo này](#phụ-lục-a--hướng-dẫn-cập-nhật-báo-cáo-này)
 
 ## 0. Bối cảnh, phạm vi và phương pháp
 
@@ -5718,3 +5719,160 @@ key, hợp đúng "tầng mặc định cho test mới" của `tests/README.md` 
 
 Mỗi mục là một `def test_...` riêng với thông báo `assert` nói rõ finding tương ứng, để khi fail
 người đọc biết ngay đang vi phạm bất biến nào.
+
+---
+
+## Phụ lục A — Hướng dẫn cập nhật báo cáo này
+
+Đợt lập báo cáo đầu tiên mất khoảng 70 phút với 9 agent chạy song song. Phần lớn thời gian đó là
+chi phí **dựng lại quy trình từ đầu**, không phải chi phí đọc code. Phụ lục này tồn tại để lần sau
+không phải trả lại khoản đó: nó ghi lại bất biến, quy trình, và những cái bẫy đã vấp.
+
+Đọc mục A.2 trước. Chỉ dựng lại toàn bộ khi thật sự cần.
+
+### A.1. Bất biến — phá là hỏng cơ chế tự kiểm
+
+| Bất biến | Vì sao | Cách kiểm |
+|---|---|---|
+| `####` **chỉ** dùng cho mục của một file, không dùng cho bất cứ thứ gì khác | Đây là cơ chế **duy nhất** phát hiện bỏ sót file. Đợt đầu chương 7 từng nâng 9 FINDING lên `####` và làm sai lệch phép đếm | đếm `^#### ` phải bằng số file trong phạm vi |
+| `##` cho chương, `###` cho tiểu mục và cho block `### ⚠️ FINDING-x.y` đứng riêng | Giữ phép đếm `^#### ` sạch | đếm `^## ` phải bằng 12 (11 chương + phụ lục này) |
+| Đánh số finding **theo chương**: `FINDING-<chương>.<thứ tự>` | Agent chạy song song không dùng chung bộ đếm được | xem A.4 |
+| Mọi `FINDING-x.y` được tham chiếu phải có dòng định nghĩa | Đợt đầu `FINDING-7.8` và `7.11` được nhắc 5 lần mà chưa từng được viết | xem A.4 |
+| Link tương đối từ `docs/reports/`: root = `../../`, `docs/` = `../`, code = `../../scripts/…` | Sai độ sâu là link chết hàng loạt | xem A.4 |
+| Mỗi mục file đủ 6 trường: **Vai trò · Đầu vào · Đầu ra · Ai gọi nó · Điểm cần biết · FINDING** | Thiếu trường là mục nửa vời, không tra cứu được | đọc bằng mắt khi review |
+
+**Luật phạm vi** (nguồn duy nhất, đừng chế lại):
+
+```bash
+EX='\.(jpg|jpeg|png|svg|pdf|pptx|npy|mp4)$|_archive|frontend/package-lock\.json'
+git ls-files scripts tests frontend kaggle_jobs colab_jobs | grep -Ev "$EX" | wc -l
+# + 11 file tầng gốc (README, CLAUDE, ARCHITECTURE, PLAN, GEMINI, requirements.txt,
+#   .env.example, .gitignore, .claudeignore, package-lock.json, docs/decisions-log.md)
+```
+
+Hai ngoại lệ **cố ý** được kéo vào phạm vi: `package-lock.json` ở root (là bất thường cần giải
+thích, xem FINDING-1.1) và `docs/decisions-log.md` (ghi lý do quyết định + sai lầm cũ).
+
+### A.2. Cập nhật tăng dần — mặc định
+
+Đây là đường đi cho hầu hết lần cập nhật. **Không dựng lại toàn bộ báo cáo chỉ vì vài file đổi.**
+
+**Bước 1 — tìm baseline.** Commit mà báo cáo hiện đang chốt nằm ở đầu file và ở §0.5. Lấy delta:
+
+```bash
+BASE=<commit ghi ở đầu báo cáo>
+git diff --name-status $BASE..HEAD -- scripts tests frontend kaggle_jobs colab_jobs
+git diff --name-status $BASE..HEAD -- '*.md' requirements.txt .env.example
+```
+
+**Bước 2 — phân loại delta.** Mỗi file rơi vào đúng một chương:
+
+| Đường dẫn | Chương |
+|---|---|
+| file ở repo root, `docs/decisions-log.md` | 1 |
+| `scripts/agent/tools/` — retrieval (`index_store`, `multi_index`, `retrieve`, `hybrid`, `fusion`, `sparse_index`, `temporal_nms`, `frames`, `query_expand`, `rerank`) | 2 |
+| `scripts/agent/tools/` — phần còn lại (Q&A, TRAKE, bằng chứng) | 3 |
+| `scripts/agent/` tầng trên (`config.py`, `pipeline_*.py`) | 4 |
+| `scripts/api/` | 5 |
+| `scripts/submit/`, `scripts/offline/` | 6 |
+| `tests/` | 7 |
+| `frontend/` | 8 |
+| `kaggle_jobs/`, `colab_jobs/` | 9 |
+
+**Bước 3 — sửa đúng ba loại thay đổi:**
+
+- **File mới** → thêm một mục `####` đủ 6 trường, đặt đúng vị trí alphabet giữa các mục hàng xóm.
+- **File bị xóa** → **đừng xóa trắng mục của nó.** Hạ xuống thành ghi chú văn xuôi trong chương,
+  nói rõ nó từng tồn tại lúc audit và bị commit nào gỡ. Lý do: các finding khác thường tham chiếu
+  tới nó, xóa trắng sẽ tạo tham chiếu treo. (Đợt đầu đã làm đúng vậy với
+  `tests/eval/eval_ground_truth.json`, gỡ bởi `2ee24cf`.)
+- **File bị sửa** → đọc lại file, cập nhật trường bị ảnh hưởng, và **kiểm lại mọi finding trỏ vào
+  nó** — finding có thể đã được vá và không còn đúng. Finding hết hiệu lực thì ghi rõ "đã được sửa
+  bởi commit `<hash>`", đừng xóa lặng lẽ.
+
+**Bước 4 — cập nhật số liệu tổng.** Đếm lại từ tài liệu, đừng cộng trừ từ số cũ. Rồi sửa: tóm tắt
+điều hành (bảng quy mô + tổng số finding), §0.4, §0.5 (baseline mới), và bảng tổng hợp §10.1.
+
+**Bước 5 —** chạy checklist A.4, rồi commit **chỉ** file báo cáo.
+
+### A.3. Dựng lại toàn bộ — chỉ khi tái cấu trúc lớn
+
+Chỉ dùng khi một bucket dưới `scripts/` đổi ý nghĩa, hoặc hơn 30% file trong phạm vi đã đổi. Công
+thức đã chạy được, giữ nguyên:
+
+1. **Một agent một chương, chín chương song song.** Chương 0+1 làm trước vì nó dựng khung; chương
+   2–9 chạy đồng thời; chương 10 chạy cuối vì nó tổng hợp mọi chương.
+2. **Mỗi agent ghi ra một file riêng**, không cho chúng cùng ghi vào báo cáo. Đây là điểm mấu chốt:
+   agent song song cùng sửa một file sẽ ghi đè mất bài của nhau. Ghép lại bằng cách thay placeholder
+   `<!-- Task N điền -->` ở bước sau.
+3. **Một file ràng buộc chung** cho mọi agent (schema 6 trường, độ sâu link, kỷ luật `####`, luật
+   phạm vi, "bằng chứng từ đọc code chứ không từ tên file", "không bình luận chất lượng số eval").
+   Viết một lần, mọi dispatch trỏ tới nó — đừng lặp lại trong từng prompt.
+4. **Bảo agent tự `grep` lấy thứ nó cần từ chương khác**, đừng bắt nó chờ. Ví dụ chương 8 cần danh
+   sách endpoint của chương 5 thì tự grep `@router.` lấy. Ghép xong thì đối chiếu hai bên.
+5. Không agent nào được commit. Controller ghép rồi commit một lần.
+
+### A.4. Checklist sau mỗi lần cập nhật
+
+Chạy trong Bash ở thư mục gốc repo:
+
+```bash
+R=docs/reports/source-code-audit-2026-08-31.md
+
+# Phụ lục A tự nhắc tới các mẫu bị cấm, nên mọi phép kiểm NỘI DUNG phải chạy trên
+# phần thân báo cáo, cắt trước phụ lục — nếu không nó sẽ tự báo động về chính mình.
+BODY=$(mktemp); sed -n "1,$(($(grep -n '^## Phụ lục A' $R | cut -d: -f1) - 1))p" $R > $BODY
+
+grep -c "^#### " $R    # = số file trong phạm vi (xem A.1)
+grep -c "^## " $R      # = 12
+grep -nE "^<!--" $BODY # phải rỗng (placeholder thật nằm đầu dòng)
+grep -nE "TODO|TBD|sẽ bổ sung" $BODY   # phải rỗng
+
+# Mục trùng lặp — so theo ĐƯỜNG DẪN, không theo tên hiển thị:
+# (nhiều thư mục cùng có CLAUDE.md / README.md / __init__.py, so tên sẽ báo nhầm)
+grep -oE "^#### \[[^]]*\]\([^)#]*" $BODY | sed "s/.*(//" | sort | uniq -d
+
+# Finding treo — được tham chiếu nhưng chưa bao giờ được định nghĩa.
+# "Định nghĩa" = xuất hiện kèm mức độ, ở bất kỳ dạng nào trong 4 dạng đang dùng:
+#   ### ⚠️ FINDING-x.y (Cao) — …      |  - **⚠️ FINDING-x.y (Cao):**
+#   > **⚠️ FINDING-x.y (Cao):**       |  | FINDING-x.y | Cao | … |   (bảng §10.1)
+SEV="Cao|Trung bình|Thấp"
+comm -23 <(grep -oE "FINDING-[0-9]+\.[0-9]+" $BODY | sort -u)          <(grep -oE "FINDING-[0-9]+\.[0-9]+ ?[(|] ?($SEV)" $BODY            | grep -oE "FINDING-[0-9]+\.[0-9]+" | sort -u)
+
+# Link chết. Hai dương tính giả đã biết, bỏ qua được:
+#   - docs/rules/…%20… : link mã hoá %20, [ -e ] không giải mã
+#   - tests/eval/eval_ground_truth_thunghiem_draft.json : đang ở trạng thái " D" trong working tree
+(cd docs/reports && grep -o "](\.\.[^)]*)" source-code-audit-2026-08-31.md   | sed "s/](//;s/)$//;s/#L[0-9]*$//" | sort -u   | while read f; do [ -e "$f" ] || echo "BROKEN: $f"; done)
+
+rm -f $BODY
+```
+
+Cuối cùng: `git status --short` — **không file source nào được sửa**. Báo cáo này là read-only đối
+với toàn bộ `scripts/`, `tests/`, `frontend/`, `kaggle_jobs/`, `colab_jobs/`.
+
+### A.5. Bẫy đã vấp — đọc để khỏi vấp lại
+
+- **`grep -rln "<tên>"` không phải bằng chứng import.** Nó khớp cả comment và docstring. Đợt đầu đã
+  vì lệnh này mà kết luận nhầm `rerank.py` import `build_submission` và suýt ghi thành lỗi kiến
+  trúc; sự thật `rerank.py:90` chỉ nhắc trong docstring. Muốn chứng minh import thì grep riêng các
+  dòng bắt đầu bằng `from` / `import` rồi mới lọc theo tên.
+- **Số dòng trôi.** Mọi `file:line` trong báo cáo là ảnh chụp tại baseline. Trước khi sửa code theo
+  một finding, `grep` lại — đợt đầu đã có vài chỗ lệch 3–5 dòng.
+- **Nhánh có thể bị commit chen ngang.** Đợt đầu 5 commit của phiên khác đã vào `fix/phase2` giữa
+  chừng và xóa mất file mà chương 7 đang audit. Chốt `BASE` ở đầu, và chạy lại
+  `git log --oneline $BASE..HEAD` **trước khi commit** để biết cây có đổi dưới chân mình không.
+- **Agent chết vì rate limit vẫn kịp ghi file.** Đợt đầu 4 agent bị lỗi 429 giết nhưng file chương
+  đã ghi xong. Trước khi dispatch lại, **kiểm file đã có chưa** — có thể chỉ mất phần ghi chú, không
+  mất bài.
+- **Đừng tin nhãn trong tài liệu.** `CLAUDE.md` gán `pure` cho `query_expand.py` và `trake_align.py`;
+  đọc code thì cả hai đều sai nhãn (FINDING-2.7, 3.6, 4.2). Tài liệu là **đối tượng cần kiểm**, không
+  phải nguồn sự thật.
+- **Mâu thuẫn nội tại là lỗi nặng nhất.** Nếu chương A và chương B nói ngược nhau về cùng một
+  module, người đọc mất niềm tin vào cả báo cáo. Sau khi ghép, luôn grep chéo vài khẳng định trọng
+  yếu để bắt loại này.
+
+### A.6. Khi nào nên vứt báo cáo này đi
+
+Báo cáo là ảnh chụp, không phải tài liệu sống. Nếu delta so với baseline vượt khoảng 30% số file
+trong phạm vi, đừng vá tiếp: dựng bản mới theo A.3 với tên file mang ngày mới, và để bản cũ lại
+trong `docs/reports/` làm mốc so sánh lịch sử.
