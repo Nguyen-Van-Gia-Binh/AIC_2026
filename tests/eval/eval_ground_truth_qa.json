@@ -108,10 +108,13 @@
     "text_vi": "Đoạn video về một chương trình từ thiện của một câu lạc bộ tên là FANA. Trong đoạn video có thể thấy câu lạc bộ này đang đi trao quà tại một xã thuộc tỉnh Khánh Hòa.",
     "text_en": "FANA charity banner and gift packages distributed by club members to people in a rural commune in Khanh Hoa",
     "question": "Hỏi xã này có tên là gì? (tại thời điểm đó)",
-    "difficulty_tags": [],
+    "difficulty_tags": [
+      "naming",
+      "text_in_frame"
+    ],
     "gt_video_id": "L22_V072",
-    "gt_frame_start": "1746",
-    "gt_frame_end": "1950",
+    "gt_frame_start": 1746,
+    "gt_frame_end": 1950,
     "gt_answer": "Xã Giang Ly",
     "gt_answers": [
       "Giang Ly",
@@ -127,10 +130,13 @@
     "text_vi": "Trong đoạn video có 2 câu thơ của một nhà thơ ca ngợi anh hùng Nguyễn Trung Trực trong đình thần Nguyễn Trung Trực tại Kiên Giang.",
     "text_en": "A commemorative tablet with two poetic verses praising hero Nguyen Trung Truc inside the Nguyen Trung Truc temple in Kien Giang, showing a wooden altar sign with Vietnamese text.",
     "question": "Hai câu thơ đó là gì?",
-    "difficulty_tags": [],
+    "difficulty_tags": [
+      "text_in_frame",
+      "fine_detail"
+    ],
     "gt_video_id": "L27_V010",
-    "gt_frame_start": "5475",
-    "gt_frame_end": "5536",
+    "gt_frame_start": 5475,
+    "gt_frame_end": 5536,
     "gt_answer": "Hỏa Hồng Nhật Tảo Oanh Thiên Địa\nKiếm Bạt Kiên Giang Khấp Quỷ Thần",
     "gt_answers": [
       "Hỏa Hồng Nhật Tảo Oanh Thiên Địa\nKiếm Bạt Kiên Giang Khấp Quỷ Thần",
@@ -145,10 +151,13 @@
     "text_vi": "Đoạn video về một người phụ nữ dạy nấu ăn cho những người khác. Trong đoạn video có thể thấy một người đang cầm công thức món ăn với nguyên liệu chính là 200g thịt nạc xay.",
     "text_en": "A recipe paper showing 200g ground pork, held by a woman teaching cooking to others in a kitchen.",
     "question": "Hỏi tiêu đề của công thức nấu ăn (tên món ăn) này là gì?",
-    "difficulty_tags": [],
+    "difficulty_tags": [
+      "text_in_frame",
+      "naming"
+    ],
     "gt_video_id": "L30_V078",
-    "gt_frame_start": "1789",
-    "gt_frame_end": "1849",
+    "gt_frame_start": 1789,
+    "gt_frame_end": 1849,
     "gt_answer": "Nhân Bánh Cuốn",
     "gt_answers": [
       "Nhân Bánh Cuốn",
@@ -163,116 +172,195 @@
     "type": "QA",
     "text_vi": "Đoạn clip được quay từ bên trong một chiếc xe ô tô tự lái, có thể thấy rõ vô lăng được xoay để chiếc xe rẽ sang phải. Sau đó, góc quay chuyển ra ngoài, bắt trọn cảnh chiếc xe màu trắng rẽ trái, và ở góc trên khung hình có một dưới một biển hiệu đỏ gồm 6 ký tự chữ Hán.",
     "text_en": "The clip is filmed from inside a self-driving car, where the steering wheel can be clearly seen turning as the car turns right. The camera then shifts to an exterior view capturing the white car turning left, and in the upper portion of the frame there is a red sign with 6 Chinese characters.",
-    "difficulty_tags": [],
+    "difficulty_tags": [
+      "text_in_frame",
+      "fine_detail"
+    ],
     "gt_video_id": "L21_V009",
     "question": "Con số được viết trên phần hông xe màu trắng là số mấy?",
     "gt_frame_start": 21053,
     "gt_frame_end": 21063,
     "gt_answer": "1204",
-    "gt_answers": []
+    "gt_answers": [
+      "1204",
+      "1.204",
+      "1 204",
+      "1204."
+    ]
   },
   {
     "query_id": "query-p2-9-qa",
     "type": "QA",
     "text_vi": "Trong video hướng dẫn nấu ăn, người đầu bếp lần lượt cho các loại hương liệu gồm tiêu xanh, lá chanh và sả vào bên trong bụng của tổng cộng 4 con cá. Đây là loài cá gì?",
     "text_en": "In the cooking tutorial video, the chef successively stuffs herbs including green peppercorns, kaffir lime leaves, and lemongrass inside the bellies of a total of 4 fish. What species of fish is this?",
-    "difficulty_tags": [],
+    "difficulty_tags": [
+      "naming",
+      "fine_detail"
+    ],
     "gt_video_id": "L26_V161",
-    "question": "",
+    "question": "Đây là loài cá gì?",
     "gt_frame_start": 2713,
     "gt_frame_end": 2723,
     "gt_answer": "Cá sòng",
-    "gt_answers": []
+    "gt_answers": [
+      "Cá sòng",
+      "cá sòng",
+      "ca song",
+      "Cá Sòng"
+    ]
   },
   {
     "query_id": "query-p2-12-qa",
     "type": "QA",
     "text_vi": "Đoạn video mô tả quá trình làm bánh, bánh được tạo ra có màu tím, nguyên liệu bên trong có giá, cà rốt, và bên trong mỗi bánh đều có 1 hạt sen. Mỗi lần khuôn này làm được bao nhiêu cái bánh?",
     "text_en": "The video describes a cake-making process; the cakes produced are purple in color, with fillings including bean sprouts, carrots, and 1 lotus seed inside each cake. How many cakes can this mold make at one time?",
-    "difficulty_tags": [],
+    "difficulty_tags": [
+      "counting"
+    ],
     "gt_video_id": "L26_V192",
-    "question": "",
+    "question": "Mỗi lần khuôn này làm được bao nhiêu cái bánh?",
     "gt_frame_start": 5377,
     "gt_frame_end": 5387,
     "gt_answer": "7",
-    "gt_answers": []
+    "gt_answers": [
+      "7",
+      "7 cái",
+      "7 cái bánh",
+      "bảy",
+      "bảy cái"
+    ]
   },
   {
     "query_id": "query-p2-19-qa",
     "type": "QA",
     "text_vi": "Đoạn phim ghi lại cảnh mạnh thường quân hỗ trợ một quán trọ dành cho người cao tuổi, sau đó chuyển sang cảnh một cụ ông trò chuyện với nhóm người nước ngoài. Hỏi quán trọ được nhắc đến trong đoạn phim nằm trên đường nào?",
     "text_en": "The footage captures a scene of a benefactor supporting a low-cost inn for the elderly, then transitions to a scene of an old man conversing with a group of foreigners. On which street is the inn mentioned in the footage located?",
-    "difficulty_tags": [],
+    "difficulty_tags": [
+      "naming",
+      "text_in_frame"
+    ],
     "gt_video_id": "L30_V043",
-    "question": "",
+    "question": "Quán trọ được nhắc đến trong đoạn phim nằm trên đường nào?",
     "gt_frame_start": 3574,
     "gt_frame_end": 3584,
     "gt_answer": "Lý Thường Kiệt",
-    "gt_answers": []
+    "gt_answers": [
+      "Lý Thường Kiệt",
+      "đường Lý Thường Kiệt",
+      "Ly Thuong Kiet",
+      "duong Ly Thuong Kiet"
+    ]
   },
   {
     "query_id": "query-p2-23-qa",
     "type": "QA",
     "text_vi": "Câu hỏi môn Sinh học nằm ở số thứ tự 11 trong đề thi THPTQG 2022. Trong câu hỏi có một biểu đồ đưa ra sự so sánh tốc độ sinh trưởng của các loài thực vật trong các hệ sinh thái ven biển. Hãy cho biết loài cây (II) đạt được tốc độ sinh trưởng tốt nhất khi môi trường sống có độ mặn là bao nhiêu phần nghìn?",
     "text_en": "A Biology question numbered 11 in the 2022 National High School Graduation Exam. The question contains a chart comparing the growth rates of plant species in coastal ecosystems. At what salinity (in parts per thousand) does plant species (II) achieve its best growth rate?",
-    "difficulty_tags": [],
+    "difficulty_tags": [
+      "chart_reading",
+      "fine_detail"
+    ],
     "gt_video_id": "L25_V012",
-    "question": "",
+    "question": "Loài cây (II) đạt được tốc độ sinh trưởng tốt nhất khi môi trường sống có độ mặn là bao nhiêu phần nghìn?",
     "gt_frame_start": 15719,
     "gt_frame_end": 15729,
     "gt_answer": "20 phần nghìn",
-    "gt_answers": []
+    "gt_answers": [
+      "20 phần nghìn",
+      "20",
+      "20‰",
+      "20/1000",
+      "hai mươi phần nghìn"
+    ]
   },
   {
     "query_id": "query-p2-27-qa",
     "type": "QA",
     "text_vi": "Cảnh quay một chú lân đang biểu diễn từ đầu video, các cột để chú lân biểu diễn được dán những con số. Phía sau có 1 mô hình con rồng uốn lượn hình xoắn ốc. Trong các số từ 16 giây đầu tiên của video, số nào không được nhìn thấy từ góc nhìn của camera trong các số từ 1-8.",
     "text_en": "A shot of a lion dance performer performing from the beginning of the video; the poles used for the lion dance performance have numbers stuck on them. Behind is a spiral coiling dragon model. Within the first 16 seconds of the video, which number among 1-8 cannot be seen from the camera's viewpoint?",
-    "difficulty_tags": [],
+    "difficulty_tags": [
+      "negation",
+      "counting",
+      "fine_detail"
+    ],
     "gt_video_id": "L24_V016",
-    "question": "",
+    "question": "Trong các số từ 16 giây đầu tiên của video, số nào không được nhìn thấy từ góc nhìn của camera trong các số từ 1-8?",
     "gt_frame_start": 1,
     "gt_frame_end": 10,
     "gt_answer": "2, 5",
-    "gt_answers": []
+    "gt_answers": [
+      "2, 5",
+      "2 và 5",
+      "2,5",
+      "số 2 và số 5",
+      "2, 5.",
+      "2 và 5."
+    ]
   },
   {
     "query_id": "query-p2-28-qa",
     "type": "QA",
     "text_vi": "Cảnh quay một tô cháo đã được nấu và trang trí hoàn chỉnh (đã xong các giai đoạn trang trí). Kế bên tô cháo có 1 chén nhỏ màu đen, để chứa 1 loại topping màu cam kết cấu hơi giống những sợi nhỏ. Loại topping này trước đó đã được rắc lên tô cháo. Xung quanh topping là các loại rau, hành,... Hỏi topping trong video là thịt của con gì?",
     "text_en": "A shot of a fully cooked and decorated bowl of congee (all decoration stages complete). Next to the bowl is a small black dish containing a type of orange-colored topping with a texture slightly resembling thin shreds. This topping was previously sprinkled over the congee bowl. Surrounding the topping are various herbs, green onions, etc. What animal's meat is the topping in the video?",
-    "difficulty_tags": [],
+    "difficulty_tags": [
+      "naming"
+    ],
     "gt_video_id": "L26_V450",
-    "question": "",
+    "question": "Topping trong video là thịt của con gì?",
     "gt_frame_start": 6019,
     "gt_frame_end": 6029,
     "gt_answer": "Cá hồi",
-    "gt_answers": []
+    "gt_answers": [
+      "Cá hồi",
+      "cá hồi",
+      "ca hoi",
+      "Cá Hồi",
+      "thịt cá hồi"
+    ]
   },
   {
     "query_id": "query-p2-29-qa",
     "type": "QA",
     "text_vi": "Cảnh quay liệt kê các nguyên liệu để nấu một món ăn. Ảnh nền bao gồm dĩa thịt, bó lá tươi xanh đặt ở góc bên trái, một gói hạt nêm, hũ thủy tinh nhỏ đựng nước cốt dừa, bột cà ri, nấm mèo (mộc nhĩ) khô đặt phía dưới chén gia vị, sả cây và ớt hiểm đỏ đặt ở góc trái phía dưới. Bảng nguyên liệu hiện lên gồm 9 thành phần cụ thể. Hỏi phần thịt có trọng lượng bao nhiêu trong bảng nguyên liệu (số và đơn vị được ghi trong bảng)?",
     "text_en": "A shot listing the ingredients to cook a dish. The background image includes a plate of meat, a bundle of fresh green leaves placed in the left corner, a packet of seasoning powder, a small glass jar containing coconut milk, curry powder, dried wood ear mushrooms (black fungus) placed below a spice bowl, lemongrass stalks and red bird's eye chili placed in the lower left corner. The ingredient list appears showing 9 specific components. What is the weight of the meat portion in the ingredient list (the number and unit as written in the list)?",
-    "difficulty_tags": [],
+    "difficulty_tags": [
+      "text_in_frame",
+      "fine_detail"
+    ],
     "gt_video_id": "L26_V439",
-    "question": "",
+    "question": "Phần thịt có trọng lượng bao nhiêu trong bảng nguyên liệu?",
     "gt_frame_start": 1409,
     "gt_frame_end": 1419,
     "gt_answer": "300g",
-    "gt_answers": []
+    "gt_answers": [
+      "300g",
+      "300 g",
+      "300 gam",
+      "300 gram",
+      "300gr",
+      "300"
+    ]
   },
   {
     "query_id": "query-p2-30-qa",
     "type": "QA",
     "text_vi": "Một cô gái đeo tạp dề màu trắng, bên cạnh là một lọ hoa riềng tía. Sau đó cô gái này đặt lên 1 dĩa trắng 4 con X, được biết X là nguyên liệu cho món ăn trong tập này. Sau đó người này lại cầm lên 2 con X. Sau đó người này đối thoại với một người đối diện để xem hôm nay nấu món gì. Hỏi X là con gì?",
     "text_en": "A girl wearing a white apron, beside her is a vase of purple galangal flowers. She then places 4 X creatures on a white plate, where X is an ingredient for the dish in this episode. She then picks up 2 X creatures. She then has a conversation with a person across from her to decide what to cook today. What creature is X?",
-    "difficulty_tags": [],
+    "difficulty_tags": [
+      "naming",
+      "fine_detail"
+    ],
     "gt_video_id": "L26_V254",
-    "question": "",
+    "question": "X là con gì?",
     "gt_frame_start": 1111,
     "gt_frame_end": 1121,
     "gt_answer": "Nghêu",
-    "gt_answers": []
+    "gt_answers": [
+      "Nghêu",
+      "nghêu",
+      "ngheu",
+      "Nghêu trắng",
+      "con nghêu"
+    ]
   }
 ]

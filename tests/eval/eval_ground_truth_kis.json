@@ -224,175 +224,222 @@
       "mistranslation"
     ],
     "gt_video_id": "L21_V015",
-    "gt_frame_start": "25606",
-    "gt_frame_end": "25696"
+    "gt_frame_start": 25606,
+    "gt_frame_end": 25696
   },
   {
     "query_id": "e-kis-thunghiem-002",
     "type": "KIS",
     "text_vi": "Mẩu tin giới thiệu về đàn hổ tại một địa phương ở miền Nam vừa có thêm khoảng 3-6 con hổ con. Đây là một giống hổ quý hiếm",
     "text_en": "A group of tigers at a wildlife sanctuary in southern Vietnam, with 3-6 tiger cubs",
-    "difficulty_tags": [],
+    "difficulty_tags": [
+      "naming",
+      "fine_detail"
+    ],
     "gt_video_id": "L21_V029",
-    "gt_frame_start": "10389",
-    "gt_frame_end": "11763"
+    "gt_frame_start": 10389,
+    "gt_frame_end": 11763
   },
   {
     "query_id": "e-kis-thunghiem-003",
     "type": "KIS",
     "text_vi": "Đoạn clip cần tìm là cảnh hai người phụ nữ đang cho dê ăn: một người mặc áo thun trắng quàng áo đỏ trên vai, người kia mặc áo dài tay kẻ sọc tím truyền thống. Cả hai đều mỉm cười, tỏ vẻ thích thú.\nKhông gian trại rộng rãi, có mái che bằng tôn và hàng rào gỗ chia thành nhiều dãy chuồng, trong đó có hàng dài dê được nuôi nhốt.",
     "text_en": "Two smiling women feeding goats in a spacious farm enclosure with a corrugated metal roof and wooden fences, one wearing a white t-shirt with a red garment draped over her shoulders and the other wearing a traditional purple striped long-sleeve shirt",
-    "difficulty_tags": [],
+    "difficulty_tags": [
+      "multi_object"
+    ],
     "gt_video_id": "L27_V014",
-    "gt_frame_start": "7941",
-    "gt_frame_end": "7966"
+    "gt_frame_start": 7941,
+    "gt_frame_end": 7966
   },
   {
     "query_id": "e-kis-thunghiem-004",
     "type": "KIS",
     "text_vi": "Đoạn clip cần tìm bắt đầu bằng cảnh 1 người đầu bếp đặt đang đặt món gỏi cuốn chay bày trên đĩa, nhân gồm rau xanh cuộn tròn và đậu hũ, gói trong bánh tráng màu vàng và tím. Đĩa được trang trí thêm lá xanh và hoa pansy tím-vàng, tạo cảm giác thanh mát và tinh tế.",
     "text_en": "A white plate of vegetarian spring rolls filled with green vegetables and tofu, wrapped in yellow and purple rice paper, garnished with green leaves and purple-yellow pansy flowers.",
-    "difficulty_tags": [],
+    "difficulty_tags": [
+      "temporal_order",
+      "action_sequence"
+    ],
     "gt_video_id": "L26_V056",
-    "gt_frame_start": "6363",
-    "gt_frame_end": "6529"
+    "gt_frame_start": 6363,
+    "gt_frame_end": 6529
   },
   {
     "query_id": "e-kis-thunghiem-005",
     "type": "KIS",
     "text_vi": "Đoạn clip cần tìm là cảnh quay trong một khu rừng, dưới gốc cây to với nhiều lá khô phủ đầy mặt đất. Nổi bật ở cận cảnh là một chú chim có bộ lông đen ánh xanh ở đầu và thân trên, còn cánh và lưng màu nâu đỏ. Đôi mắt chim đỏ rực, tạo điểm nhấn rõ ràng. Đây là loài chim thường thấy ở vùng Nam Bộ Việt Nam.",
     "text_en": "A bird with a glossy blue-black head and upper body, reddish-brown wings and back, and bright red eyes, perched on the ground covered in dry leaves under a large tree trunk in a forest.",
-    "difficulty_tags": [],
+    "difficulty_tags": [
+      "fine_detail"
+    ],
     "gt_video_id": "L29_V023",
-    "gt_frame_start": "10916",
-    "gt_frame_end": "10936"
+    "gt_frame_start": 10916,
+    "gt_frame_end": 10936
   },
   {
     "query_id": "e-kis-thunghiem-006",
     "type": "KIS",
     "text_vi": "Đoạn video về một lễ hội ẩm thực Nhật Bản lớn nhất thế giới. Hãy tìm chính xác phân cảnh một cô bé đeo một con bạch tuộc / con mực màu đỏ phía trước ngực. Trên tay cô bé có cầm một chiếc túi giấy.",
     "text_en": "Red octopus plush toy worn in front of the chest of a young girl holding a paper bag at a Japanese food festival",
-    "difficulty_tags": [],
+    "difficulty_tags": [
+      "text_in_frame",
+      "fine_detail"
+    ],
     "gt_video_id": "L22_V030",
-    "gt_frame_start": "18328",
-    "gt_frame_end": "18418"
+    "gt_frame_start": 18328,
+    "gt_frame_end": 18418
   },
   {
     "query_id": "e-kis-thunghiem-007",
     "type": "KIS",
     "text_vi": "Đoạn clip là cảnh thu hoạch dứa ở miền Tây: một bà cụ ngồi bên giỏ dứa trò chuyện với cô gái mặc áo hồng quàng khăn rằn; xung quanh chất đầy dứa, phía sau có người phụ nữ đội nón lá cầm trái dứa và một chiếc ghe xanh đậu cạnh bờ, tạo không khí nông thôn mộc mạc, yên bình.",
     "text_en": "Pineapple basket and piled pineapples, an elderly woman sitting next to a young woman wearing a pink shirt and a checkered scarf, a blue boat docked at the rural riverbank",
-    "difficulty_tags": [],
+    "difficulty_tags": [
+      "multi_object",
+      "action_sequence"
+    ],
     "gt_video_id": "L27_V013",
-    "gt_frame_start": "5051",
-    "gt_frame_end": "5131"
+    "gt_frame_start": 5051,
+    "gt_frame_end": 5131
   },
   {
     "query_id": "e-kis-thunghiem-008",
     "type": "KIS",
     "text_vi": "Tìm chính xác đoạn clip ngắn có ba người (hai phụ nữ và một nam giới) đang ngồi cạnh nhau, tập trung chơi nhạc cụ kim loại có dạng tròn, rỗng, với các vết lõm để tạo ra âm thanh khi gõ tay. Có 1 người mặc áo trắng ngồi giữa 2 người mặc áo đen. Bối cảnh phía sau là một kệ sách nhiều ngăn, xếp đầy sách với nhiều màu sắc",
     "text_en": "Three people sitting together playing a round hollow metal percussion instrument with dimples, one person in a white shirt sitting between two people in black shirts, bookshelf filled with colorful books in the background",
-    "difficulty_tags": [],
+    "difficulty_tags": [
+      "counting",
+      "multi_object"
+    ],
     "gt_video_id": "L30_V017",
-    "gt_frame_start": "2987",
-    "gt_frame_end": "3011"
+    "gt_frame_start": 2987,
+    "gt_frame_end": 3011
   },
   {
     "query_id": "e-kis-thunghiem-009",
     "type": "KIS",
     "text_vi": "Trong đoạn clip có là một chàng trai đội mũ lưỡi trai đen, mặc áo thun trắng có dòng chữ tiếng Anh, đang ngồi cạnh một chiếc hộp. Trên hộp, anh sắp xếp nhiều mảnh bìa cắt rời với hình thù ngẫu nhiên.\nNhờ ánh sáng chiếu từ một phía, các mảnh bìa đó đổ bóng lên tường, tạo thành hình chân dung một người đàn ông với khuôn mặt rõ nét, tóc vuốt gọn và mặc vest.",
     "text_en": "Cardboard shadow portrait on wall, a young man wearing a black baseball cap and a white t-shirt sitting beside a box arranging cut pieces of cardboard",
-    "difficulty_tags": [],
+    "difficulty_tags": [
+      "fine_detail"
+    ],
     "gt_video_id": "L30_V057",
-    "gt_frame_start": "4345",
-    "gt_frame_end": "4665"
+    "gt_frame_start": 4345,
+    "gt_frame_end": 4665
   },
   {
     "query_id": "e-kis-thunghiem-010",
     "type": "KIS",
     "text_vi": "Đoạn video mô tả cảnh trang trí bánh rán. Phân cảnh bắt đầu là một chiếc đĩa sứ màu trắng nằm trên một khay gỗ hình chữ nhật. Bên cạnh chiếc đĩa sứ là một chén đựng một vài trái dâu, nhưng có 2 trái bị rơi ra ngoài. Ngoài ra, bên cạnh đĩa sứ còn có một chén sứ nhỏ màu trắng đựng chuối đã được cắt sẵn và một cái thìa nhỏ màu nâu. Phân cảnh tiếp theo cho thấy đầu bếp đặt 2 chiếc bánh rán lên đĩa sứ và bắt đầu trang trí. Bước đầu tiên là việc rưới chocolate lên trên mặt bánh. Sau đó, đầu bếp đặt các lát chuối lên trên một chiếc bánh rán, chiếc còn lại được đặt các lát dâu tây lên.",
     "text_en": "White porcelain plate on a rectangular wooden tray with sliced bananas, strawberries, and drizzled chocolate.",
-    "difficulty_tags": [],
+    "difficulty_tags": [
+      "temporal_order",
+      "action_sequence"
+    ],
     "gt_video_id": "L26_V200",
-    "gt_frame_start": "4481",
-    "gt_frame_end": "5039"
+    "gt_frame_start": 4481,
+    "gt_frame_end": 5039
   },
   {
     "query_id": "e-kis-thunghiem-011",
     "type": "KIS",
     "text_vi": "Đoạn video mô tả một người ngồi vệ sinh máy ảnh. Công đoạn này bắt đầu bằng việc tháo rời máy ảnh. Tiếp theo, chiếc ống kính đã được tháo rời và được đặt ngay ngắn trên một chiếc khăn màu tím hồng. Phân cảnh cuối cùng là vệ sinh ống kính (lens) bằng một chiếc tăm bông.",
     "text_en": "Camera lens placed on a pinkish-purple cloth beside a disassembled camera",
-    "difficulty_tags": [],
+    "difficulty_tags": [
+      "temporal_order",
+      "action_sequence"
+    ],
     "gt_video_id": "L30_V095",
-    "gt_frame_start": "2673",
-    "gt_frame_end": "2821"
+    "gt_frame_start": 2673,
+    "gt_frame_end": 2821
   },
   {
     "query_id": "e-kis-thunghiem-012",
     "type": "KIS",
     "text_vi": "Đoạn clip bắt đầu với cảnh một tác phẩm điêu khắc cát hoành tráng tại Lễ hội điêu khắc trên cát. Tác phẩm mô tả cảnh những thanh niên chơi thể thao đường phố: một người trượt patin, hai người trượt ván\nNền phía sau là họa tiết vòm cong lớn và có khắc chữ.\nTiếp theo có cảnh nhiều tác phẩm khác bằng cát, và có 2 cột khói màu hồng",
     "text_en": "Giant sand sculpture of street sports including a roller skater and two skateboarders with carved arched wall background",
-    "difficulty_tags": [],
+    "difficulty_tags": [
+      "temporal_order",
+      "action_sequence"
+    ],
     "gt_video_id": "L21_V027",
-    "gt_frame_start": "20227",
-    "gt_frame_end": "20356"
+    "gt_frame_start": 20227,
+    "gt_frame_end": 20356
   },
   {
     "query_id": "e-kis-thunghiem-013",
     "type": "KIS",
     "text_vi": "Đoạn video trong buổi trao quà từ thiện diễn ra tại 1 bệnh viện trong dịp Xuân 2024. Trong cảnh có hai người đàn ông (mặc áo sơ mi hồng và sơ mi trắng) đứng hai bên, đại diện ban tổ chức. Ở giữa là bốn em nhỏ và thiếu niên, trong đó có em mặc áo đỏ, em mặc áo trắng, em mặc váy hồng và em mặc áo xanh. Các em được trao bảng tượng trưng với nội dung “Chương trình: Trao kinh phí hỗ trợ cho trẻ em mồ côi do dịch COVID-19”. Trước mặt mỗi em là túi quà lớn mang logo y tế. Phía sau là phông nền màu đỏ với khẩu hiệu đón xuân và thông tin sự kiện.",
     "text_en": "Large symbolic donation board held by children and men on stage, red banner background in hospital charity event",
-    "difficulty_tags": [],
+    "difficulty_tags": [
+      "multi_object",
+      "text_in_frame"
+    ],
     "gt_video_id": "L30_V092",
-    "gt_frame_start": "2492",
-    "gt_frame_end": "2522"
+    "gt_frame_start": 2492,
+    "gt_frame_end": 2522
   },
   {
     "query_id": "e-kis-thunghiem-014",
     "type": "KIS",
     "text_vi": "Trên đĩa tròn màu trắng có 1 ly panna cotta. Có một bàn tay lần lượt đặt thêm 2 ly panna cotta nữa vào đĩa.\nMỗi ly panna cotta có lớp kem mịn màu trắng ngà, bên trên trang trí vài lát nho đỏ, thêm lá bạc hà xanh tạo điểm nhấn tươi mát.\nBên cạnh trên đĩa còn có hai bông hoa ăn được (màu đỏ và vàng) để tăng phần đẹp mắt.",
     "text_en": "Three white panna cotta glasses on a round white plate, decorated with red grapes, green mint leaves, and red and yellow edible flowers",
-    "difficulty_tags": [],
+    "difficulty_tags": [
+      "fine_detail",
+      "small_object"
+    ],
     "gt_video_id": "L21_V004",
-    "gt_frame_start": "5394",
-    "gt_frame_end": "5401"
+    "gt_frame_start": 5394,
+    "gt_frame_end": 5401
   },
   {
     "query_id": "e-kis-thunghiem-016",
     "type": "KIS",
     "text_vi": "Đoạn clip về 1 thị trấn ven biển thu hút du khách hiếu kỳ nhờ 1 loài động vật biển nguy hiểm. Loài động vật này nổi tiếng trong 1 bộ phim của đạo diễn Steven Spielberg được sản xuất vào năm 1975",
     "text_en": "Great white shark marine animal associated with the 1975 Steven Spielberg movie in a coastal tourist town",
-    "difficulty_tags": [],
+    "difficulty_tags": [
+      "naming"
+    ],
     "gt_video_id": "L22_V022",
-    "gt_frame_start": "16228",
-    "gt_frame_end": "18397"
+    "gt_frame_start": 16228,
+    "gt_frame_end": 18397
   },
   {
     "query_id": "e-kis-thunghiem-017",
     "type": "KIS",
     "text_vi": "Đoạn video về tường thuật một cuộc đua xe đạp. Tìm phân cảnh với góc quay trực diện từ trên cao xuống dõi theo các tay đua. Trong khung hình gồm có 3 tay đua đang đạp thành một đường thẳng. Cả 3 tay đua đều đến từ cùng một đội, với đồng phục áo trắng quần vàng xanh. Tay đua đầu tiên đội nón trắng, tay đua thứ hai đội nón đỏ và tay đua cuối cùng đội nón đen.",
     "text_en": "Overhead direct frontal view of 3 cyclists riding in a single file line, wearing white jerseys with yellow-green shorts, the first wearing a white helmet, the second wearing a red helmet, and the last wearing a black helmet on a cycling track",
-    "difficulty_tags": [],
+    "difficulty_tags": [
+      "counting",
+      "fine_detail"
+    ],
     "gt_video_id": "L23_V007",
-    "gt_frame_start": "3247",
-    "gt_frame_end": "3501"
+    "gt_frame_start": 3247,
+    "gt_frame_end": 3501
   },
   {
     "query_id": "e-kis-thunghiem-018",
     "type": "KIS",
     "text_vi": "Tìm một đoạn video đua xe đạp, góc quay từ flycam trên cao, một vận động viên mặc áo xanh dương, trắng đang vượt ba vận động viên khác và lên vị trí dẫn đầu. Biết sau đó vận động viên này dẫn đầu suốt đoạn đường còn lại đến đích.",
     "text_en": "Aerial drone view of a bicycle race showing a cyclist in a blue and white jersey overtaking three other riders to take the lead on the road.",
-    "difficulty_tags": [],
+    "difficulty_tags": [
+      "action_sequence",
+      "temporal_order"
+    ],
     "gt_video_id": "L23_V017",
-    "gt_frame_start": "1109",
-    "gt_frame_end": "4426"
+    "gt_frame_start": 1109,
+    "gt_frame_end": 4426
   },
   {
     "query_id": "query-p2-1-kis",
     "type": "KIS",
     "text_vi": "Nhóm 5 người đang chơi đùa bên cạnh một con vật màu vàng. Một trong số đó đã mang một vật trông như trái bí đỏ đi giấu. Người đàn ông thức dậy không thấy quả bí đỏ đâu nên đánh thức con vật dậy.",
     "text_en": "A group of 5 people are playing beside a yellow animal. One of them took an object that looks like a pumpkin and hid it. The man woke up and could not find the pumpkin, so he woke the animal up.",
-    "difficulty_tags": [],
+    "difficulty_tags": [
+      "counting",
+      "action_sequence"
+    ],
     "gt_video_id": "L24_V035",
     "gt_frame_start": 300,
     "gt_frame_end": 310
@@ -402,7 +449,10 @@
     "type": "KIS",
     "text_vi": "Đoạn clip bắt đầu với cảnh một người đang dùng điện thoại chụp ảnh bức tranh hình tê giác trên tường. Đoạn clip kết thúc với cảnh một người chụp ảnh các hình graffiti 3 chú khỉ trên một cây cầu",
     "text_en": "The clip begins with a person using a phone to photograph a rhinoceros painting on a wall. The clip ends with a person photographing graffiti of 3 monkeys on a bridge.",
-    "difficulty_tags": [],
+    "difficulty_tags": [
+      "temporal_order",
+      "action_sequence"
+    ],
     "gt_video_id": "L21_V013",
     "gt_frame_start": 22370,
     "gt_frame_end": 22380
@@ -412,7 +462,10 @@
     "type": "KIS",
     "text_vi": "Một chú lân (hay rồng/sư tử?) màu vàng nhảy hay rơi từ trên cao xuống, gần với mô hình chiếc tàu thủy nhỏ màu xanh dương.",
     "text_en": "A yellow lion dance (or dragon/lion?) jumps or falls from a height, close to a small blue ship model.",
-    "difficulty_tags": [],
+    "difficulty_tags": [
+      "short_action",
+      "small_object"
+    ],
     "gt_video_id": "L24_V044",
     "gt_frame_start": 260,
     "gt_frame_end": 270
@@ -422,7 +475,11 @@
     "type": "KIS",
     "text_vi": "Hai bạn trẻ đang treo băng-rôn lớn có tông màu xanh dương, được trang trí bằng hình ảnh núi, mây và một con đường dẫn tới trường học. Trên băng rôn còn có hình ảnh 02 em bé vùng khó khăn đang mặc áo màu vàng.",
     "text_en": "Two young people are hanging a large blue-toned banner decorated with images of mountains, clouds, and a road leading to a school. The banner also features images of 2 children from disadvantaged areas wearing yellow shirts.",
-    "difficulty_tags": [],
+    "difficulty_tags": [
+      "text_in_frame",
+      "counting",
+      "fine_detail"
+    ],
     "gt_video_id": "L30_V072",
     "gt_frame_start": 700,
     "gt_frame_end": 710
@@ -432,7 +489,10 @@
     "type": "KIS",
     "text_vi": "Một người áo đỏ, đội nón màu trắng, đang lấy nước rưới vào mặt của mình. Khung hình có hai người đi xe đạp, người mặc áo xanh đậm đang đuổi theo người mặc áo đen phối cam.",
     "text_en": "A person in a red shirt and white cap is splashing water on their face. The frame shows two cyclists, one in a dark blue jersey chasing another in a black and orange jersey.",
-    "difficulty_tags": [],
+    "difficulty_tags": [
+      "multi_object",
+      "action_sequence"
+    ],
     "gt_video_id": "L21_V022",
     "gt_frame_start": 26077,
     "gt_frame_end": 26087
@@ -442,7 +502,10 @@
     "type": "KIS",
     "text_vi": "Đoạn video do người đi đường phía sau ghi lại cho thấy 2 thanh niên điều khiển xe máy bất ngờ nằm dài trên yên và phóng với tốc độ cao. Xuất hiện trong khung hình còn có một chiếc ô tô màu xanh cùng một người đi xe máy mặc áo xanh khác. Có 2 vòng tròn màu đỏ xuất hiện để khoanh vùng vị trí 2 thanh niên này.",
     "text_en": "A video recorded from behind by a passerby shows 2 young men riding motorcycles who suddenly lie flat on the seat and speed at high velocity. Also visible in the frame is a blue car and another motorcyclist in a blue shirt. Two red circles appear to highlight the positions of these 2 young men.",
-    "difficulty_tags": [],
+    "difficulty_tags": [
+      "fine_detail",
+      "counting"
+    ],
     "gt_video_id": "L22_V024",
     "gt_frame_start": 20786,
     "gt_frame_end": 26096
@@ -452,7 +515,10 @@
     "type": "KIS",
     "text_vi": "Một đầu bếp chế biến món ăn trong chảo, với các miếng dồi trường màu trắng và rau xanh.\nĐầu bếp cho bông hẹ vào chảo đang có dồi trường rồi dùng dụng cụ đảo các nguyên liệu.\nCác đoạn bông hẹ dài màu xanh được trộn cùng những miếng dồi trường trắng trong chảo.\nMáy quay chuyển sang cận cảnh chảo khi đầu bếp tiếp tục xào và trộn hai nguyên liệu.",
     "text_en": "A chef prepares a dish in a wok with white pork intestine pieces and green vegetables.\nThe chef adds chive blossoms to the wok containing the intestines and uses a utensil to stir the ingredients.\nLong green chive blossom segments are mixed together with the white intestine pieces in the wok.\nThe camera shifts to a close-up of the wok as the chef continues to stir-fry and mix the two ingredients.",
-    "difficulty_tags": [],
+    "difficulty_tags": [
+      "action_sequence",
+      "temporal_order"
+    ],
     "gt_video_id": "L26_V120",
     "gt_frame_start": 4481,
     "gt_frame_end": 4491
@@ -462,7 +528,10 @@
     "type": "KIS",
     "text_vi": "Trong video, người đầu bếp cầm một nguyên liệu dài đã được xiên que và lăn qua hỗn hợp màu xanh lá cây và màu đỏ đã băm nhỏ.\nNguyên liệu sau đó được chuyển sang một đĩa chứa bột trắng để phủ bên ngoài.\nNgười đầu bếp cầm que xiên và xoay nguyên liệu qua lại nhiều lần trên lớp bột.\nCuối cùng, nguyên liệu đã được phủ kín một lớp bột trắng và đặt riêng sang một chiếc đĩa.",
     "text_en": "In the video, the chef holds a long skewered ingredient and rolls it through a finely chopped green and red mixture.\nThe ingredient is then transferred to a plate of white flour to coat the outside.\nThe chef holds the skewer and rolls the ingredient back and forth multiple times in the flour.\nFinally, the ingredient is fully coated in a layer of white flour and placed separately on a plate.",
-    "difficulty_tags": [],
+    "difficulty_tags": [
+      "action_sequence",
+      "temporal_order"
+    ],
     "gt_video_id": "L26_V392",
     "gt_frame_start": 3611,
     "gt_frame_end": 3621
@@ -472,7 +541,10 @@
     "type": "KIS",
     "text_vi": "Người đầu bếp đảo đều một hỗn hợp các nguyên liệu trong chảo, nhìn bằng mắt thường có thể thấy một số nguyên liệu như thịt gà, ớt đỏ, ớt xanh, đậu phộng và hành tím. Sau đó cô ấy tắt lửa, cho thêm vỏ chanh và nước cốt chanh vào chảo trước khi trút hỗn hợp thức ăn này ra đĩa.",
     "text_en": "The chef evenly stirs a mixture of ingredients in a wok; visible to the naked eye are ingredients such as chicken, red chili, green chili, peanuts, and shallots. She then turns off the heat, adds lime zest and lime juice to the wok before pouring the food mixture onto a plate.",
-    "difficulty_tags": [],
+    "difficulty_tags": [
+      "action_sequence",
+      "temporal_order"
+    ],
     "gt_video_id": "L26_V422",
     "gt_frame_start": 4293,
     "gt_frame_end": 4303
@@ -482,7 +554,10 @@
     "type": "KIS",
     "text_vi": "Cận cảnh một nhóm 3 vận động viên đua xe đạp đang di chuyển sát nhau, hai tay đua mặc áo xanh biển đội mũ bảo hiểm đỏ và trắng, bên cạnh có một tay đua mặc áo vàng đang đua cùng. Bên dưới quai mũ của tay đua nón đỏ có một sợi dây màu trắng treo lủng xuống gần cổ.",
     "text_en": "A close-up of a group of 3 cyclists riding closely together; two riders in blue jerseys wearing red and white helmets, alongside a rider in a yellow jersey racing with them. Beneath the chin strap of the red-helmeted rider, a white cord hangs loosely near the neck.",
-    "difficulty_tags": [],
+    "difficulty_tags": [
+      "counting",
+      "fine_detail"
+    ],
     "gt_video_id": "L23_V010",
     "gt_frame_start": 626,
     "gt_frame_end": 636
@@ -492,7 +567,10 @@
     "type": "KIS",
     "text_vi": "Cảnh phim lần lượt giới thiệu các nguyên liệu của món ăn qua 3 chuyển cảnh: máy quay chéo lên và kết thúc ở nguyên liệu hải sản đầu tiên; quay từ trên xuống cận cảnh nguyên liệu hải sản thứ hai rồi chuyển sang các nguyên liệu nhiều màu sắc; cuối cùng là cú máy tĩnh toàn cảnh toàn bộ nguyên liệu.",
     "text_en": "The film scene sequentially introduces the dish's ingredients through 3 transitions: the camera tilts diagonally upward and ends on the first seafood ingredient; pans down for a close-up of the second seafood ingredient then shifts to colorful ingredients; finally, a static wide shot captures all ingredients together.",
-    "difficulty_tags": [],
+    "difficulty_tags": [
+      "temporal_order",
+      "action_sequence"
+    ],
     "gt_video_id": "L26_V074",
     "gt_frame_start": 497,
     "gt_frame_end": 507
@@ -502,7 +580,10 @@
     "type": "KIS",
     "text_vi": "Trong một ngôi nhà nông thôn có cửa sổ lớn, hai người phụ nữ đang làm thủ công trên một bộ ván ngựa, phía sau là một dãy khoảng 10 thớt gỗ được treo thành một hàng ngang.",
     "text_en": "In a rural house with large windows, two women are doing handicrafts on a traditional wooden platform bed (van ngua), behind them is a row of about 10 wooden cutting boards hung in a horizontal line.",
-    "difficulty_tags": [],
+    "difficulty_tags": [
+      "counting",
+      "multi_object"
+    ],
     "gt_video_id": "L29_V014",
     "gt_frame_start": 17416,
     "gt_frame_end": 17426
@@ -512,7 +593,9 @@
     "type": "KIS",
     "text_vi": "Sân khấu với dòng chữ nổi 3D to, ánh kim phủ kim tuyến có nội dung: “SẮC CỔ ...” đặt ở mép trước sân khấu.",
     "text_en": "A stage with large 3D raised lettering covered in metallic gold glitter with the content: \"SAC CO ...\" placed at the front edge of the stage.",
-    "difficulty_tags": [],
+    "difficulty_tags": [
+      "text_in_frame"
+    ],
     "gt_video_id": "L30_V026",
     "gt_frame_start": 1929,
     "gt_frame_end": 1939
@@ -522,7 +605,11 @@
     "type": "KIS",
     "text_vi": "Đoạn phim quay từ phía sau nhóm dẫn đầu, gồm 1 tay đua dẫn trước và 3 tay đua bám phía sau, khi cả nhóm rẽ phải vào đường Hồ Tùng Mậu tại giao lộ có đèn xanh đang đếm ngược đến 13 giây.",
     "text_en": "The footage is filmed from behind the leading group, consisting of 1 rider in front and 3 riders drafting behind, as the whole group turns right onto Ho Tung Mau street at an intersection with a green traffic light counting down to 13 seconds.",
-    "difficulty_tags": [],
+    "difficulty_tags": [
+      "counting",
+      "text_in_frame",
+      "fine_detail"
+    ],
     "gt_video_id": "L23_V017",
     "gt_frame_start": 2571,
     "gt_frame_end": 2581
@@ -532,7 +619,10 @@
     "type": "KIS",
     "text_vi": "Clip bài giảng môn Địa lí, có 1 bảng số liệu về mạng lưới đô thị ở Việt Nam. Bảng này thể hiện sự khác nhau về phân bố đô thị giữa các vùng bằng màu sắc: 3 vùng có nhiều đô thị nhất thì con số thể hiện số lượng đô thị được in màu đỏ, còn 2 vùng có ít đô thị nhất thì con số này được in màu xanh. Từ bảng số liệu ta còn có thể thấy rằng vùng có ít đô thị nhất lại là vùng có dân số đô thi cao nhất.",
     "text_en": "A Geography lecture clip featuring a data table on Vietnam's urban network. The table shows the difference in urban distribution between regions using color: the 3 regions with the most cities have their city count figures printed in red, while the 2 regions with the fewest cities have this figure printed in blue. From the data table, it can also be seen that the region with the fewest cities has the highest urban population.",
-    "difficulty_tags": [],
+    "difficulty_tags": [
+      "chart_reading",
+      "text_in_frame"
+    ],
     "gt_video_id": "L25_V060",
     "gt_frame_start": 33301,
     "gt_frame_end": 33311
@@ -542,7 +632,10 @@
     "type": "KIS",
     "text_vi": "Trong video nấu ăn, một loại nguyên liệu hải sản màu trắng được khứa theo những đường thẳng vuông góc nhau, trên cả 2 bề mặt của nguyên liệu này. Nguyên liệu sau đó được cắt thành từng que và cho vào tô, trước khi được trộn đều với các gia vị gồm rượu, tiêu và hạt nêm.",
     "text_en": "In the cooking video, a white seafood ingredient is scored with perpendicular straight lines on both surfaces. The ingredient is then cut into strips and placed in a bowl, before being thoroughly mixed with seasonings including rice wine, pepper, and seasoning powder.",
-    "difficulty_tags": [],
+    "difficulty_tags": [
+      "action_sequence",
+      "temporal_order"
+    ],
     "gt_video_id": "L26_V470",
     "gt_frame_start": 2055,
     "gt_frame_end": 2065
@@ -552,7 +645,10 @@
     "type": "KIS",
     "text_vi": "Đoạn clip ghi lại khoảnh khắc về đích của một chặng đua xe đạp diễn ra tại thành phố thuộc tỉnh Quảng Nam (cũ, trước ngày 01/7/2025). Vận động viên người Estonia mặc áo xanh nước biển dẫn đầu đoàn. Khi chỉ còn cách đích một đoạn ngắn, anh buông cả hai tay khỏi ghi-đông, giang hai tay lên cao ăn mừng chiến thắng trong khi xe vẫn tiến về phía trước. Ngay phía sau anh là một vận động viên mặc áo vàng và một vận động viên mặc áo cam đang lần lượt lao về đích.",
     "text_en": "The clip captures the finish-line moment of a cycling stage race held in a city in Quang Nam province (old boundaries, before July 1, 2025). An Estonian athlete in a navy blue jersey leads the pack. With only a short distance to the finish, he releases both hands from the handlebars, raising both arms high in victory celebration while the bike continues moving forward. Immediately behind him are a rider in a yellow jersey and a rider in an orange jersey sprinting to the finish in succession.",
-    "difficulty_tags": [],
+    "difficulty_tags": [
+      "short_action",
+      "multi_object"
+    ],
     "gt_video_id": "L23_V013",
     "gt_frame_start": 6778,
     "gt_frame_end": 6788
@@ -562,7 +658,10 @@
     "type": "KIS",
     "text_vi": "Cảnh giáo viên nam đeo kính, mặc áo sơ mi kẻ sọc ngắn tay, xuất hiện ở góc dưới bên trái và dùng hai tay làm cử chỉ minh họa khi đang giảng bài.\n\nKhung hình chứa một bức ảnh minh họa cô gái trẻ đeo kính, mặc áo sơ mi trắng, ngồi khoanh chân trên ghế sofa màu xám vừa cầm cốc nước vừa nhìn vào laptop mở trên đùi.",
     "text_en": "A scene of a male teacher wearing glasses and a short-sleeved striped shirt, appearing in the lower left corner and using both hands to gesture as he lectures.\n\nThe frame contains an illustration of a young woman with glasses, wearing a white shirt, sitting cross-legged on a gray sofa, holding a cup of water while looking at an open laptop on her lap.",
-    "difficulty_tags": [],
+    "difficulty_tags": [
+      "image_in_image",
+      "fine_detail"
+    ],
     "gt_video_id": "L25_V045",
     "gt_frame_start": 16651,
     "gt_frame_end": 16661
@@ -572,7 +671,10 @@
     "type": "KIS",
     "text_vi": "Đây là một đoạn trong bài giảng. Trên slide bao gồm:\n- Một nhóm nhân vật người 3D màu trắng vây quanh một nhân vật màu đỏ ở chính giữa.\n\n- Hai nhân vật hoạt hình nam đang trong tư thế thi đấu kéo co, đối đầu nhau với sợi dây thừng.",
     "text_en": "This is a segment from a lecture. The slide includes:\n- A group of white 3D human figures surrounding a red figure in the center.\n\n- Two male cartoon characters in a tug-of-war competition stance, facing each other with a rope.",
-    "difficulty_tags": [],
+    "difficulty_tags": [
+      "image_in_image",
+      "multi_object"
+    ],
     "gt_video_id": "L25_V062",
     "gt_frame_start": 13801,
     "gt_frame_end": 13811
@@ -616,7 +718,7 @@
   {
     "query_id": "e-kis-ai-022",
     "type": "KIS",
-    "text_vi": "Mẩu tin bắt đầu với hình ảnh nột người đàn ông mặc vest xanh đậm, sơ mi trắng và cà vạt, đang ngồi trên một chiếc ghế lớn. Ông cầm bằng hai tay một khối đá quý thô khá lớn, đưa lên gần mặt để quan sát. \nBên phải là một phụ nữ mặc trang phục công sở màu đen và khăn trùm đầu màu hồng tím, đang đứng cạnh và mỉm cười. Tiếp theo có hình ảnh toàn cảnh từ trên cao của một mỏ đá quý lộ thiên quy mô lớn với hố khai thác sâu nhiều tầng và hệ thống đường vận chuyển bao quanh.",
+    "text_vi": "Mẩu tin bắt đầu với hình ảnh một người đàn ông mặc vest xanh đậm, sơ mi trắng và cà vạt, đang ngồi trên một chiếc ghế lớn. Ông cầm bằng hai tay một khối đá quý thô khá lớn, đưa lên gần mặt để quan sát. \nBên phải là một phụ nữ mặc trang phục công sở màu đen và khăn trùm đầu màu hồng tím, đang đứng cạnh và mỉm cười. Tiếp theo có hình ảnh toàn cảnh từ trên cao của một mỏ đá quý lộ thiên quy mô lớn với hố khai thác sâu nhiều tầng và hệ thống đường vận chuyển bao quanh.",
     "text_en": "The news segment starts with a man wearing a dark blue suit, white shirt, and tie, sitting on a large chair. He holds a fairly large rough gemstone with both hands, bringing it close to his face to examine it. \nTo the right is a woman wearing a black office outfit and a pink-purple headscarf, standing nearby and smiling. Next, there is an aerial view of a large-scale open-pit gemstone mine with deep multi-level excavation pits and a surrounding transportation network.",
     "difficulty_tags": [
       "short_action"

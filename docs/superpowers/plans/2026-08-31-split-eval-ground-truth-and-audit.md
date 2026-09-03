@@ -34,7 +34,7 @@
     - `tests/eval/eval_ground_truth_qa.json`
     - `tests/eval/eval_ground_truth_trake.json`
 
-- [ ] **Step 1: Viết failing test cho hàm tách ground truth**
+- [x] **Step 1: Viết failing test cho hàm tách ground truth**
 
 Tạo file `tests/unit/test_split_eval_gt.py`:
 
@@ -82,12 +82,12 @@ def test_split_ground_truth_preserves_all_records(tmp_path):
     assert loaded_kis == [mock_data[0]]
 ```
 
-- [ ] **Step 2: Chạy test để xác nhận fail**
+- [x] **Step 2: Chạy test để xác nhận fail**
 
 Run: `.venv\Scripts\pytest.exe tests\unit\test_split_eval_gt.py -v`
 Expected: FAIL with `ModuleNotFoundError: No module named 'tests.eval.split_eval_gt'`
 
-- [ ] **Step 3: Cài đặt module `tests/eval/split_eval_gt.py`**
+- [x] **Step 3: Cài đặt module `tests/eval/split_eval_gt.py`**
 
 Tạo `tests/eval/split_eval_gt.py`:
 
@@ -183,12 +183,12 @@ if __name__ == "__main__":
     main()
 ```
 
-- [ ] **Step 4: Chạy test để xác nhận pass**
+- [x] **Step 4: Chạy test để xác nhận pass**
 
 Run: `.venv\Scripts\pytest.exe tests\unit\test_split_eval_gt.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```powershell
 git add tests/eval/split_eval_gt.py tests/unit/test_split_eval_gt.py
@@ -207,14 +207,14 @@ git commit -m "feat(eval): add split_eval_gt script for lossless sub-file splitt
 - Input: Toàn bộ 91 entries trong `tests/eval/eval_ground_truth.json` (59 KIS, 17 QA, 15 TRAKE).
 - Output: Báo cáo `tests/eval/AUDIT_REPORT.md` ghi nhận chi tiết mọi bất thường, lỗi cấu trúc, lỗi ngữ nghĩa dịch thuật, nhãn nghi vấn và đề xuất kế hoạch sửa.
 
-- [ ] **Step 1: Rà soát cấu trúc & dữ liệu bằng script phân tích tự động**
+- [x] **Step 1: Rà soát cấu trúc & dữ liệu bằng script phân tích tự động**
 
 Chạy script kiểm tra 91 câu để lập bảng thống kê lỗi cấu trúc:
 - Tìm `gt_video_id` rỗng (`e-trake-thunghiem-001`, `e-trake-thunghiem-003`).
 - Tìm khoảng frame bị đảo ngược `start > end` (`e-trake-thunghiem-001` event #1: 5140 > 5050, `query-p2-8-trake` event #1: 3909 > 3819).
 - Tìm các câu QA bị thiếu `question` hoặc `gt_answers: []` (`query-p2-7-qa`, `query-p2-9-qa`, `query-p2-12-qa`, `query-p2-19-qa`, `query-p2-23-qa`, `query-p2-27-qa`, `query-p2-28-qa`, `query-p2-29-qa`, `query-p2-30-qa`).
 
-- [ ] **Step 2: Đọc và rà soát thủ công chất lượng dịch thuật (`text_vi` vs `text_en`) & nhãn từng câu**
+- [x] **Step 2: Đọc và rà soát thủ công chất lượng dịch thuật (`text_vi` vs `text_en`) & nhãn từng câu**
 
 Đọc kỹ từng câu hỏi trong 3 nhóm:
 1. **Nhóm KIS (59 câu):**
@@ -227,7 +227,7 @@ Chạy script kiểm tra 91 câu để lập bảng thống kê lỗi cấu trú
 3. **Nhóm TRAKE (15 câu):**
    - Đọc từng sự kiện trong `events`: `text_en` mô tả sự kiện con có rõ ràng không, thứ tự thời gian có liên tục không (`gt_frame_start` của event sau có lớn hơn event trước không).
 
-- [ ] **Step 3: Viết tài liệu báo cáo kiểm toán `tests/eval/AUDIT_REPORT.md`**
+- [x] **Step 3: Viết tài liệu báo cáo kiểm toán `tests/eval/AUDIT_REPORT.md`**
 
 Tạo file `tests/eval/AUDIT_REPORT.md` với đầy đủ các mục:
 1. **Tổng quan số lượng**: 91 câu (59 KIS, 17 QA, 15 TRAKE).
@@ -243,7 +243,7 @@ Tạo file `tests/eval/AUDIT_REPORT.md` với đầy đủ các mục:
 5. **Kế hoạch đề xuất sửa chữa cho Phase tiếp theo (Action Plan)**:
    - Đề xuất các giá trị sửa cụ thể cho từng câu (bổ sung video ID, đảo lại khoảng frame, điền `question`/`gt_answers`, chuẩn hoá nhãn) để người dùng phê duyệt trước khi thực thi.
 
-- [ ] **Step 4: Commit báo cáo kiểm toán**
+- [x] **Step 4: Commit báo cáo kiểm toán**
 
 ```powershell
 git add tests/eval/AUDIT_REPORT.md
@@ -263,7 +263,7 @@ git commit -m "docs(eval): add comprehensive audit report for 91 ground truth qu
 **Interfaces:**
 - Chạy lệnh CLI để sinh 3 file con từ file tổng thể.
 
-- [ ] **Step 1: Thực thi lệnh tách file**
+- [x] **Step 1: Thực thi lệnh tách file**
 
 Run: `.venv\Scripts\python.exe tests\eval\split_eval_gt.py`
 Expected Output:
@@ -274,7 +274,7 @@ Expected Output:
    - TRAKE: 15 entries -> ...\eval_ground_truth_trake.json
 ```
 
-- [ ] **Step 2: Xác minh 3 file con được tạo đúng trên đĩa**
+- [x] **Step 2: Xác minh 3 file con được tạo đúng trên đĩa**
 
 Kiểm tra sự tồn tại và số dòng của 3 file con:
 ```powershell
@@ -282,7 +282,7 @@ Kiểm tra sự tồn tại và số dòng của 3 file con:
 ```
 Expected: `KIS: 59, QA: 17, TRAKE: 15, SUM: 91`
 
-- [ ] **Step 3: Commit 3 file ground truth con**
+- [x] **Step 3: Commit 3 file ground truth con**
 
 ```powershell
 git add tests/eval/eval_ground_truth_kis.json tests/eval/eval_ground_truth_qa.json tests/eval/eval_ground_truth_trake.json
@@ -300,7 +300,7 @@ git commit -m "feat(eval): generate separate ground truth files for KIS, QA, and
 **Interfaces:**
 - Test suite kiểm tra cả file tổng (`eval_ground_truth.json`) lẫn 3 file con (`_kis.json`, `_qa.json`, `_trake.json`).
 
-- [ ] **Step 1: Bổ sung test kiểm tra tính nhất quán giữa file tổng và 3 file con**
+- [x] **Step 1: Bổ sung test kiểm tra tính nhất quán giữa file tổng và 3 file con**
 
 Cập nhật `tests/unit/test_split_eval_gt.py` thêm các ca kiểm thử:
 - Mọi `query_id` trong file tổng xuất hiện chính xác 1 lần trong 3 file con.
@@ -309,16 +309,16 @@ Cập nhật `tests/unit/test_split_eval_gt.py` thêm các ca kiểm thử:
 - File QA chỉ chứa `type: "QA"`.
 - File TRAKE chỉ chứa `type: "TRAKE"`.
 
-- [ ] **Step 2: Cập nhật `tests/unit/test_eval_ground_truth.py` để validate 3 file con**
+- [x] **Step 2: Cập nhật `tests/unit/test_eval_ground_truth.py` để validate 3 file con**
 
 Thêm test case duyệt qua cả 3 file con để kiểm tra ID không trùng và type khớp tên file.
 
-- [ ] **Step 3: Chạy toàn bộ test suite**
+- [x] **Step 3: Chạy toàn bộ test suite**
 
 Run: `.venv\Scripts\pytest.exe tests\unit`
 Expected: 100% tests pass (90+ passed, 0 failures).
 
-- [ ] **Step 4: Commit test updates**
+- [x] **Step 4: Commit test updates**
 
 ```powershell
 git add tests/unit/test_eval_ground_truth.py tests/unit/test_split_eval_gt.py

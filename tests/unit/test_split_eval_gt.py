@@ -58,8 +58,8 @@ def test_split_files_on_disk_match_expected_counts_and_types():
     # 1. Số lượng
     assert len(kis) == 59
     assert len(qa) == 17
-    assert len(trake) == 15
-    assert len(kis) + len(qa) + len(trake) == 91
+    assert len(trake) == 13
+    assert len(kis) + len(qa) + len(trake) == 89
 
     # 2. Type từng file
     assert all(d.get("type") == "KIS" for d in kis)

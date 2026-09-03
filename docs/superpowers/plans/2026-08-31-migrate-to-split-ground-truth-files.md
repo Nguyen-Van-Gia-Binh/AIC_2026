@@ -29,7 +29,7 @@
 - `load_ground_truth(types: str | list[str] | None = None, eval_dir: Path | None = None) -> list[dict]`: Nạp danh sách entries theo loại yêu cầu (mặc định nạp cả 3 file gộp lại: KIS -> QA -> TRAKE).
 - `save_ground_truth(entries: list[dict], query_type: str, eval_dir: Path | None = None) -> Path`: Ghi danh sách entries vào đúng file con tương ứng.
 
-- [ ] **Step 1: Viết failing test cho `gt_loader.py`**
+- [x] **Step 1: Viết failing test cho `gt_loader.py`**
 
 Tạo `tests/unit/test_gt_loader.py`:
 
@@ -84,12 +84,12 @@ def test_save_ground_truth_writes_to_correct_file(tmp_path):
     assert json.loads(saved_path.read_text(encoding="utf-8")) == qa_data
 ```
 
-- [ ] **Step 2: Chạy test để xác nhận fail**
+- [x] **Step 2: Chạy test để xác nhận fail**
 
 Run: `.venv\Scripts\pytest.exe tests\unit\test_gt_loader.py -v`
 Expected: FAIL with `ModuleNotFoundError: No module named 'tests.eval.gt_loader'`
 
-- [ ] **Step 3: Cài đặt module `tests/eval/gt_loader.py`**
+- [x] **Step 3: Cài đặt module `tests/eval/gt_loader.py`**
 
 Tạo `tests/eval/gt_loader.py`:
 
@@ -169,12 +169,12 @@ def save_ground_truth(
     return path
 ```
 
-- [ ] **Step 4: Chạy test để xác nhận pass**
+- [x] **Step 4: Chạy test để xác nhận pass**
 
 Run: `.venv\Scripts\pytest.exe tests\unit\test_gt_loader.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```powershell
 git add tests/eval/gt_loader.py tests/unit/test_gt_loader.py
@@ -197,7 +197,7 @@ git commit -m "feat(eval): add centralized ground truth loader module for split 
 **Interfaces:**
 - Thay thế các biến đường dẫn cứng `_EVAL_SET_PATH = ... / "eval_ground_truth.json"` bằng việc gọi `load_ground_truth()` hoặc trỏ trực tiếp vào `eval_ground_truth_{type}.json`.
 
-- [ ] **Step 1: Cập nhật `tests/e2e/score_pipelines.py`**
+- [x] **Step 1: Cập nhật `tests/e2e/score_pipelines.py`**
 
 Thay thế việc đọc trực tiếp `eval_ground_truth.json`:
 - Import `from tests.eval.gt_loader import load_ground_truth, _EVAL_DIR`
@@ -205,7 +205,7 @@ Thay thế việc đọc trực tiếp `eval_ground_truth.json`:
   - Nếu `args.eval_set` là file cụ thể (người dùng tự truyền file riêng qua CLI): đọc file đó.
   - Nếu là mặc định: gọi `eval_set = load_ground_truth(types=args.types)`.
 
-- [ ] **Step 2: Cập nhật `tests/eval/run_eval.py`**
+- [x] **Step 2: Cập nhật `tests/eval/run_eval.py`**
 
 - Import `from tests.eval.gt_loader import load_ground_truth`
 - Sửa hàm `load_eval_set(path: Path | None)`:
@@ -213,22 +213,22 @@ Thay thế việc đọc trực tiếp `eval_ground_truth.json`:
   - Nếu là file cụ thể: đọc file đó.
 - Sửa mặc định CLI `--eval-set` thành `None` (mặc định nạp toàn bộ qua `load_ground_truth()`).
 
-- [ ] **Step 3: Cập nhật `tests/e2e/golden_kis_snapshot.py`**
+- [x] **Step 3: Cập nhật `tests/e2e/golden_kis_snapshot.py`**
 
 - Đổi `_EVAL_SET = _ROOT / "tests" / "eval" / "eval_ground_truth_kis.json"`
 - Hàm `_load_kis_queries()`: nạp trực tiếp file KIS.
 
-- [ ] **Step 4: Cập nhật `tests/e2e/test_phase3_rerank.py` và `tests/e2e/test_phase4_trake.py`**
+- [x] **Step 4: Cập nhật `tests/e2e/test_phase3_rerank.py` và `tests/e2e/test_phase4_trake.py`**
 
 - Trong `test_phase3_rerank.py`: dùng `load_ground_truth(types=["KIS", "QA"])`.
 - Trong `test_phase4_trake.py`: trỏ `EVAL_SET_PATH = _ROOT / "tests" / "eval" / "eval_ground_truth_trake.json"`.
 
-- [ ] **Step 5: Cập nhật `tests/eval/widen_gt_windows.py` và `tests/eval/sweep_rerank.py`**
+- [x] **Step 5: Cập nhật `tests/eval/widen_gt_windows.py` và `tests/eval/sweep_rerank.py`**
 
 - Trong `sweep_rerank.py`: đổi `_DEFAULT_GT` trỏ về `tests/eval/eval_ground_truth_kis.json`.
 - Trong `widen_gt_windows.py`: hỗ trợ xử lý cả 3 file con `eval_ground_truth_kis.json`, `eval_ground_truth_qa.json`, `eval_ground_truth_trake.json`.
 
-- [ ] **Step 6: Chạy kiểm thử tự động xác minh các harness**
+- [x] **Step 6: Chạy kiểm thử tự động xác minh các harness**
 
 Run: `.venv\Scripts\python.exe tests\e2e\score_pipelines.py --self-test`
 Expected: `[score_pipelines] self-test PASS`
@@ -236,7 +236,7 @@ Expected: `[score_pipelines] self-test PASS`
 Run: `.venv\Scripts\pytest.exe tests\unit`
 Expected: 100% PASS
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```powershell
 git add tests/e2e/score_pipelines.py tests/eval/run_eval.py tests/e2e/golden_kis_snapshot.py tests/e2e/test_phase3_rerank.py tests/e2e/test_phase4_trake.py tests/eval/widen_gt_windows.py tests/eval/sweep_rerank.py
@@ -254,22 +254,22 @@ git commit -m "refactor(eval): update benchmark harnesses and evaluation scripts
 **Interfaces:**
 - `normalize_gt.py`: Hỗ trợ `--merge-split` (tự động phân loại KIS/QA/TRAKE và nối vào đúng file con tương ứng mà không cần file tổng thể).
 
-- [ ] **Step 1: Cập nhật `tests/eval/normalize_gt.py`**
+- [x] **Step 1: Cập nhật `tests/eval/normalize_gt.py`**
 
 - Tích hợp `gt_loader`:
   - Khi người dùng truyền `--merge <file>`, nếu truyền file con cụ thể thì nối vào file đó.
   - Nếu truyền `--merge-split` (hoặc truyền thư mục `tests/eval/`), tự động lọc entries theo `type` và nối vào từng file con `eval_ground_truth_kis.json`, `eval_ground_truth_qa.json`, `eval_ground_truth_trake.json`.
 
-- [ ] **Step 2: Cập nhật `tests/eval/split_eval_gt.py`**
+- [x] **Step 2: Cập nhật `tests/eval/split_eval_gt.py`**
 
 - Cập nhật mô tả và mặc định: `split_eval_gt.py` đóng vai trò tiện ích phân tách từ bất kỳ file v1 nguồn nào ra 3 file con.
 
-- [ ] **Step 3: Chạy test cho `normalize_gt.py` và `split_eval_gt.py`**
+- [x] **Step 3: Chạy test cho `normalize_gt.py` và `split_eval_gt.py`**
 
 Run: `.venv\Scripts\pytest.exe tests\unit\test_normalize_gt.py tests\unit\test_split_eval_gt.py -v`
 Expected: PASS
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```powershell
 git add tests/eval/normalize_gt.py tests/eval/split_eval_gt.py
@@ -294,30 +294,30 @@ git commit -m "feat(eval): update normalize_gt to support merging directly into 
 **Interfaces:**
 - Đảm bảo toàn bộ hệ thống hoạt động hoàn hảo khi KHÔNG CÒN file `eval_ground_truth.json`.
 
-- [ ] **Step 1: Cập nhật `tests/unit/test_eval_ground_truth.py` và `tests/unit/test_normalize_gt.py`**
+- [x] **Step 1: Cập nhật `tests/unit/test_eval_ground_truth.py` và `tests/unit/test_normalize_gt.py`**
 
 - Sửa `test_eval_ground_truth.py`: hàm `_load()` nạp thông qua `load_ground_truth()`.
 - Sửa `test_normalize_gt.py`: `test_tag_chuan_phu_het_tag_dang_dung_trong_bo_eval` nạp qua `load_ground_truth()`.
 
-- [ ] **Step 2: Xoá bỏ hoàn toàn file `tests/eval/eval_ground_truth.json`**
+- [x] **Step 2: Xoá bỏ hoàn toàn file `tests/eval/eval_ground_truth.json`**
 
 Thực thi xoá file:
 ```powershell
 git rm tests/eval/eval_ground_truth.json
 ```
 
-- [ ] **Step 3: Cập nhật các tài liệu hướng dẫn và mô tả repo**
+- [x] **Step 3: Cập nhật các tài liệu hướng dẫn và mô tả repo**
 
 - `tests/eval/EVAL_GUIDE.md`: Cập nhật bảng và lệnh merge trỏ vào các file con.
 - `tests/eval/AUDIT_REPORT.md`: Cập nhật ghi chú phạm vi trỏ vào 3 file con.
 - `tests/README.md`, `README.md`, `GEMINI.md`: Cập nhật cấu trúc thư mục mô tả 3 file con (`eval_ground_truth_kis.json`, `eval_ground_truth_qa.json`, `eval_ground_truth_trake.json`).
 
-- [ ] **Step 4: Chạy toàn bộ test suite để xác minh không còn lỗi nào**
+- [x] **Step 4: Chạy toàn bộ test suite để xác minh không còn lỗi nào**
 
 Run: `.venv\Scripts\pytest.exe tests\unit`
 Expected: 100% tests pass (tất cả 90+ tests pass, không có lỗi file not found).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```powershell
 git add tests/unit/ tests/eval/ tests/README.md README.md GEMINI.md

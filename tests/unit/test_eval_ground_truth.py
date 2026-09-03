@@ -78,6 +78,40 @@ def test_sub_files_co_cau_truc_hop_le_va_khong_trung_id():
         assert not trung, f"File {path.name} co query_id bi trung: {trung}"
 
 
+def test_trake_events_khong_nguoc_va_khong_trong_video_id():
+    path = get_gt_path("TRAKE")
+    items = json.loads(path.read_text(encoding="utf-8"))
+    for q in items:
+        assert q.get("gt_video_id"), f"{q.get('query_id')}: gt_video_id bi rong"
+        assert q.get("difficulty_tags"), f"{q.get('query_id')}: thieu difficulty_tags"
+        for i, ev in enumerate(q.get("events", [])):
+            s = ev.get("gt_frame_start")
+            e = ev.get("gt_frame_end")
+            assert isinstance(s, int) and isinstance(e, int), f"{q.get('query_id')} event {i}: frame phai la int (nhan {type(s)} va {type(e)})"
+            assert e >= s, f"{q.get('query_id')} event {i}: gt_frame_end ({e}) < gt_frame_start ({s})"
+
+
+def test_qa_day_du_question_va_gt_answers():
+    path = get_gt_path("QA")
+    items = json.loads(path.read_text(encoding="utf-8"))
+    for q in items:
+        assert q.get("question") and q.get("question").strip(), f"{q.get('query_id')}: thieu question"
+        assert isinstance(q.get("gt_answers"), list) and len(q.get("gt_answers")) > 0, f"{q.get('query_id')}: thieu gt_answers"
+        assert isinstance(q.get("gt_frame_start"), int) and isinstance(q.get("gt_frame_end"), int), f"{q.get('query_id')}: frame phai la int"
+        assert q.get("difficulty_tags"), f"{q.get('query_id')}: thieu difficulty_tags"
+
+
+def test_kis_toan_ven_du_lieu():
+    path = get_gt_path("KIS")
+    items = json.loads(path.read_text(encoding="utf-8"))
+    for q in items:
+        assert q.get("gt_video_id"), f"{q.get('query_id')}: thieu gt_video_id"
+        assert isinstance(q.get("gt_frame_start"), int) and isinstance(q.get("gt_frame_end"), int), f"{q.get('query_id')}: frame phai la int (nhan {type(q.get('gt_frame_start'))})"
+        assert q.get("gt_frame_end") >= q.get("gt_frame_start"), f"{q.get('query_id')}: frame_end < frame_start"
+        assert q.get("difficulty_tags"), f"{q.get('query_id')}: thieu difficulty_tags"
+        assert "nột" not in q.get("text_vi", ""), f"{q.get('query_id')}: con loi chinh ta 'nột'"
+
+
 # ─── Regression Guard ──────────────────────────────────────────────────────────
 
 def test_regression_guard_khong_bao_dong_gia_khi_chay_tung_phan(tmp_path, capsys):

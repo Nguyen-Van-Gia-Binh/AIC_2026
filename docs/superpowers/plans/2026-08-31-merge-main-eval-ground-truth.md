@@ -29,7 +29,7 @@
 - Consumes: `TAG_CHUAN` definition in `tests/eval/normalize_gt.py`
 - Produces: `TAG_CHUAN` containing `"mistranslation"`
 
-- [ ] **Step 1: Thêm tag `"mistranslation"` vào `TAG_CHUAN`**
+- [x] **Step 1: Thêm tag `"mistranslation"` vào `TAG_CHUAN`**
 
 ```python
 TAG_CHUAN = {
@@ -52,7 +52,7 @@ TAG_CHUAN = {
 }
 ```
 
-- [ ] **Step 2: Chạy unit test kiểm tra tag chuẩn**
+- [x] **Step 2: Chạy unit test kiểm tra tag chuẩn**
 
 Run: `.venv\Scripts\python.exe -m pytest tests/unit/test_normalize_gt.py -k test_tag_chuan_phu_het_tag_dang_dung_trong_bo_eval -v`
 Expected: PASS (sau khi GT hợp nhất được giải quyết)
@@ -69,7 +69,7 @@ Expected: PASS (sau khi GT hợp nhất được giải quyết)
 - Consumes: JSON data từ `MERGE_HEAD:test_eval/Eval/eval_ground_truth.json` và `HEAD:tests/eval/eval_ground_truth.json`
 - Produces: 91 entries JSON hợp lệ, không chứa conflict markers, không có query_id trùng lặp, trim trailing spaces trong `gt_video_id`
 
-- [ ] **Step 1: Tạo và chạy script hợp nhất ground truth tự động**
+- [x] **Step 1: Tạo và chạy script hợp nhất ground truth tự động**
 
 Chạy script Python để:
 1. Đọc và vá lỗi cú pháp thiếu `}, {` ở `MERGE_HEAD` (trước `"query_id": "query-p2-22-kis"`).
@@ -79,7 +79,7 @@ Chạy script Python để:
 5. Ghi đè vào `tests/eval/eval_ground_truth.json`.
 6. Dọn dẹp phần tử rỗng `{}` cuối file `tests/eval/eval_ground_truth_v2_template.json`.
 
-- [ ] **Step 2: Xác minh cú pháp JSON và số lượng query**
+- [x] **Step 2: Xác minh cú pháp JSON và số lượng query**
 
 Run: `.venv\Scripts\python.exe -c "import json; data = json.load(open('tests/eval/eval_ground_truth.json', encoding='utf-8')); print(f'Total valid queries: {len(data)}'); assert len(data) == 91; assert len(set(q['query_id'] for q in data)) == 91"`
 Expected: Output `Total valid queries: 91`
@@ -92,24 +92,24 @@ Expected: Output `Total valid queries: 91`
 - Test: `tests/unit/test_eval_ground_truth.py`
 - Test: `tests/unit/` (toàn bộ unit tests)
 
-- [ ] **Step 1: Chạy toàn bộ suite `tests/unit`**
+- [x] **Step 1: Chạy toàn bộ suite `tests/unit`**
 
 Run: `.venv\Scripts\python.exe -m pytest tests/unit -v`
 Expected: 89 passed, 0 failed.
 
-- [ ] **Step 2: Stage các file đã giải quyết xung đột**
+- [x] **Step 2: Stage các file đã giải quyết xung đột**
 
 ```bash
 git add tests/eval/eval_ground_truth.json tests/eval/eval_ground_truth_v2_template.json tests/eval/normalize_gt.py
 ```
 
-- [ ] **Step 3: Hoàn tất commit merge**
+- [x] **Step 3: Hoàn tất commit merge**
 
 ```bash
 git commit -m "merge: resolve merge conflict in eval_ground_truth.json and unify 91 queries"
 ```
 
-- [ ] **Step 4: Kiểm tra lại `git status` và `git log`**
+- [x] **Step 4: Kiểm tra lại `git status` và `git log`**
 
 Run: `git status`
 Expected: `working tree clean`, merge hoàn tất thành công.

@@ -306,32 +306,35 @@
     "type": "TRAKE",
     "text_vi": "Đoạn video về quá trình nấu ăn một món ăn với nguyên liệu chính là măng tây.",
     "text_en": "A cooking pan with food inside on a stove in a kitchen",
-    "difficulty_tags": [],
-    "gt_video_id": "",
+    "difficulty_tags": [
+      "action_sequence",
+      "temporal_order"
+    ],
+    "gt_video_id": "L26_V194",
     "events": [
       {
         "text_vi": "Khoảnh khắc đầu tiên bột được bỏ vào tô măng tây.",
-        "text_en": "The first moment the batter is added to the bamboo basket.",
-        "gt_frame_start": "4708",
-        "gt_frame_end": "4718"
+        "text_en": "The first moment the batter is added to the asparagus bowl.",
+        "gt_frame_start": 4708,
+        "gt_frame_end": 4737
       },
       {
         "text_vi": "Khoảnh khắc đầu tiên thấy miến măng tây đầu tiên tiếp xúc với dầu trong chảo.",
-        "text_en": "The first moment the măng tây is接触到 with oil in the pan.",
-        "gt_frame_start": "5140",
-        "gt_frame_end": "5050"
+        "text_en": "The first moment the asparagus touches the oil in the pan.",
+        "gt_frame_start": 5121,
+        "gt_frame_end": 5180
       },
       {
         "text_vi": "Khoảnh khắc miếng măng tây đầu tiên rời khỏi chảo dầu.",
-        "text_en": "The first moment the măng tây is removed from the oil in the pan.",
-        "gt_frame_start": "5416",
-        "gt_frame_end": "5426"
+        "text_en": "The first moment the asparagus is removed from the oil in the pan.",
+        "gt_frame_start": 5449,
+        "gt_frame_end": 5559
       },
       {
         "text_vi": "Khoảng khắc miếng măng tây cuối cùng rời chảo dầu và nằm hoàn toàn trên dĩa.",
-        "text_en": "The last moment the măng tây is removed from the oil in the pan and placed on the plate.",
-        "gt_frame_start": "5796",
-        "gt_frame_end": "5806"
+        "text_en": "The last moment the asparagus is removed from the oil in the pan and placed on the plate.",
+        "gt_frame_start": 5796,
+        "gt_frame_end": 5806
       }
     ]
   },
@@ -340,7 +343,11 @@
     "type": "TRAKE",
     "text_vi": "Video về một khu vườn cây ăn trái ở miền Tây Nam Bộ. Đây là chuỗi liên tiếp các cảnh quay về 4 loại trái cây trong vườn.\nE1: Cảnh đầu tiên có trái sầu riêng.\nE2: Cảnh đầu tiên có trái măng cụt.\nE3: Cảnh đầu tiên có trái bưởi.\nE4: Cảnh đầu tiên có trái dâu bòn bon.",
     "text_en": "Video of a fruit orchard in the Mekong Delta region. This is a consecutive series of shots about 4 types of fruit in the garden.\nE1: The first scene featuring durian.\nE2: The first scene featuring mangosteen.\nE3: The first scene featuring pomelo.\nE4: The first scene featuring longan (bon bon berry).",
-    "difficulty_tags": [],
+    "difficulty_tags": [
+      "action_sequence",
+      "temporal_order",
+      "fine_detail"
+    ],
     "gt_video_id": "L27_V011",
     "events": [
       {
@@ -352,8 +359,8 @@
       {
         "text_vi": "E2: Cảnh đầu tiên có trái măng cụt.",
         "text_en": "E2: The first scene featuring mangosteen.",
-        "gt_frame_start": 3909,
-        "gt_frame_end": 3819
+        "gt_frame_start": 3879,
+        "gt_frame_end": 3889
       },
       {
         "text_vi": "E3: Cảnh đầu tiên có trái bưởi.",
@@ -364,8 +371,8 @@
       {
         "text_vi": "E4: Cảnh đầu tiên có trái dâu bòn bon.",
         "text_en": "E4: The first scene featuring longan (bon bon berry).",
-        "gt_frame_start": 5026,
-        "gt_frame_end": 5036
+        "gt_frame_start": 4097,
+        "gt_frame_end": 4139
       }
     ]
   },
@@ -374,7 +381,10 @@
     "type": "TRAKE",
     "text_vi": "4 cảnh này xảy ra liên tiếp nhau. \nCảnh 1: Hai người phụ nữ cùng nhau dán niêm phong một thùng carton.\nCảnh 2: Các thùng mì tôm và bọc bánh mì được sắp xếp ngay ngắn.\nCảnh 3: Một người đàn ông nhấc thùng mì tôm lên và xếp lên trên chồng thùng mì.\nCảnh 4: Cảnh quay cận cảnh các thùng mì được xếp chồng trên xe tải.",
     "text_en": "These 4 scenes occur consecutively.\nScene 1: Two women together seal a cardboard box with tape.\nScene 2: Boxes of instant noodles and wrapped bread are neatly arranged.\nScene 3: A man lifts a box of instant noodles and stacks it on top of the pile.\nScene 4: A close-up shot of the noodle boxes stacked on a truck.",
-    "difficulty_tags": [],
+    "difficulty_tags": [
+      "action_sequence",
+      "temporal_order"
+    ],
     "gt_video_id": "L30_V031",
     "events": [
       {
@@ -400,74 +410,6 @@
         "text_en": "Scene 4: A close-up shot of the noodle boxes stacked on a truck.",
         "gt_frame_start": 2227,
         "gt_frame_end": 2237
-      }
-    ]
-  },
-  {
-    "query_id": "e-trake-thunghiem-002",
-    "type": "TRAKE",
-    "text_vi": "Đoạn video múa lân một con lân màu vàng đen trắng, tìm các sự kiện sau:",
-    "text_en": "A lion dance performer wearing a yellow, black, and white costume during a performance",
-    "difficulty_tags": [],
-    "gt_video_id": "L24_V033",
-    "events": [
-      {
-        "text_vi": "Lân quay vòng trên cột số 4 bằng 2 chân trước rồi tiếp đất. Khoảnh khắc đầu tiên mà lân bắt đầu xoay vòng.",
-        "text_en": "The first moment the lion starts spinning on the pillar.",
-        "gt_frame_start": "15961",
-        "gt_frame_end": "15971"
-      },
-      {
-        "text_vi": "Khoảnh khắc 4 chân hoàn toàn chạm đất đầu tiên.",
-        "text_en": "The first moment all four legs of the lion touch the ground.",
-        "gt_frame_start": "16113",
-        "gt_frame_end": "16123"
-      },
-      {
-        "text_vi": "Khoảnh khắc đầu tiên 2 người biểu diễn lân cuối chào ban giám khảo.",
-        "text_en": "The first moment the two lion dancers bow to the judges.",
-        "gt_frame_start": "16569",
-        "gt_frame_end": "16579"
-      },
-      {
-        "text_vi": "Sau đó lân tiến lại chào một con rồng. Khoảnh khắc đầu tiên con rồng cử động đầu.",
-        "text_en": "The first moment the dragon moves its head.",
-        "gt_frame_start": "16873",
-        "gt_frame_end": "16883"
-      }
-    ]
-  },
-  {
-    "query_id": "e-trake-thunghiem-003",
-    "type": "TRAKE",
-    "text_vi": "Trong đoạn video nấu ăn một món ăn về nấm, gồm các khoảnh khắc sơ chế:",
-    "text_en": "Mushroom ingredients being prepared on a cutting board in a kitchen cooking scene",
-    "difficulty_tags": [],
-    "gt_video_id": "",
-    "events": [
-      {
-        "text_vi": "Khoảnh khắc đầu tiên thấy cắt nấm.",
-        "text_en": "The first moment mushrooms are seen being cut.",
-        "gt_frame_start": "2467",
-        "gt_frame_end": "2477"
-      },
-      {
-        "text_vi": "Khoảnh khắc đầu tiên cắt củ năng.",
-        "text_en": "The first moment the taro root is cut.",
-        "gt_frame_start": "3134",
-        "gt_frame_end": "3144"
-      },
-      {
-        "text_vi": "Khoảnh khắc đầu tiên cắt đậu hủ.",
-        "text_en": "The first moment tofu is cut.",
-        "gt_frame_start": "3421",
-        "gt_frame_end": "3431"
-      },
-      {
-        "text_vi": "Khoảnh khắc chảo đặt lên bếp, đầu bếp mở lửa và thấy lửa bắt đầu xuất hiện",
-        "text_en": "The first moment the pan is placed on the stove and the chef turns on the flame, seeing the fire begin to appear.",
-        "gt_frame_start": "3828",
-        "gt_frame_end": "3838"
       }
     ]
   }

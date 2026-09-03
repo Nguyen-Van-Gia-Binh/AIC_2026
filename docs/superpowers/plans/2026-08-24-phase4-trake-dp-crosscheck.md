@@ -85,7 +85,7 @@ sai lầm "trần 100" lần nữa trong cùng dự án.
   `video_id, n, frame_idx, frame_id, pts_time, score, jpg_path`.
 - Consumes: không có phụ thuộc vào Task khác (Task đầu tiên).
 
-- [ ] **Step 1: Thêm self-test cho `_find_best_increasing_chain` (chưa implement — test sẽ fail)**
+- [x] **Step 1: Thêm self-test cho `_find_best_increasing_chain` (chưa implement — test sẽ fail)**
 
 Thêm vào cuối `scripts/agent/pipeline_trake.py`, **trước** khối `# ─── CLI Demo ──` hiện có, đoạn sau
 (hàm `_fake_hit` + 4 test):
@@ -144,12 +144,12 @@ if __name__ == "__main__":
     _run_self_tests()
 ```
 
-- [ ] **Step 2: Chạy self-test, xác nhận FAIL (hàm chưa tồn tại)**
+- [x] **Step 2: Chạy self-test, xác nhận FAIL (hàm chưa tồn tại)**
 
 Run: `.venv\Scripts\python.exe scripts\agent\pipeline_trake.py`
 Expected: `NameError: name '_find_best_increasing_chain' is not defined`
 
-- [ ] **Step 3: Thêm import `Optional` và cài `_find_best_increasing_chain`**
+- [x] **Step 3: Thêm import `Optional` và cài `_find_best_increasing_chain`**
 
 Sửa dòng import ở đầu file (`from typing import Callable, Optional` — file hiện chưa import
 `typing` gì cả, thêm dòng mới ngay dưới `from collections import defaultdict`):
@@ -217,13 +217,13 @@ def _find_best_increasing_chain(event_hits: list[list[dict]]) -> list[dict] | No
     return chain  # type: ignore[return-value]
 ```
 
-- [ ] **Step 4: Chạy lại self-test, xác nhận PASS**
+- [x] **Step 4: Chạy lại self-test, xác nhận PASS**
 
 Run: `.venv\Scripts\python.exe scripts\agent\pipeline_trake.py`
 Expected: 4 dòng `OK` + `[trake] Tat ca self-test PASS`, sau đó demo CLI cũ vẫn chạy tiếp bình thường
 (chưa nối dây vào `run_trake()` ở bước này — demo vẫn dùng hành vi cũ).
 
-- [ ] **Step 5: Nối `_find_best_increasing_chain` vào `run_trake()`, dùng `RETRIEVAL_POOL_SIZE`**
+- [x] **Step 5: Nối `_find_best_increasing_chain` vào `run_trake()`, dùng `RETRIEVAL_POOL_SIZE`**
 
 Sửa import ở đầu file:
 
@@ -264,14 +264,14 @@ cũ, đúng đoạn dòng ~91-119 bản gốc) bằng:
         })
 ```
 
-- [ ] **Step 6: Chạy demo CLI có sẵn, xác nhận frame_id tăng dần và không lỗi**
+- [x] **Step 6: Chạy demo CLI có sẵn, xác nhận frame_id tăng dần và không lỗi**
 
 Run: `.venv\Scripts\python.exe scripts\agent\pipeline_trake.py`
 Expected: self-test PASS như Step 4, tiếp theo demo in ra `Frame IDs:` là danh sách không giảm dần
 (vd. `[120, 340, 512, 890]` — thứ tự tăng, không còn trường hợp lặp "frame 1" fallback), không có
 traceback.
 
-- [ ] **Step 7: Viết benchmark thật cho TRAKE (baseline mới sau DP)**
+- [x] **Step 7: Viết benchmark thật cho TRAKE (baseline mới sau DP)**
 
 Tạo file mới `scripts/test_phase4_trake.py`:
 
@@ -356,7 +356,7 @@ if __name__ == "__main__":
     main()
 ```
 
-- [ ] **Step 8: Chạy benchmark, ghi lại số liệu baseline (sau DP, trước cross-check)**
+- [x] **Step 8: Chạy benchmark, ghi lại số liệu baseline (sau DP, trước cross-check)**
 
 Run: `.venv\Scripts\python.exe scripts\test_phase4_trake.py`
 Expected: không traceback; in ra 4 dòng (1/query) + tóm tắt 3 dòng. Ghi lại 3 con số tóm tắt — dùng làm
@@ -376,7 +376,7 @@ mốc so sánh "không tệ đi" ở Task 2 Step 6.
   keywords: set[str]) -> int` — không dùng ở Task nào khác trong plan này, nhưng đặt tên đủ rõ để tái
   dùng sau nếu cần (vd. Phase 5 OCR).
 
-- [ ] **Step 1: Thêm self-test cho `_extract_keywords` (chưa implement — test sẽ fail)**
+- [x] **Step 1: Thêm self-test cho `_extract_keywords` (chưa implement — test sẽ fail)**
 
 Thêm vào `_run_self_tests()` (nối tiếp sau test 4 của Task 1, trước dòng
 `print("[trake] Tat ca self-test PASS")`):
@@ -394,12 +394,12 @@ Thêm vào `_run_self_tests()` (nối tiếp sau test 4 của Task 1, trước d
     print("[trake] Test crosscheck rong: OK")
 ```
 
-- [ ] **Step 2: Chạy self-test, xác nhận FAIL**
+- [x] **Step 2: Chạy self-test, xác nhận FAIL**
 
 Run: `.venv\Scripts\python.exe scripts\agent\pipeline_trake.py`
 Expected: `NameError: name '_extract_keywords' is not defined`
 
-- [ ] **Step 3: Cài `_extract_keywords` + `_crosscheck_hit_count` + hằng số ngưỡng**
+- [x] **Step 3: Cài `_extract_keywords` + `_crosscheck_hit_count` + hằng số ngưỡng**
 
 Thêm import ở đầu file (nối tiếp các import hiện có):
 
@@ -449,12 +449,12 @@ def _crosscheck_hit_count(chain: list[dict], keywords: set[str]) -> int:
     return sum(1 for kw in keywords if any(kw in obj for obj in all_objects))
 ```
 
-- [ ] **Step 4: Chạy lại self-test, xác nhận PASS**
+- [x] **Step 4: Chạy lại self-test, xác nhận PASS**
 
 Run: `.venv\Scripts\python.exe scripts\agent\pipeline_trake.py`
 Expected: 6 dòng `OK` + `[trake] Tat ca self-test PASS`.
 
-- [ ] **Step 5: Nối cross-check vào `run_trake()` sau khi sắp xếp video_results**
+- [x] **Step 5: Nối cross-check vào `run_trake()` sau khi sắp xếp video_results**
 
 Trong `run_trake()`, ngay sau dòng `video_results.sort(key=lambda x: x["score"], reverse=True)`, thêm:
 
@@ -473,7 +473,7 @@ Trong `run_trake()`, ngay sau dòng `video_results.sort(key=lambda x: x["score"]
                 print(f"[trake]   -> Doi cho: {video_results[0]['video_id']} len #1")
 ```
 
-- [ ] **Step 6: Chạy lại benchmark, so sánh với baseline Task 1 Step 8, xác nhận không tệ đi**
+- [x] **Step 6: Chạy lại benchmark, so sánh với baseline Task 1 Step 8, xác nhận không tệ đi**
 
 Run: `.venv\Scripts\python.exe scripts\test_phase4_trake.py`
 Expected: 3 số tóm tắt (video #1 đúng / video xuất hiện / event khớp) **>= baseline Task 1**, không có
@@ -482,7 +482,7 @@ bị ảnh hưởng — nếu `TRAKE_CROSSCHECK_MARGIN` đang bắt quá nhiều
 video #1 gốc vẫn đúng), hạ ngưỡng xuống (vd 0.008) và chạy lại; tối đa 3 lần điều chỉnh trước khi coi là
 cần thiết kế lại (theo đúng tinh thần "verify bằng số thật, không đoán" đã áp dụng ở Phase 3).
 
-- [ ] **Step 7: Cập nhật PLAN.md Phase 4 với số liệu benchmark thật**
+- [x] **Step 7: Cập nhật PLAN.md Phase 4 với số liệu benchmark thật**
 
 Trong `PLAN.md`, đổi `## Phase 4: ... (⏳ Todo)` thành `(✅ Done)`, thêm đoạn "Đã làm:" mô tả 2 thay đổi
 (DP + cross-check), số liệu benchmark thật từ Step 6 (3 số tóm tắt), và link tới file plan này:

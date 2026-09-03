@@ -101,7 +101,7 @@ LangGraph/chat parts, per the user's reordered roadmap).
 - Produces: `app` (FastAPI instance) importable as `scripts.api.main:app`, mounted with CORS + a
   `/api/health` endpoint. Consumed by Task 3–6 (routers) and by `uvicorn` at dev time.
 
-- [ ] **Step 1: Add dependencies**
+- [x] **Step 1: Add dependencies**
 
   Append to `requirements.txt` (after the existing entries, before the Phase 6 eval-only comment
   block):
@@ -112,7 +112,7 @@ LangGraph/chat parts, per the user's reordered roadmap).
   ```
 
   Then install: `.venv\Scripts\python.exe -m pip install fastapi==0.115.6 "uvicorn[standard]==0.34.0"`
-- [ ] **Step 2: Write `scripts/api/schemas.py`**
+- [x] **Step 2: Write `scripts/api/schemas.py`**
 
   ```python
   """
@@ -215,7 +215,7 @@ LangGraph/chat parts, per the user's reordered roadmap).
       csv_count: int
       errors: list[str]
   ```
-- [ ] **Step 3: Write `scripts/api/state.py`**
+- [x] **Step 3: Write `scripts/api/state.py`**
 
   ```python
   """
@@ -258,7 +258,7 @@ LangGraph/chat parts, per the user's reordered roadmap).
   def clear_queue(session_id: str) -> None:
       _QUEUES[session_id] = []
   ```
-- [ ] **Step 4: Write `scripts/api/main.py`**
+- [x] **Step 4: Write `scripts/api/main.py`**
 
   ```python
   """
@@ -308,7 +308,7 @@ LangGraph/chat parts, per the user's reordered roadmap).
 
   (Routers are added to this file in Tasks 3–6, one `app.include_router(...)` line each — kept out of
   this step because they don't exist yet.)
-- [ ] **Step 5: Verify — app imports and starts, health check responds**
+- [x] **Step 5: Verify — app imports and starts, health check responds**
 
   Run:
 
@@ -333,7 +333,7 @@ LangGraph/chat parts, per the user's reordered roadmap).
 - Produces: `get_neighbor_frames(video_id: str, frame_idx: int, window: int = 5) -> list[dict]`.
   Consumed by Task 3's KIS router (mockup screen `1c`'s "frame lân cận" strip).
 
-- [ ] **Step 1: Append the function** (after `fast_retrieve_for_video`, before the `if __name__ == "__main__":` block)
+- [x] **Step 1: Append the function** (after `fast_retrieve_for_video`, before the `if __name__ == "__main__":` block)
 
   ```python
   def get_neighbor_frames(video_id: str, frame_idx: int, window: int = 5) -> list[dict]:
@@ -363,7 +363,7 @@ LangGraph/chat parts, per the user's reordered roadmap).
           })
       return results
   ```
-- [ ] **Step 2: Verify against real data**
+- [x] **Step 2: Verify against real data**
 
   Run:
 
@@ -389,7 +389,7 @@ LangGraph/chat parts, per the user's reordered roadmap).
   (`scripts/agent/tools/rewrite.py`), `get_neighbor_frames` (Task 2).
 - Produces: `POST /api/rewrite`, `POST /api/kis/search`, `GET /api/keyframes/{video_id}/neighbors`.
 
-- [ ] **Step 1: Write `scripts/api/routers/kis.py`**
+- [x] **Step 1: Write `scripts/api/routers/kis.py`**
 
   ```python
   """
@@ -438,7 +438,7 @@ LangGraph/chat parts, per the user's reordered roadmap).
       frames = get_neighbor_frames(video_id, frame_idx, window=window)
       return [NeighborFrame(**f) for f in frames]
   ```
-- [ ] **Step 2: Register the router in `scripts/api/main.py`**
+- [x] **Step 2: Register the router in `scripts/api/main.py`**
 
   Append at the end of the file:
 
@@ -447,7 +447,7 @@ LangGraph/chat parts, per the user's reordered roadmap).
 
   app.include_router(kis.router)
   ```
-- [ ] **Step 3: Verify against real data (startup + endpoints, via `TestClient` context manager so
+- [x] **Step 3: Verify against real data (startup + endpoints, via `TestClient` context manager so
   `preload()` actually runs)**
 
   Run:
@@ -486,7 +486,7 @@ LangGraph/chat parts, per the user's reordered roadmap).
 - Consumes: `run_qa` (`scripts/agent/pipeline_qa.py`).
 - Produces: `POST /api/qa/run`.
 
-- [ ] **Step 1: Write `scripts/api/routers/qa.py`**
+- [x] **Step 1: Write `scripts/api/routers/qa.py`**
 
   ```python
   """
@@ -514,14 +514,14 @@ LangGraph/chat parts, per the user's reordered roadmap).
           hits=hits, answer=out["answer"], confidence=out["confidence"], n_loops=out["n_loops"],
       )
   ```
-- [ ] **Step 2: Register in `scripts/api/main.py`**
+- [x] **Step 2: Register in `scripts/api/main.py`**
 
   ```python
   from scripts.api.routers import qa  # noqa: E402
 
   app.include_router(qa.router)
   ```
-- [ ] **Step 3: Verify against real data**
+- [x] **Step 3: Verify against real data**
 
   Run:
 
@@ -555,7 +555,7 @@ LangGraph/chat parts, per the user's reordered roadmap).
 - Consumes: `run_trake` (`scripts/agent/pipeline_trake.py`).
 - Produces: `POST /api/trake/run`.
 
-- [ ] **Step 1: Write `scripts/api/routers/trake.py`**
+- [x] **Step 1: Write `scripts/api/routers/trake.py`**
 
   ```python
   """
@@ -581,14 +581,14 @@ LangGraph/chat parts, per the user's reordered roadmap).
       candidates = [TrakeCandidate(**c) for c in out["results"]]
       return TrakeRunResponse(candidates=candidates, n_events=out["n_events"])
   ```
-- [ ] **Step 2: Register in `scripts/api/main.py`**
+- [x] **Step 2: Register in `scripts/api/main.py`**
 
   ```python
   from scripts.api.routers import trake  # noqa: E402
 
   app.include_router(trake.router)
   ```
-- [ ] **Step 3: Verify against real data**
+- [x] **Step 3: Verify against real data**
 
   Run:
 
@@ -629,7 +629,7 @@ LangGraph/chat parts, per the user's reordered roadmap).
   (`scripts/submit/validate_submission.py`).
 - Produces: `GET/POST/DELETE /api/queue/{session_id}[...]`, `POST /api/export/{session_id}`.
 
-- [ ] **Step 1: Write `scripts/api/routers/queue.py`**
+- [x] **Step 1: Write `scripts/api/routers/queue.py`**
 
   ```python
   """
@@ -708,14 +708,14 @@ LangGraph/chat parts, per the user's reordered roadmap).
       valid = validate_file(zip_path)
       return ExportResponse(zip_path=str(zip_path), valid=valid, csv_count=len(csv_files), errors=errors)
   ```
-- [ ] **Step 2: Register in `scripts/api/main.py`**
+- [x] **Step 2: Register in `scripts/api/main.py`**
 
   ```python
   from scripts.api.routers import queue  # noqa: E402
 
   app.include_router(queue.router)
   ```
-- [ ] **Step 3: Write `scripts/api/_smoke_test.py` — full end-to-end backend check**
+- [x] **Step 3: Write `scripts/api/_smoke_test.py` — full end-to-end backend check**
 
   ```python
   """
@@ -820,7 +820,7 @@ LangGraph/chat parts, per the user's reordered roadmap).
   if __name__ == "__main__":
       main()
   ```
-- [ ] **Step 4: Run it**
+- [x] **Step 4: Run it**
 
   Run: `.venv\Scripts\python.exe scripts\api\_smoke_test.py`
 
@@ -848,9 +848,9 @@ LangGraph/chat parts, per the user's reordered roadmap).
 - Produces: the running shell (rail nav + empty main panel) and the shared `api` client object used
   by every screen component in Tasks 8–11.
 
-- [ ] **Step 0: Verify Node is installed** — run `node -v` and `npm -v`. If either fails, STOP and
+- [x] **Step 0: Verify Node is installed** — run `node -v` and `npm -v`. If either fails, STOP and
   tell the user to install Node.js 20 LTS first — this plan does not install Node itself.
-- [ ] **Step 1: Scaffold the project**
+- [x] **Step 1: Scaffold the project**
 
   From the repo root:
 
@@ -860,7 +860,7 @@ LangGraph/chat parts, per the user's reordered roadmap).
   npm install
   cd ..
   ```
-- [ ] **Step 2: Add the dev proxy — `frontend/vite.config.ts`**
+- [x] **Step 2: Add the dev proxy — `frontend/vite.config.ts`**
 
   ```ts
   import { defineConfig } from "vite";
@@ -877,14 +877,14 @@ LangGraph/chat parts, per the user's reordered roadmap).
     },
   });
   ```
-- [ ] **Step 3: Port design tokens — `frontend/src/styles/organic.css`**
+- [x] **Step 3: Port design tokens — `frontend/src/styles/organic.css`**
 
   Copy the full content of the mockup project's `ds-organic.css` (already fetched in this session)
   verbatim into this file — it is the exact `:root` token set (`--color-bg`, `--color-accent`,
   `--font-heading`, `--radius-*`, `--shadow-*`, ...) plus the `.btn/.card/.tag/.table/.dialog/.input`
   component classes the screens in Tasks 8–11 use. No changes needed, it's plain CSS with no
   framework dependency.
-- [ ] **Step 4: Write the app-layout stylesheet — `frontend/src/styles/app.css`**
+- [x] **Step 4: Write the app-layout stylesheet — `frontend/src/styles/app.css`**
 
   ```css
   /* app.css — Bo cuc rieng cua app (rail nav, luoi ket qua, panel...), dung tren nen token/component
@@ -957,7 +957,7 @@ LangGraph/chat parts, per the user's reordered roadmap).
   .queue-header { display: flex; align-items: center; justify-content: space-between; }
   .queue-header > div { display: flex; gap: 8px; }
   ```
-- [ ] **Step 5: Write `frontend/src/session.ts`**
+- [x] **Step 5: Write `frontend/src/session.ts`**
 
   ```ts
   // session.ts — sinh 1 session_id (UUID) luu trong localStorage, dung chung cho toan bo query
@@ -973,7 +973,7 @@ LangGraph/chat parts, per the user's reordered roadmap).
     return id;
   }
   ```
-- [ ] **Step 6: Write `frontend/src/api/client.ts`**
+- [x] **Step 6: Write `frontend/src/api/client.ts`**
 
   ```ts
   // client.ts — wrapper fetch() goi backend qua proxy /api/* (xem vite.config.ts).
@@ -1069,7 +1069,7 @@ LangGraph/chat parts, per the user's reordered roadmap).
       ),
   };
   ```
-- [ ] **Step 7: Replace `frontend/src/main.tsx`**
+- [x] **Step 7: Replace `frontend/src/main.tsx`**
 
   ```tsx
   import { StrictMode } from "react";
@@ -1084,7 +1084,7 @@ LangGraph/chat parts, per the user's reordered roadmap).
     </StrictMode>
   );
   ```
-- [ ] **Step 8: Replace `frontend/src/App.tsx` with the rail-nav shell (screens are stubbed until
+- [x] **Step 8: Replace `frontend/src/App.tsx` with the rail-nav shell (screens are stubbed until
   Tasks 8–11 add them)**
 
   ```tsx
@@ -1126,7 +1126,7 @@ LangGraph/chat parts, per the user's reordered roadmap).
     );
   }
   ```
-- [ ] **Step 9: Verify — dev server starts, shell renders**
+- [x] **Step 9: Verify — dev server starts, shell renders**
 
   Terminal 1: `.venv\Scripts\python.exe -m uvicorn scripts.api.main:app --port 8000` (leave running).
   Terminal 2: `cd frontend; npm run dev` — open the printed `http://localhost:5173/` URL in a browser.
@@ -1149,7 +1149,7 @@ LangGraph/chat parts, per the user's reordered roadmap).
 
 - Consumes: `api.kisSearch`, `api.keyframeNeighbors`, `api.addToQueue`, `getSessionId()` (Task 7).
 
-- [ ] **Step 1: Write `frontend/src/components/KeyframeDetail.tsx`**
+- [x] **Step 1: Write `frontend/src/components/KeyframeDetail.tsx`**
 
   ```tsx
   import { useEffect, useState } from "react";
@@ -1203,7 +1203,7 @@ LangGraph/chat parts, per the user's reordered roadmap).
     );
   }
   ```
-- [ ] **Step 2: Write `frontend/src/screens/KisScreen.tsx`**
+- [x] **Step 2: Write `frontend/src/screens/KisScreen.tsx`**
 
   ```tsx
   import { useState } from "react";
@@ -1362,7 +1362,7 @@ LangGraph/chat parts, per the user's reordered roadmap).
     );
   }
   ```
-- [ ] **Step 3: Wire into `App.tsx`**
+- [x] **Step 3: Wire into `App.tsx`**
 
   Add `import KisScreen from "./screens/KisScreen";` and replace the placeholder body with:
 
@@ -1372,7 +1372,7 @@ LangGraph/chat parts, per the user's reordered roadmap).
     {mode !== "kis" && <p className="status-line">Màn "{mode}" sẽ được thêm ở Task tiếp theo.</p>}
   </main>
   ```
-- [ ] **Step 4: Manual verification** (backend + frontend dev servers both running, per Task 7 Step 9)
+- [x] **Step 4: Manual verification** (backend + frontend dev servers both running, per Task 7 Step 9)
 
   In the browser: type a query (e.g. "a red car parked on the street") into the KIS search box,
   press Enter. Expected: status line shows a result count + top score; a 4-column grid of striped
@@ -1395,7 +1395,7 @@ LangGraph/chat parts, per the user's reordered roadmap).
 
 - Consumes: `api.qaRun`, `api.addToQueue`.
 
-- [ ] **Step 1: Write `frontend/src/screens/QaScreen.tsx`**
+- [x] **Step 1: Write `frontend/src/screens/QaScreen.tsx`**
 
   ```tsx
   import { useState } from "react";
@@ -1484,9 +1484,9 @@ LangGraph/chat parts, per the user's reordered roadmap).
     );
   }
   ```
-- [ ] **Step 2: Wire into `App.tsx`** — add `import QaScreen from "./screens/QaScreen";` and
+- [x] **Step 2: Wire into `App.tsx`** — add `import QaScreen from "./screens/QaScreen";` and
   `{mode === "qa" && <QaScreen />}`.
-- [ ] **Step 3: Manual verification** — enter a scene description + question (e.g. from
+- [x] **Step 3: Manual verification** — enter a scene description + question (e.g. from
   `pipeline_qa.py`'s own CLI demo), click Run Q&A. Expected: status line shows confidence/n_loops,
   an editable answer box appears with a confidence bar, editing the answer box updates its value,
   "Chốt đáp án" acknowledges via the status line.
@@ -1504,7 +1504,7 @@ LangGraph/chat parts, per the user's reordered roadmap).
 
 - Consumes: `api.trakeRun`, `api.addToQueue`.
 
-- [ ] **Step 1: Write `frontend/src/screens/TrakeScreen.tsx`**
+- [x] **Step 1: Write `frontend/src/screens/TrakeScreen.tsx`**
 
   ```tsx
   import { useState } from "react";
@@ -1601,9 +1601,9 @@ LangGraph/chat parts, per the user's reordered roadmap).
     );
   }
   ```
-- [ ] **Step 2: Wire into `App.tsx`** — add `import TrakeScreen from "./screens/TrakeScreen";` and
+- [x] **Step 2: Wire into `App.tsx`** — add `import TrakeScreen from "./screens/TrakeScreen";` and
   `{mode === "trake" && <TrakeScreen />}`.
-- [ ] **Step 3: Manual verification** — paste the global query + 3 events from `pipeline_trake.py`'s
+- [x] **Step 3: Manual verification** — paste the global query + 3 events from `pipeline_trake.py`'s
   own CLI demo, click Run TRAKE. Expected: status line names the best video + frame_ids, a table
   lists all candidates sorted by score, "Thêm vào hàng đợi" acknowledges via the status line.
 
@@ -1620,7 +1620,7 @@ LangGraph/chat parts, per the user's reordered roadmap).
 
 - Consumes: `api.getQueue`, `api.clearQueue`, `api.exportZip`.
 
-- [ ] **Step 1: Write `frontend/src/screens/QueueScreen.tsx`**
+- [x] **Step 1: Write `frontend/src/screens/QueueScreen.tsx`**
 
   ```tsx
   import { useEffect, useState } from "react";
@@ -1686,10 +1686,10 @@ LangGraph/chat parts, per the user's reordered roadmap).
     );
   }
   ```
-- [ ] **Step 2: Wire into `App.tsx`** — add `import QueueScreen from "./screens/QueueScreen";` and
+- [x] **Step 2: Wire into `App.tsx`** — add `import QueueScreen from "./screens/QueueScreen";` and
   `{mode === "queue" && <QueueScreen />}`. At this point every mode in `MODES` (except the disabled
   `chat`) renders a real screen — remove the now-unused fallback placeholder line entirely.
-- [ ] **Step 3: Full end-to-end manual walkthrough** (both dev servers running, submissions/queue
+- [x] **Step 3: Full end-to-end manual walkthrough** (both dev servers running, submissions/queue
   empty — call `api.clearQueue` via the Queue screen first if not)
 
   1. KIS: search a query, drag-reorder the shortlist, add it to the queue with a query ID.
@@ -1713,7 +1713,7 @@ LangGraph/chat parts, per the user's reordered roadmap).
 - Modify: `.gitignore`, `.claudeignore`
 - Modify: `PLAN.md` (Phase 7)
 
-- [ ] **Step 1: Add real run commands to CLAUDE.md's Quick Start**
+- [x] **Step 1: Add real run commands to CLAUDE.md's Quick Start**
 
   Append two lines to the "Daily commands" block:
 
@@ -1727,7 +1727,7 @@ LangGraph/chat parts, per the user's reordered roadmap).
   ```
   .venv\Scripts\python.exe scripts\api\_smoke_test.py               # backend API end-to-end smoke test (KIS/QA/TRAKE/queue/export)
   ```
-- [ ] **Step 2: Ignore frontend build artifacts**
+- [x] **Step 2: Ignore frontend build artifacts**
 
   Add to `.gitignore`:
 
@@ -1738,7 +1738,7 @@ LangGraph/chat parts, per the user's reordered roadmap).
 
   Add to `.claudeignore` (same two lines) — large generated trees, no reason for either tool to load
   them into context.
-- [ ] **Step 3: Update PLAN.md**
+- [x] **Step 3: Update PLAN.md**
 
   Rename the `## Phase 7: (chưa đặt tên — chờ scope)` section to name this work, e.g.:
 
@@ -1757,7 +1757,7 @@ LangGraph/chat parts, per the user's reordered roadmap).
   ```
 
   Mark the Phase 1 checkbox `[x]` only after Task 11 Step 3's walkthrough has actually passed.
-- [ ] **Step 4: Do NOT commit** — per session convention, leave changes unstaged unless the user
+- [x] **Step 4: Do NOT commit** — per session convention, leave changes unstaged unless the user
   explicitly asks for a commit in this session.
 
 ---

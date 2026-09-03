@@ -32,21 +32,21 @@
 - Consumes: (không)
 - Produces: `pytest` khả dụng trong `.venv` cho mọi task sau.
 
-- [ ] **Step 1: Xác nhận đây đúng là rác không track git**
+- [x] **Step 1: Xác nhận đây đúng là rác không track git**
 
 ```bash
 git ls-files graphify-out providers_import.csv providers_import.json .venv-broken
 ```
 Expected: không in ra gì (rỗng = không file nào được track → xoá an toàn).
 
-- [ ] **Step 2: Xoá**
+- [x] **Step 2: Xoá**
 
 ```bash
 rm -rf graphify-out providers_import.csv providers_import.json .venv-broken
 find . -name __pycache__ -type d -not -path "./.venv/*" -not -path "./frontend/node_modules/*" -exec rm -rf {} +
 ```
 
-- [ ] **Step 3: Bổ sung `.gitignore`**
+- [x] **Step 3: Bổ sung `.gitignore`**
 
 Thêm vào cuối `.gitignore`:
 
@@ -55,7 +55,7 @@ Thêm vào cuối `.gitignore`:
 .venv-broken/
 ```
 
-- [ ] **Step 4: Thêm pytest vào `requirements.txt`**
+- [x] **Step 4: Thêm pytest vào `requirements.txt`**
 
 Thêm ngay dưới dòng `python-dotenv==1.2.3`:
 
@@ -63,7 +63,7 @@ Thêm ngay dưới dòng `python-dotenv==1.2.3`:
 pytest==8.4.2                # chạy bộ test tất định trong tests/unit (xem tests/README.md)
 ```
 
-- [ ] **Step 5: Cài và xác nhận**
+- [x] **Step 5: Cài và xác nhận**
 
 ```bash
 .venv/Scripts/python.exe -m pip install "pytest==8.4.2"
@@ -71,7 +71,7 @@ pytest==8.4.2                # chạy bộ test tất định trong tests/unit (
 ```
 Expected: in ra `pytest 8.4.2`.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add .gitignore requirements.txt
@@ -92,7 +92,7 @@ git commit -m "chore: don rac goc repo (graphify-out, providers_import, .venv-br
 - Consumes: pytest từ Task 1.
 - Produces: `tests/conftest.py` đặt repo root lên `sys.path` cho toàn bộ pytest — Task 8 dựa vào đó để xoá boilerplate.
 
-- [ ] **Step 1: Di chuyển bằng `git mv`**
+- [x] **Step 1: Di chuyển bằng `git mv`**
 
 ```bash
 mkdir -p tests/eval tests/e2e tests/data tests/unit
@@ -103,7 +103,7 @@ git mv test_eval/README.md tests/README.md
 rmdir test_eval/Eval test_eval/Test test_eval 2>/dev/null || true
 ```
 
-- [ ] **Step 2: Tạo `tests/conftest.py`**
+- [x] **Step 2: Tạo `tests/conftest.py`**
 
 ```python
 """
@@ -126,7 +126,7 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 ```
 
-- [ ] **Step 3: Sửa hằng đường dẫn**
+- [x] **Step 3: Sửa hằng đường dẫn**
 
 `tests/e2e/golden_kis_snapshot.py` dòng 38:
 ```python
@@ -156,7 +156,7 @@ EVAL_SET_PATH = _ROOT / "tests" / "eval" / "eval_ground_truth.json"
 
 > `_REPO_ROOT = _THIS_DIR.parent.parent` trong `run_eval.py:53` và `widen_gt_windows.py:34`, và `_ROOT = Path(__file__).resolve().parents[2]` trong `tests/e2e/*` **vẫn đúng** sau khi di chuyển (`tests/eval/x.py` → parent → `tests` → parent → repo root). Không đổi.
 
-- [ ] **Step 4: Sửa bug double-load ở 2 smoke test**
+- [x] **Step 4: Sửa bug double-load ở 2 smoke test**
 
 Trong `tests/e2e/test_smoke_tools.py`, thay khối dòng 19-21:
 ```python
@@ -188,14 +188,14 @@ from scripts.agent.pipeline_trake import run_trake
 
 > Đây là phần còn sót của bug đã ghi trong `EXPERIMENT.md`: đặt `scripts/` lên `sys.path` rồi `from agent...` khiến index + SigLIP nạp **hai bản**. `ocr_lookup` sẽ được đổi tên ở Task 4 — ở task này giữ nguyên tên cũ.
 
-- [ ] **Step 5: Quét sạch chuỗi `test_eval` còn sót trong code**
+- [x] **Step 5: Quét sạch chuỗi `test_eval` còn sót trong code**
 
 ```bash
 grep -rn "test_eval" --include=*.py tests scripts
 ```
 Sửa từng dòng còn lại (đa số nằm trong docstring hướng dẫn chạy) thành đường dẫn `tests\...` tương ứng. Chạy lại lệnh trên tới khi không còn kết quả.
 
-- [ ] **Step 6: Nghiệm thu**
+- [x] **Step 6: Nghiệm thu**
 
 ```bash
 PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe tests/e2e/golden_kis_snapshot.py --check
@@ -207,7 +207,7 @@ Expected: `KHỚP TUYỆT ĐỐI trên 18 câu`, exit 0.
 ```
 Expected: tất cả PASS (đây là lần đầu 2 file này thực sự chạy được).
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add -A
@@ -227,14 +227,14 @@ git commit -m "refactor: test_eval/ -> tests/ (eval|e2e|data) + conftest.py, sua
 - Consumes: (không)
 - Produces: `scripts/offline/` là bucket thứ tư chính thức; Task 10 sẽ ghi vào CLAUDE.md.
 
-- [ ] **Step 1: Xác nhận `es_index` + `vlm_ocr_caption` chỉ dùng offline**
+- [x] **Step 1: Xác nhận `es_index` + `vlm_ocr_caption` chỉ dùng offline**
 
 ```bash
 grep -rn "es_index\|vlm_ocr_caption" --include=*.py scripts tests | grep -v "scripts/agent/tools/es_index.py\|scripts/agent/tools/vlm_ocr_caption.py"
 ```
 Expected: chỉ ra kết quả trong `scripts/preprocess/ocr/index_ocr_es.py`. Nếu có file khác → **dừng lại**, báo lại, đừng di chuyển.
 
-- [ ] **Step 2: Di chuyển**
+- [x] **Step 2: Di chuyển**
 
 ```bash
 mkdir -p scripts/offline/captions scripts/offline/ocr scripts/offline/shards scripts/offline/analysis
@@ -247,7 +247,7 @@ git mv scripts/agent/tools/vlm_ocr_caption.py scripts/offline/ocr/vlm_ocr_captio
 rmdir scripts/preprocess/captions scripts/preprocess/ocr scripts/preprocess/shards scripts/preprocess scripts/experiments 2>/dev/null || true
 ```
 
-- [ ] **Step 3: Sửa import trong `scripts/offline/ocr/index_ocr_es.py`**
+- [x] **Step 3: Sửa import trong `scripts/offline/ocr/index_ocr_es.py`**
 
 ```python
 from scripts.offline.ocr.es_index import ...
@@ -255,7 +255,7 @@ from scripts.offline.ocr.vlm_ocr_caption import ...
 ```
 (giữ nguyên danh sách tên được import, chỉ đổi đường dẫn module)
 
-- [ ] **Step 4: Thêm `__init__.py` cho package mới**
+- [x] **Step 4: Thêm `__init__.py` cho package mới**
 
 ```bash
 for d in scripts/offline scripts/offline/captions scripts/offline/ocr scripts/offline/shards scripts/offline/analysis; do
@@ -263,7 +263,7 @@ for d in scripts/offline scripts/offline/captions scripts/offline/ocr scripts/of
 done
 ```
 
-- [ ] **Step 5: Nghiệm thu**
+- [x] **Step 5: Nghiệm thu**
 
 ```bash
 grep -rn "scripts.preprocess\|scripts/preprocess\|scripts.experiments\|scripts/experiments" --include=*.py --include=*.md . | grep -v docs/_archive
@@ -276,7 +276,7 @@ PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe tests/e2e/golden_kis_snapshot.py
 ```
 Expected: `offline import OK`, rồi `KHỚP TUYỆT ĐỐI`.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add -A
@@ -295,21 +295,21 @@ git commit -m "refactor: gom preprocess/ + experiments/ thanh scripts/offline/, 
 - Consumes: (không)
 - Produces: `scripts.agent.tools.objects_lookup` với API không đổi: `get_objects(video_id, n)`, `get_objects_for_hits(hits)`, `objects_contain_keywords(...)`, hằng `DEFAULT_SCORE_THRESHOLD`.
 
-- [ ] **Step 1: Liệt kê call site**
+- [x] **Step 1: Liệt kê call site**
 
 ```bash
 grep -rn "ocr_lookup" --include=*.py scripts tests
 ```
 Expected: 4 file (`pipeline_qa.py`, `pipeline_trake.py`, `answer_qa.py`, `tests/e2e/test_smoke_tools.py`) + chính file đó.
 
-- [ ] **Step 2: Đổi tên và cập nhật call site**
+- [x] **Step 2: Đổi tên và cập nhật call site**
 
 ```bash
 git mv scripts/agent/tools/ocr_lookup.py scripts/agent/tools/objects_lookup.py
 grep -rl "ocr_lookup" --include=*.py scripts tests | xargs sed -i 's/ocr_lookup/objects_lookup/g'
 ```
 
-- [ ] **Step 3: Sửa docstring đầu `objects_lookup.py`**
+- [x] **Step 3: Sửa docstring đầu `objects_lookup.py`**
 
 Đổi dòng mô tả đầu file thành:
 
@@ -325,7 +325,7 @@ objects_lookup.py — Đọc Objects JSON (Faster R-CNN / OpenImages) đã tính
 ```
 Giữ nguyên phần còn lại của docstring cũ (usage, ghi chú ngưỡng) bên dưới.
 
-- [ ] **Step 4: Nghiệm thu**
+- [x] **Step 4: Nghiệm thu**
 
 ```bash
 grep -rn "ocr_lookup" --include=*.py --include=*.md . | grep -v docs/_archive
@@ -337,7 +337,7 @@ PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe tests/e2e/golden_kis_snapshot.py
 ```
 Expected: `KHỚP TUYỆT ĐỐI`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A
@@ -367,7 +367,7 @@ git commit -m "refactor: ocr_lookup.py -> objects_lookup.py (module doc Objects 
   - `hybrid.hybrid_retrieve`, `hybrid.fast_retrieve_multi_model`, `hybrid.SPARSE_TOP_K` — chữ ký **không đổi**
   - `frames.get_neighbor_frames`, `frames.get_all_frames`, `frames.get_keyframe_path` — chữ ký **không đổi**
 
-- [ ] **Step 1: Tạo `index_store.py`**
+- [x] **Step 1: Tạo `index_store.py`**
 
 Chuyển nguyên văn (không sửa logic) từ `retrieve.py` sang: khối `sys.stdout.reconfigure`, `_SCRIPTS_DIR`/`_REPO_ROOT`, `_MODEL_TAG`/`_QA_MODEL_TAG`, mọi biến global `_MATRIX`/`_META`/`_ENCODE_FN`/`_QA_*`/`_KEY_INDEX`/`_QA_KEY_INDEX`, `_add_jpg_paths()`, `_load_model()`, `_ensure_loaded()`, `_ensure_qa_loaded()`, `preload()`, `_row_to_hit()`, `_get_key_index()`, `_encode_mean()`.
 
@@ -414,7 +414,7 @@ def encode_mean(texts: list[str], qa: bool = False):
 
 `load_model(tag)` = `_load_model()` cũ đổi tên (đã gồm `_add_jpg_paths`).
 
-- [ ] **Step 2: Viết lại `retrieve.py` chỉ còn 4 hàm truy vấn**
+- [x] **Step 2: Viết lại `retrieve.py` chỉ còn 4 hàm truy vấn**
 
 Mọi hàm dùng `index_store.get_index()` + `index_store.row_to_hit()` thay cho global và vòng lặp dựng dict thủ công. Ví dụ:
 
@@ -435,11 +435,11 @@ def fast_retrieve(query_text: str, top_k: int = 100) -> list[dict]:
 
 > **Cẩn thận:** `fast_retrieve` cũ trả `"n"` từ `row["n"]` và `jpg_path` theo cùng quy tắc `_row_to_hit`. Sau khi thống nhất qua `row_to_hit`, kết quả phải **giống hệt từng trường**. Golden snapshot sẽ bắt được nếu lệch.
 
-- [ ] **Step 3: Tạo `hybrid.py`**
+- [x] **Step 3: Tạo `hybrid.py`**
 
 Chuyển nguyên văn `SPARSE_TOP_K`, `hybrid_retrieve()`, `fast_retrieve_multi_model()` sang file mới. Thay `_ensure_loaded()/_MATRIX/_META` bằng `index_store.get_index(qa=qa)`, `_get_key_index` bằng `index_store.key_index(qa=qa)`, `_row_to_hit` bằng `index_store.row_to_hit`, `_encode_mean` bằng `index_store.encode_mean`, `_load_model` bằng `index_store.load_model`.
 
-- [ ] **Step 4: Tạo `frames.py`**
+- [x] **Step 4: Tạo `frames.py`**
 
 Chuyển `get_neighbor_frames()`, `get_all_frames()`, `get_keyframe_path()`. Ba hàm này **không** trả hit đầy đủ (không có score) nên giữ nguyên việc dựng dict tại chỗ, nhưng thêm comment trỏ về `index_store.row_to_hit` để người đọc biết vì sao có ngoại lệ:
 
@@ -448,7 +448,7 @@ Chuyển `get_neighbor_frames()`, `get_all_frames()`, `get_keyframe_path()`. Ba 
 # nên không đi qua index_store.row_to_hit(). Phép +1 vẫn phải khớp đúng quy ước ở đó.
 ```
 
-- [ ] **Step 5: Cập nhật mọi call site**
+- [x] **Step 5: Cập nhật mọi call site**
 
 ```bash
 grep -rn "from scripts.agent.tools.retrieve import\|tools.retrieve import\|import retrieve" --include=*.py scripts tests
@@ -464,7 +464,7 @@ Với từng kết quả, đổi sang module mới theo bảng:
 
 Chú ý `scripts/agent/tools/rerank.py` có import trễ `from scripts.agent.tools.retrieve import fast_retrieve_for_video` bên trong `_bet_mode` — giữ nguyên module `retrieve`.
 
-- [ ] **Step 6: Nghiệm thu — tiêu chí cứng**
+- [x] **Step 6: Nghiệm thu — tiêu chí cứng**
 
 ```bash
 .venv/Scripts/python.exe -c "
@@ -475,7 +475,7 @@ PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe tests/e2e/golden_kis_snapshot.py
 ```
 Expected: `KHỚP TUYỆT ĐỐI trên 18 câu`, exit 0. **Nếu lệch dù 1 dòng → dừng, tìm nguyên nhân, không đi tiếp.**
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add -A
@@ -501,7 +501,7 @@ git commit -m "refactor: tach retrieve.py thanh index_store + retrieve + hybrid 
 > **Ba file mới ở task này KHÔNG được chứa khối `sys.path.insert`** — chúng chỉ-được-import, và
 > `tests/conftest.py` (Task 2) đã lo phần đó. Chỉ import `from scripts...` trực tiếp.
 
-- [ ] **Step 1: Tạo `qa_prompts.py`**
+- [x] **Step 1: Tạo `qa_prompts.py`**
 
 Chuyển nguyên văn 9 hằng prompt (không sửa một ký tự nào trong nội dung prompt — đổi prompt = đổi hành vi LLM). Đầu file:
 
@@ -515,15 +515,15 @@ phải đo lại bằng tests/e2e/score_pipelines.py.
 """
 ```
 
-- [ ] **Step 2: Tạo `qa_classify.py`**
+- [x] **Step 2: Tạo `qa_classify.py`**
 
 Chuyển `_VISUAL_COUNT_HINTS`, `_TEXT_READING_HINTS`, `_DISPLAYED_NUMBER_RE`, `_DIGIT_TOKEN_RE`, `is_visual_count_question()`, `_needs_text_reading()` → đổi tên công khai `needs_text_reading()`, `_asks_displayed_number()` → `asks_displayed_number()`.
 
-- [ ] **Step 3: Tạo `qa_normalize.py`**
+- [x] **Step 3: Tạo `qa_normalize.py`**
 
 Chuyển `MAX_ANSWER_CHARS`, `CANONICAL_MAX_WORDS`, `_CONVERSATIONAL_PREFIX`, `_NON_ANSWER_HINTS`, `_STANDALONE_INTEGER`, `_normalize_answer()` → `normalize_answer()`, `is_non_answer()`, `extract_visual_count()`, `canonicalize_answer()`. `canonicalize_answer` vẫn `from scripts.agent.config import call_llm` và dùng `CANONICAL_PROMPT` từ `qa_prompts`.
 
-- [ ] **Step 4: Rút gọn `answer_qa.py`**
+- [x] **Step 4: Rút gọn `answer_qa.py`**
 
 Giữ lại: `_trace_evidence`, `_load_captions`, `_build_evidence_bundle`, `_trace_prompt`, `ocr_direct_answer`, `answer_from_hits`, `_crosscheck_answer`, `_CAPTION_CACHE`, `QA_EVIDENCE_TOP_N`. Thêm import:
 
@@ -543,7 +543,7 @@ from scripts.agent.tools.qa_normalize import (
 
 Trong thân hàm đổi `_needs_text_reading(` → `needs_text_reading(`, `_asks_displayed_number(` → `asks_displayed_number(`, `_normalize_answer(` → `normalize_answer(`.
 
-- [ ] **Step 5: Cập nhật test đang import trực tiếp**
+- [x] **Step 5: Cập nhật test đang import trực tiếp**
 
 `tests/e2e/test_qa_answer_contract.py` đang có:
 ```python
@@ -555,7 +555,7 @@ from scripts.agent.tools.qa_classify import is_visual_count_question
 from scripts.agent.tools.qa_normalize import extract_visual_count
 ```
 
-- [ ] **Step 6: Nghiệm thu**
+- [x] **Step 6: Nghiệm thu**
 
 ```bash
 .venv/Scripts/python.exe -m pytest tests/e2e/test_qa_answer_contract.py -q
@@ -566,7 +566,7 @@ _run_self_tests()
 ```
 Expected: pytest PASS; self-test in `[answer_qa] Tat ca self-test PASS`.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add -A
@@ -587,7 +587,7 @@ git commit -m "refactor: tach answer_qa.py thanh qa_prompts + qa_classify + qa_n
   - `trake_align.find_best_increasing_chain(event_hits: list[list[dict]], strict: bool = True) -> list[dict] | None`
   - `trake_align.rule_plausibility(event_queries_en: list[str], chain: list[dict]) -> float`
 
-- [ ] **Step 1: Tạo `trake_align.py`**
+- [x] **Step 1: Tạo `trake_align.py`**
 
 Chuyển nguyên văn `_find_best_increasing_chain()` → `find_best_increasing_chain()` và `_rule_plausibility()` → `rule_plausibility()`, kèm nguyên vẹn docstring giải thích DP thắng greedy. Đầu file:
 
@@ -600,7 +600,7 @@ Tách khỏi pipeline_trake.py để phần thuật toán (quy hoạch động +
 """
 ```
 
-- [ ] **Step 2: Sửa `pipeline_trake.py`**
+- [x] **Step 2: Sửa `pipeline_trake.py`**
 
 Xoá 2 hàm vừa chuyển đi, thêm:
 ```python
@@ -608,18 +608,18 @@ from scripts.agent.tools.trake_align import find_best_increasing_chain, rule_pla
 ```
 Đổi call site: `_find_best_increasing_chain(` → `find_best_increasing_chain(`, `_rule_plausibility(` → `rule_plausibility(`.
 
-- [ ] **Step 3: Chuyển phần self-test tương ứng**
+- [x] **Step 3: Chuyển phần self-test tương ứng**
 
 Trong `_run_self_tests()` của `pipeline_trake.py`, các test 1/2/3/4/4c thao tác trên hai hàm vừa tách. Giữ nguyên chúng ở chỗ cũ trong task này (Task 8 sẽ chuyển sang pytest) — chỉ đổi tên hàm được gọi.
 
-- [ ] **Step 4: Nghiệm thu**
+- [x] **Step 4: Nghiệm thu**
 
 ```bash
 PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe scripts/agent/pipeline_trake.py --self-test
 ```
 Expected: in `[trake] Test DP thang greedy: OK`, `[trake] Test strict monotonic: OK`, `[trake] Test cong rule-based: OK`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A
@@ -639,7 +639,7 @@ git commit -m "refactor: tach DP + rule plausibility cua TRAKE ra tools/trake_al
 - Consumes: `tests/conftest.py` (Task 2) đặt repo root lên `sys.path`.
 - Produces: `pytest tests/unit` là lệnh kiểm tra tất định của repo.
 
-- [ ] **Step 1: Đếm số assert hiện có (mốc để không làm mất test)**
+- [x] **Step 1: Đếm số assert hiện có (mốc để không làm mất test)**
 
 ```bash
 grep -c "assert " scripts/agent/tools/fusion.py scripts/agent/tools/temporal_nms.py \
@@ -650,7 +650,7 @@ grep -c "assert " scripts/agent/tools/fusion.py scripts/agent/tools/temporal_nms
 ```
 Ghi lại tổng số. Sau khi chuyển xong, tổng số assert trong `tests/unit/` phải **≥** con số này.
 
-- [ ] **Step 2: Chuyển từng file, mỗi khối assert thành một hàm `test_*`**
+- [x] **Step 2: Chuyển từng file, mỗi khối assert thành một hàm `test_*`**
 
 Mẫu cho `tests/unit/test_fusion.py` (làm y hệt cho các file còn lại, mỗi nhóm assert trong khối `__main__` cũ thành một hàm test riêng, giữ nguyên từng câu assert và thông điệp lỗi):
 
@@ -705,11 +705,11 @@ def test_bet_mode_khong_loai_nham_ung_vien_trung_frame_idx(monkeypatch) -> None:
 
 Với `test_answer_qa.py` và `test_pipeline_qa.py`: khối cũ gán đè biến global (`call_llm = _fake_call_llm`). Dùng `monkeypatch.setattr(module, "call_llm", fake)` thay cho gán trực tiếp.
 
-- [ ] **Step 3: Xoá khối `__main__` self-test khỏi module nguồn**
+- [x] **Step 3: Xoá khối `__main__` self-test khỏi module nguồn**
 
 Chỉ xoá phần self-test. **Giữ nguyên** khối `__main__` là CLI demo/công cụ ở: `retrieve.py`, `objects_lookup.py`, `rewrite.py`, `sparse_index.py` (giữ `--build`/`--query`, bỏ `--self-test`), `answer_qa.py` (giữ phần demo `fast_retrieve` cuối), `ocr_read.py`, `pipeline_kis.py`, `pipeline_qa.py`, `pipeline_trake.py`, `config.py`.
 
-- [ ] **Step 4: Xoá `sys.path` boilerplate ở module chỉ-được-import**
+- [x] **Step 4: Xoá `sys.path` boilerplate ở module chỉ-được-import**
 
 Xoá khối dưới đây khỏi 12 file liệt kê trong **Files** (chúng không có `__main__` chạy trực tiếp):
 
@@ -728,7 +728,7 @@ từ `_ROOT`. Xoá nhầm hằng này thì `jpg_path` thành `None` toàn bộ v
 Giữ lại phép gán `_ROOT = ...`, chỉ bỏ hai dòng `if str(_ROOT) not in sys.path: sys.path.insert(...)`
 (và `import sys` nếu không còn ai dùng).
 
-- [ ] **Step 5: Chuyển 2 file pytest sẵn có**
+- [x] **Step 5: Chuyển 2 file pytest sẵn có**
 
 ```bash
 git mv tests/e2e/test_rrf_fusion.py tests/unit/
@@ -736,7 +736,7 @@ git mv tests/e2e/test_qa_answer_contract.py tests/unit/
 ```
 Rồi xoá khối `_ROOT`/`sys.path.insert` ở đầu hai file đó (đã có `conftest.py` lo).
 
-- [ ] **Step 6: Nghiệm thu**
+- [x] **Step 6: Nghiệm thu**
 
 ```bash
 .venv/Scripts/python.exe -m pytest tests/unit -q
@@ -754,7 +754,7 @@ PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe tests/e2e/golden_kis_snapshot.py
 ```
 Expected: không `ModuleNotFoundError`; golden `KHỚP TUYỆT ĐỐI`.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add -A
@@ -774,7 +774,7 @@ git commit -m "test: chuyen self-test tu khoi __main__ sang tests/unit (pytest),
 - Consumes: `_DEFAULT_OUT` đã trỏ `docs/reports/` từ Task 2.
 - Produces: cây `docs/` để Task 10 tham chiếu.
 
-- [ ] **Step 1: Di chuyển**
+- [x] **Step 1: Di chuyển**
 
 ```bash
 mkdir -p docs/rules docs/training docs/reports docs/presentation
@@ -789,7 +789,7 @@ git mv docs/diagrams docs/presentation/diagrams
 git add docs/_archive/PipelineDPDiagram.png docs/_archive/manifest_vitl14.csv
 ```
 
-- [ ] **Step 2: Tạo `docs/decisions-log.md`**
+- [x] **Step 2: Tạo `docs/decisions-log.md`**
 
 Cấu trúc:
 
@@ -812,7 +812,7 @@ Cấu trúc:
 
 Chuyển **nguyên văn** nội dung 2 file, không tóm tắt lại — chúng là bản ghi lịch sử.
 
-- [ ] **Step 3: Bổ sung 2 mục mới vào Phần 2**
+- [x] **Step 3: Bổ sung 2 mục mới vào Phần 2**
 
 ```markdown
 ### Bug nạp index 2 bản — phần còn sót ở smoke test (2026-08-31)
@@ -831,27 +831,27 @@ Vision. Module bắt lỗi và chạy tiếp rất gọn nên **không ai nhận
 Bài học: degradation êm ái cần đi kèm một chỗ báo cáo trạng thái, nếu không nó thành lỗi vô hình.
 ```
 
-- [ ] **Step 4: Xoá 2 file cũ**
+- [x] **Step 4: Xoá 2 file cũ**
 
 ```bash
 git rm DECISION.md EXPERIMENT.md
 ```
 
-- [ ] **Step 5: Sửa mọi tham chiếu tới đường dẫn cũ**
+- [x] **Step 5: Sửa mọi tham chiếu tới đường dẫn cũ**
 
 ```bash
 grep -rn "DECISION.md\|EXPERIMENT.md\|docs/Training\|docs/eval_" --include=*.py --include=*.md . | grep -v docs/_archive | grep -v decisions-log.md
 ```
 Sửa hết sang `docs/decisions-log.md` / `docs/training/` / `docs/reports/`. Chạy lại tới khi rỗng.
 
-- [ ] **Step 6: Nghiệm thu**
+- [x] **Step 6: Nghiệm thu**
 
 ```bash
 test -f docs/decisions-log.md && test ! -f DECISION.md && test ! -f EXPERIMENT.md && echo "gop OK"
 ls docs/rules docs/training docs/reports docs/presentation
 ```
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add -A
@@ -869,7 +869,7 @@ git commit -m "docs: sap xep docs/ theo nhom (rules|training|reports|presentatio
 - Consumes: cây thư mục cuối cùng từ Task 1-9.
 - Produces: tài liệu khớp thực tế — điều kiện để Task 12 grep sạch.
 
-- [ ] **Step 1: `CLAUDE.md`**
+- [x] **Step 1: `CLAUDE.md`**
 
 Cập nhật, giữ nguyên giọng văn và cấu trúc mục hiện có:
 - Mục **Folder Structure**: ghi 4 bucket thật (`agent` / `api` / `submit` / `offline`), bỏ mọi nhắc tới `scripts/index.py`, `scripts/app.py`, `preprocess/`, `experiments/`, `test_eval/`.
@@ -878,7 +878,7 @@ Cập nhật, giữ nguyên giọng văn và cấu trúc mục hiện có:
 - Thêm quy ước test: self-test → `tests/unit/`; khối `__main__` chỉ dành cho CLI demo/công cụ.
 - Thêm quy ước `sys.path`: giữ ở file có `__main__`, bỏ ở file chỉ-được-import; không bao giờ đặt `scripts/` lên path.
 
-- [ ] **Step 2: `ARCHITECTURE.md`**
+- [x] **Step 2: `ARCHITECTURE.md`**
 
 - Vẽ lại sơ đồ §1: thay `scripts/app.py (Gradio)` bằng `frontend/ (React) → scripts/api/ (FastAPI)`.
 - Bảng §2: bỏ dòng `scripts/index.py`, đổi `rank.py` → `rerank.py`, `ocr_lookup.py` → `objects_lookup.py`, thêm dòng cho `index_store.py`, `hybrid.py`, `frames.py`, `trake_align.py`, `qa_prompts.py`, `qa_classify.py`, `qa_normalize.py`.
@@ -893,11 +893,11 @@ Cập nhật, giữ nguyên giọng văn và cấu trúc mục hiện có:
 | `RECALL_HEAD_N` | 20 | 18 câu KIS, 2026-08-31 | Final 0.667 → 0.722. |
 ```
 
-- [ ] **Step 3: `README.md`**
+- [x] **Step 3: `README.md`**
 
 Đổi mọi lệnh sang cây mới; bỏ phần mô tả Gradio là UI hiện hành; thêm `pytest tests/unit` vào phần kiểm tra.
 
-- [ ] **Step 4: `PLAN.md`**
+- [x] **Step 4: `PLAN.md`**
 
 Thêm mục **Pha 2 — sửa lỗi hành vi (chưa làm)**, liệt kê đúng 6 việc, mỗi việc một dòng kèm chứng cứ:
 
@@ -913,7 +913,7 @@ Thêm mục **Pha 2 — sửa lỗi hành vi (chưa làm)**, liệt kê đúng 6
 6. Q&A chỉ trích answer riêng cho 3 cụm video đầu; ~97 dòng còn lại mang answer của video khác.
 ```
 
-- [ ] **Step 5: Nghiệm thu**
+- [x] **Step 5: Nghiệm thu**
 
 ```bash
 grep -rn "scripts/index.py\|scripts/app.py\|test_eval\|ocr_lookup\|preprocess/\|experiments/\|rank\.py" \
@@ -921,7 +921,7 @@ grep -rn "scripts/index.py\|scripts/app.py\|test_eval\|ocr_lookup\|preprocess/\|
 ```
 Expected: rỗng.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add README.md CLAUDE.md ARCHITECTURE.md PLAN.md
@@ -939,13 +939,13 @@ git commit -m "docs: viet lai 4 tai lieu goc cho khop cay thu muc va code thuc t
 - Consumes: cây file cuối cùng (làm SAU mọi task tách/di chuyển để không sửa hai lần).
 - Produces: (không có API mới)
 
-- [ ] **Step 1: Liệt kê file cần sửa**
+- [x] **Step 1: Liệt kê file cần sửa**
 
 ```bash
 grep -rln "khong\|duoc\|ung vien\|tuong ung\|thu hang" --include=*.py scripts/agent scripts/api scripts/submit
 ```
 
-- [ ] **Step 2: Sửa từng file một, chỉ comment và docstring**
+- [x] **Step 2: Sửa từng file một, chỉ comment và docstring**
 
 Bỏ dấu → có dấu. **Không đụng vào:** chuỗi trong `print()` có tiền tố `[module]` nếu chúng đang được test so khớp, tên biến/hàm, và **toàn bộ nội dung prompt LLM trong `qa_prompts.py`** (tiếng Anh, đổi = đổi hành vi).
 
@@ -954,7 +954,7 @@ Sau mỗi file, chạy ngay:
 .venv/Scripts/python.exe -c "import scripts.agent.tools.<ten_module>; print('OK')"
 ```
 
-- [ ] **Step 3: Nghiệm thu**
+- [x] **Step 3: Nghiệm thu**
 
 ```bash
 .venv/Scripts/python.exe -m pytest tests/unit -q
@@ -962,7 +962,7 @@ PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe tests/e2e/golden_kis_snapshot.py
 ```
 Expected: pytest PASS, golden `KHỚP TUYỆT ĐỐI`.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add -A
@@ -980,14 +980,14 @@ git commit -m "style: thong nhat comment/docstring tieng Viet co dau trong scrip
 - Consumes: toàn bộ Task 1-11.
 - Produces: bằng chứng Pha 1 không đổi hành vi.
 
-- [ ] **Step 1: Tiêu chí cứng — golden snapshot**
+- [x] **Step 1: Tiêu chí cứng — golden snapshot**
 
 ```bash
 PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe tests/e2e/golden_kis_snapshot.py --check
 ```
 Expected: `mốc digest=81448536a4f1245f | lần này digest=81448536a4f1245f`, `KHỚP TUYỆT ĐỐI trên 18 câu`, exit 0.
 
-- [ ] **Step 2: Đối chiếu `run_eval`**
+- [x] **Step 2: Đối chiếu `run_eval`**
 
 ```bash
 PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe tests/eval/run_eval.py \
@@ -996,21 +996,21 @@ diff tests/e2e/eval_before_snapshot.md /tmp/eval_after.md
 ```
 Expected: `diff` không in gì (khác biệt duy nhất được phép là dòng ngày/giờ nếu file có).
 
-- [ ] **Step 3: Bộ test đơn vị**
+- [x] **Step 3: Bộ test đơn vị**
 
 ```bash
 .venv/Scripts/python.exe -m pytest tests/unit -q
 ```
 Expected: tất cả PASS.
 
-- [ ] **Step 4: Smoke test API**
+- [x] **Step 4: Smoke test API**
 
 ```bash
 AIC_MODE=test PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe scripts/api/_smoke_test.py
 ```
 Expected: `[smoke] TAT CA BUOC PASS`.
 
-- [ ] **Step 5: Quét tham chiếu chết**
+- [x] **Step 5: Quét tham chiếu chết**
 
 ```bash
 grep -rn "scripts/index\.py\|scripts/app\.py\|test_eval\|ocr_lookup\|scripts\.preprocess\|scripts\.experiments\|rank\.py" \
@@ -1018,7 +1018,7 @@ grep -rn "scripts/index\.py\|scripts/app\.py\|test_eval\|ocr_lookup\|scripts\.pr
 ```
 Expected: rỗng.
 
-- [ ] **Step 6: Mỗi module import được độc lập**
+- [x] **Step 6: Mỗi module import được độc lập**
 
 ```bash
 .venv/Scripts/python.exe - <<'PY'
@@ -1036,7 +1036,7 @@ PY
 ```
 Expected: `Moi module runtime import duoc`.
 
-- [ ] **Step 7: Cập nhật `tests/README.md`**
+- [x] **Step 7: Cập nhật `tests/README.md`**
 
 Ghi 3 tầng test và khi nào dùng cái nào:
 
@@ -1051,7 +1051,7 @@ Ghi 3 tầng test và khi nào dùng cái nào:
 regression cho toàn bộ đường KIS production. Chạy `--check` sau mọi refactor.
 ```
 
-- [ ] **Step 8: Commit cuối**
+- [x] **Step 8: Commit cuối**
 
 ```bash
 git add -A

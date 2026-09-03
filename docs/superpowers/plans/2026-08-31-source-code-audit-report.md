@@ -166,7 +166,7 @@ Mục dưới đây được viết sẵn từ dữ liệu **đã chạy thật*
 - Consumes: không có (task đầu tiên).
 - Produces: file báo cáo với **11 heading `##` đã có sẵn theo đúng thứ tự ở §File Structure**, §0.1–§0.4 và §1 đã điền. Dãy FINDING bắt đầu từ `FINDING-01`; task sau đọc số cuối để tiếp tục. §0.3 chứa bản chép của §Schema mục từng file. §0.4 chứa bảng "Bản đồ 10 chương ↔ nhóm file ↔ số file".
 
-- [ ] **Step 1: Đọc 6 tài liệu điều hướng**
+- [x] **Step 1: Đọc 6 tài liệu điều hướng**
 
 Đọc trọn vẹn `README.md`, `CLAUDE.md`, `ARCHITECTURE.md`, `PLAN.md`, `GEMINI.md`, `docs/decisions-log.md`. Vừa đọc vừa ghi ra scratchpad danh sách **phát biểu kiểm chứng được** mà tài liệu đưa ra — đây là input cho toàn bộ các task sau. Tối thiểu phải bắt được 6 phát biểu này:
 
@@ -177,7 +177,7 @@ Mục dưới đây được viết sẵn từ dữ liệu **đã chạy thật*
 5. Chỉ repo root nằm trên `sys.path`; không bao giờ đặt `scripts/` lên `sys.path`.
 6. `scripts/` có **đúng 4** bucket: `agent/`, `api/`, `submit/`, `offline/`.
 
-- [ ] **Step 2: Chạy bộ lệnh xác minh 6 phát biểu**
+- [x] **Step 2: Chạy bộ lệnh xác minh 6 phát biểu**
 
 ```bash
 # (1) litellm ngoài config.py — kỳ vọng: rỗng
@@ -196,7 +196,7 @@ git ls-files scripts | cut -d/ -f2 | sort -u
 
 Ghi nguyên **output** của từng lệnh vào scratchpad. Kết quả (2) đã biết trước từ lúc lập kế hoạch: `hybrid.py:156` và `multi_index.py:78` **vi phạm** — đó là `FINDING-01`, đã soạn sẵn ở §Ví dụ mẫu, Task 2 sẽ chép vào. Ba phát biểu (1), (5), (6) đã xác minh là **đúng** lúc lập kế hoạch; nếu chạy lại thấy khác, đó là finding mới.
 
-- [ ] **Step 3: Đối chiếu ARCHITECTURE.md với cây file thật**
+- [x] **Step 3: Đối chiếu ARCHITECTURE.md với cây file thật**
 
 ```bash
 git ls-files scripts tests frontend | wc -l
@@ -206,7 +206,7 @@ for f in $(git ls-files 'scripts/**/*.py'); do b=$(basename $f); grep -q "$b" AR
 
 Mỗi file lọt ra ở lệnh thứ hai là ứng viên finding "code không có trong tài liệu kiến trúc" — chưa kết luận ở đây, chuyển cho task phụ trách bucket đó xác nhận (có thể nó chỉ là helper tầm thường).
 
-- [ ] **Step 4: Đọc 5 file cấu hình + soi bất thường lockfile**
+- [x] **Step 4: Đọc 5 file cấu hình + soi bất thường lockfile**
 
 Đọc `requirements.txt`, `.env.example`, `.gitignore`, `.claudeignore`, và **liếc 20 dòng đầu** `package-lock.json` ở root (không đọc hết — file sinh tự động).
 
@@ -221,7 +221,7 @@ Kiểm 3 điều, mỗi điều sai là một finding:
 - `.env.example` có chứa key thật không (phải là placeholder 100%), và có liệt kê **đủ** biến mà `config.py` đọc không — để trống chỗ này thì người mới clone repo sẽ chết lúc chạy.
 - `requirements.txt` có ghim version không, có liệt kê `torch` CUDA build không, có dependency nào không file nào import không.
 
-- [ ] **Step 5: Tạo file báo cáo với khung 11 chương + §0**
+- [x] **Step 5: Tạo file báo cáo với khung 11 chương + §0**
 
 Tạo `docs/reports/source-code-audit-2026-08-31.md`. Bắt buộc có, theo đúng thứ tự:
 
@@ -235,7 +235,7 @@ Tạo `docs/reports/source-code-audit-2026-08-31.md`. Bắt buộc có, theo đ�
    - **§0.4 Bản đồ chương ↔ nhóm file ↔ số file** — bảng 9 dòng.
 5. Chín heading `##` còn lại (`## 1.` … `## 10.`), mỗi cái theo sau đúng một dòng `<!-- Task N điền -->`. **Phải tạo hết ở bước này** để các task sau chỉ thay thế comment, không phải tự tìm chỗ chèn.
 
-- [ ] **Step 6: Viết §1 — tầng gốc (11 file)**
+- [x] **Step 6: Viết §1 — tầng gốc (11 file)**
 
 Mỗi file một mục theo schema. Nội dung tối thiểu cho từng file:
 
@@ -249,7 +249,7 @@ Mỗi file một mục theo schema. Nội dung tối thiểu cho từng file:
 
 Kết chương bằng bảng `| File | Vai trò một dòng | Finding |` cho 11 file.
 
-- [ ] **Step 7: Tự kiểm chương 1**
+- [x] **Step 7: Tự kiểm chương 1**
 
 ```bash
 # Đủ 11 mục file?
@@ -262,7 +262,7 @@ grep -n "TODO\|TBD\|tương tự file trên\|sẽ bổ sung" docs/reports/source
 
 Kỳ vọng: lệnh 1 ra `11`, lệnh 2 ra `11`, lệnh 3 rỗng.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add docs/reports/source-code-audit-2026-08-31.md
@@ -281,13 +281,13 @@ git commit -m "docs(audit): khung bao cao + chuong 0-1 tang goc"
 - Consumes: từ Task 1 — schema mục file (§0.3), số finding cuối cùng, danh sách phát biểu kiểm chứng được, output các lệnh grep ở Task 1 Step 2.
 - Produces: §2 hoàn chỉnh 10 mục; số FINDING cuối cùng; **sơ đồ phụ thuộc của lõi retrieval** (khối mermaid `flowchart LR`) mà Task 4 và Task 10 sẽ tham chiếu, không vẽ lại.
 
-- [ ] **Step 1: Đọc trọn 10 file, không đọc lướt**
+- [x] **Step 1: Đọc trọn 10 file, không đọc lướt**
 
 Thứ tự đọc bắt buộc, đi từ nền lên: `fusion.py` → `temporal_nms.py` → `query_expand.py` (3 module pure, dễ nắm) → `index_store.py` (singleton, nền của mọi thứ) → `retrieve.py` → `sparse_index.py` → `hybrid.py` → `multi_index.py` → `frames.py` → `rerank.py`.
 
 Với mỗi file ghi vào scratchpad: danh sách hàm public, hằng số module-level viết HOA, mọi lệnh đọc file dưới `data/`, mọi biến `os.environ`.
 
-- [ ] **Step 2: Dựng bản đồ ai-gọi-ai bằng grep, không đoán**
+- [x] **Step 2: Dựng bản đồ ai-gọi-ai bằng grep, không đoán**
 
 ```bash
 for m in index_store multi_index retrieve hybrid fusion sparse_index temporal_nms frames query_expand rerank; do
@@ -298,7 +298,7 @@ done
 
 Điền cột **Ai gọi nó** cho cả 10 mục từ đúng output này. Module nào không ai import ⇒ finding "dead code hoặc entry point ẩn" — phải kiểm thêm xem nó có `__main__` không trước khi kết luận.
 
-- [ ] **Step 3: Xác minh 4 invariant riêng của lõi**
+- [x] **Step 3: Xác minh 4 invariant riêng của lõi**
 
 ```bash
 # (a) module pure có thực sự pure? Ky vong: rong
@@ -315,7 +315,7 @@ Chú ý (c): [CLAUDE.md](../../../CLAUDE.md) cảnh báo `MARGIN_THRESHOLD` / `R
 
 Chú ý (d): [CLAUDE.md](../../../CLAUDE.md) yêu cầu upcast float32 + re-normalize khi load. Nếu `multi_index.py` làm khác `index_store.py` ⇒ finding: hai đường load index có tiền xử lý lệch nhau thì điểm số hai backbone không so sánh được.
 
-- [ ] **Step 4: Viết 10 mục file**
+- [x] **Step 4: Viết 10 mục file**
 
 Theo schema §0.3. Chép nguyên mục mẫu `hybrid.py` + `FINDING-01` từ §Ví dụ mẫu của plan này (đã kiểm chứng, chỉ cần đánh lại số finding nếu Task 1 đã dùng `FINDING-01`).
 
@@ -325,18 +325,18 @@ Ba mục dưới đây phải sâu hơn phần còn lại vì chúng là nơi bu
 - **`rerank.py`** — giải thích *risk-aware ranking* và *recall-tail preservation* bằng lời, kèm giá trị hằng số thật. Nêu rõ hằng số này chỉ đo được bằng `tests/e2e/score_pipelines.py --types kis`, không đo được bằng `run_eval.py`.
 - **`sparse_index.py`** — cache BM25 build offline ~3,5 phút; điều gì xảy ra khi cache **chưa** build (fail loud hay im lặng trả rỗng?). Nếu im lặng ⇒ finding mức Cao: hybrid âm thầm suy biến về dense-only mà không ai biết, và mọi số đo hybrid sau đó là giả.
 
-- [ ] **Step 5: Vẽ sơ đồ phụ thuộc lõi**
+- [x] **Step 5: Vẽ sơ đồ phụ thuộc lõi**
 
 Chèn cuối §2 một khối ```mermaid `flowchart LR` thể hiện: `index_store` ở gốc → `retrieve` / `multi_index` → `hybrid` (fuse cùng `sparse_index` qua `fusion`) → `temporal_nms` → `rerank` → đầu ra pipeline. Chỉ vẽ cạnh **có thật trong output Step 2**, không vẽ cạnh "hợp lý về mặt khái niệm".
 
-- [ ] **Step 6: Tự kiểm chương 2**
+- [x] **Step 6: Tự kiểm chương 2**
 
 ```bash
 grep -c "^#### " docs/reports/source-code-audit-2026-08-31.md   # ky vong: 21 (11 + 10)
 grep -o "FINDING-[0-9]*" docs/reports/source-code-audit-2026-08-31.md | sort -u   # so lien tuc, khong trung, khong nhay coc
 ```
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add docs/reports/source-code-audit-2026-08-31.md
@@ -355,11 +355,11 @@ git commit -m "docs(audit): chuong 2 loi truy hoi — 10 file"
 - Consumes: §0.3 schema; sơ đồ lõi từ Task 2 (để nói rõ tool nghiệp vụ *tiêu thụ* hit từ lõi chứ không tự truy hồi).
 - Produces: §3 với 12 mục; bảng "tín hiệu bằng chứng" (OCR / Objects / ASR / caption) ghi rõ mỗi tín hiệu chạy **on-demand hay offline**, dữ liệu nằm ở đâu — Task 6 sẽ nối bảng này với phía sinh dữ liệu.
 
-- [ ] **Step 1: Đọc 12 file**
+- [x] **Step 1: Đọc 12 file**
 
 Thứ tự: `qa_classify.py` → `qa_normalize.py` → `qa_prompts.py` → `answer_qa.py` (nhánh Q&A, từ nhỏ tới lớn) → `trake_align.py` → `objects_lookup.py` → `asr_lookup.py` → `ocr_read.py` → `rewrite.py` → `translate_raw.py` → `__init__.py` → `CLAUDE.md`.
 
-- [ ] **Step 2: Xác minh ranh giới OCR vs Objects, và luật on-demand**
+- [x] **Step 2: Xác minh ranh giới OCR vs Objects, và luật on-demand**
 
 ```bash
 # objects_lookup KHONG duoc lam OCR that (CLAUDE.md noi ro "not OCR")
@@ -374,13 +374,13 @@ grep -n "call_llm" scripts/agent/tools/rewrite.py scripts/agent/tools/translate_
 
 Điểm phải kết luận rõ ràng, vì [CLAUDE.md](../../../CLAUDE.md) cấm chạy OCR/VLM trên toàn bộ 177K keyframe ở đường truy vấn: `ocr_read.py` có **giới hạn cứng** số ảnh không? Nếu giới hạn đến từ *lời gọi* chứ không từ *chính module*, đó là finding — luật chỉ được thực thi bằng kỷ luật của người gọi, một call site mới là vi phạm.
 
-- [ ] **Step 3: Soi `ocr_read.py` (573 dòng — file lớn nhất repo)**
+- [x] **Step 3: Soi `ocr_read.py` (573 dòng — file lớn nhất repo)**
 
 Liệt kê: có mấy backend OCR, chọn backend bằng gì, có fallback không, cache ở đâu, xử lý ảnh hỏng thế nào. Trả lời hai câu:
 - File 573 dòng này có **nhiều hơn một** trách nhiệm không? (đọc ảnh + chạy OCR + hậu xử lý + cache + chọn backend). Nếu có ⇒ finding loại (b) *điểm yếu*: file khó test, khó giữ trong đầu, và [tests/unit/test_ocr_read.py](../../tests/unit/test_ocr_read.py) phủ được bao nhiêu phần trong số đó.
 - Nó có phụ thuộc Elasticsearch không? Đối chiếu với `scripts/offline/ocr/es_index.py` và `index_ocr_es.py` ở Task 6 — nếu đường truy vấn cần ES mà `requirements.txt` không có client ES, hoặc ES không nằm trong Quick Start, đó là finding mức Cao (hệ thống có dependency hạ tầng ẩn).
 
-- [ ] **Step 4: Soi hợp đồng trả lời Q&A**
+- [x] **Step 4: Soi hợp đồng trả lời Q&A**
 
 ```bash
 grep -rn "def " scripts/agent/tools/answer_qa.py | head -30
@@ -391,15 +391,15 @@ Mô tả **3 tầng trả lời + cross-check** bằng lời: tầng nào chạy
 
 Ghi rõ ngoại lệ ngôn ngữ: prompt trong `qa_prompts.py` cố ý viết tiếng Anh, đổi một ký tự là đổi hành vi hệ thống. Đây là *ghi chú*, không phải finding.
 
-- [ ] **Step 5: Soi `trake_align.py` (pure, 102 dòng)**
+- [x] **Step 5: Soi `trake_align.py` (pure, 102 dòng)**
 
 Giải thích quy hoạch động đơn điệu (monotonic DP) và "rule-based plausibility" bằng lời + độ phức tạp. Kiểm: nó có thực sự pure không (dùng lệnh (a) ở Task 2 Step 3 cho file này), và [tests/unit/test_trake_align.py](../../tests/unit/test_trake_align.py) có phủ trường hợp **chuỗi sự kiện không tìm đủ frame** không.
 
-- [ ] **Step 6: Viết 12 mục + bảng tín hiệu bằng chứng**
+- [x] **Step 6: Viết 12 mục + bảng tín hiệu bằng chứng**
 
 Bảng đặt cuối §3: `| Tín hiệu | Module đọc | Nguồn dữ liệu (đường dẫn data/) | Sinh ra bởi (script offline) | On-demand hay precomputed |`. Cột "Sinh ra bởi" điền `?` nếu chưa xác định — Task 6 có nhiệm vụ quay lại đóng hết dấu `?`. Mọi `?` còn sót sau Task 6 là một finding "tín hiệu không rõ nguồn gốc".
 
-- [ ] **Step 7: Tự kiểm + commit**
+- [x] **Step 7: Tự kiểm + commit**
 
 ```bash
 grep -c "^#### " docs/reports/source-code-audit-2026-08-31.md   # ky vong: 33
@@ -420,7 +420,7 @@ git commit -m "docs(audit): chuong 3 tool nghiep vu — 12 file"
 - Consumes: sơ đồ lõi (Task 2), bảng tín hiệu bằng chứng (Task 3).
 - Produces: §4 với 6 mục + **3 sơ đồ tuần tự** (một cho mỗi pipeline) mà Task 5 dùng để chỉ ra router nào gọi pipeline nào; danh sách đầy đủ **mọi call site của `call_llm`** kèm số vòng lặp tối đa — Task 10 dùng để tính chi phí/rủi ro.
 
-- [ ] **Step 1: Đọc `config.py` trước tiên**
+- [x] **Step 1: Đọc `config.py` trước tiên**
 
 Ghi lại chính xác: 3 chế độ `AIC_MODE` (`local` / `test` / `contest`) ánh xạ sang provider và biến môi trường nào; `MAX_AGENT_LOOPS` bằng bao nhiêu; có retry/timeout/fallback không; điều gì xảy ra khi thiếu API key.
 
@@ -430,7 +430,7 @@ grep -n "AIC_MODE\|LM_STUDIO\|OPENROUTER\|MAX_AGENT_LOOPS\|timeout\|retry\|fallb
 
 Kiểm hai điều [CLAUDE.md](../../../CLAUDE.md) khẳng định: (i) mode `local` **không có** fallback trả phí — nó phải fail loud khi LM Studio chết; (ii) `contest` dùng `OPENROUTER_MODEL_CONTEST`. Sai bất kỳ điều nào ⇒ finding mức Cao (rủi ro tiêu tiền âm thầm).
 
-- [ ] **Step 2: Liệt kê toàn bộ call site của `call_llm` + kiểm chặn vòng lặp**
+- [x] **Step 2: Liệt kê toàn bộ call site của `call_llm` + kiểm chặn vòng lặp**
 
 ```bash
 grep -rn "call_llm" scripts --include=*.py | grep -v "def call_llm"
@@ -441,11 +441,11 @@ grep -rn "MAX_AGENT_LOOPS\|for _ in range\|while " scripts/agent/pipeline_qa.py 
 - Mọi vòng reflection/retry có bị chặn bởi `MAX_AGENT_LOOPS` không? Vòng nào không bị chặn ⇒ finding mức Cao ([CLAUDE.md](../../../CLAUDE.md) DO NOT cấm vòng LLM không giới hạn).
 - `query_expand.py` gọi `call_llm` **nhưng** [CLAUDE.md](../../../CLAUDE.md) xếp nó vào nhóm module **pure** ("no index, no model, no LLM, no I/O"). Nếu Task 2 Step 3 lệnh (a) và grep trên cùng xác nhận, đây là **mâu thuẫn tài liệu ↔ code** ⇒ finding: hoặc phân loại sai, hoặc `run_eval.py` đang tái dùng một hàm bí mật tốn tiền/không tất định. Kiểm thêm `run_eval.py` import gì từ `query_expand` (Task 7 xác nhận chéo).
 
-- [ ] **Step 3: Dựng 3 sơ đồ tuần tự**
+- [x] **Step 3: Dựng 3 sơ đồ tuần tự**
 
 Mỗi pipeline một khối ```mermaid `sequenceDiagram`, các bước theo đúng thứ tự gọi hàm trong code: nhận query → (rewrite?) → (expand?) → retrieve/hybrid → temporal_nms → rerank → (evidence?) → (LLM?) → kết quả. Ghi rõ bước nào **tốn LLM** và bước nào **tất định**.
 
-- [ ] **Step 4: Chỉ ra sự bất đối xứng giữa 3 pipeline**
+- [x] **Step 4: Chỉ ra sự bất đối xứng giữa 3 pipeline**
 
 Bảng `| Bước | KIS | Q&A | TRAKE |` với ô là ✔ / ✘ / tên hàm. Bắt buộc bàn tới:
 - `pipeline_kis.py` cố ý **không** tự dịch VN→EN, trong khi Q&A/TRAKE có `rewrite.py`. [ARCHITECTURE.md](../../../ARCHITECTURE.md) nói đây là chủ ý. Nêu **hệ quả**: người dùng gõ tiếng Việt vào KIS sẽ nhận kết quả tệ hơn hẳn vì SigLIP mạnh nhất trên tiếng Anh, và UI có bù được không (Task 8 xác nhận). Đây là finding loại (b) *điểm yếu* nếu UI không bù.
@@ -456,7 +456,7 @@ Bảng `| Bước | KIS | Q&A | TRAKE |` với ô là ✔ / ✘ / tên hàm. B�
   ```
   Một module *ranking* mà phụ thuộc module *serialize file nộp bài* là đảo ngược tầng — xác nhận rồi ghi finding về hướng phụ thuộc.
 
-- [ ] **Step 5: Viết 6 mục file + tự kiểm + commit**
+- [x] **Step 5: Viết 6 mục file + tự kiểm + commit**
 
 ```bash
 grep -c "^#### " docs/reports/source-code-audit-2026-08-31.md   # ky vong: 39
@@ -476,7 +476,7 @@ git commit -m "docs(audit): chuong 4 pipeline va cong LLM — 6 file"
 - Consumes: 3 sơ đồ tuần tự pipeline (Task 4).
 - Produces: §5 với 13 mục + **bảng endpoint đầy đủ** (`| Method | Path | Router | Pipeline gọi tới | Có tốn LLM |`) — Task 8 đối chiếu bảng này với `frontend/src/api/client.ts` để tìm endpoint mồ côi hai chiều.
 
-- [ ] **Step 1: Trích toàn bộ endpoint bằng grep, rồi mới đọc file**
+- [x] **Step 1: Trích toàn bộ endpoint bằng grep, rồi mới đọc file**
 
 ```bash
 grep -rn "@router\.\(get\|post\|put\|delete\)\|@app\." scripts/api --include=*.py
@@ -485,11 +485,11 @@ grep -n "include_router\|prefix=" scripts/api/main.py
 
 Bảng endpoint dựng từ output này, không dựng từ trí nhớ.
 
-- [ ] **Step 2: Đọc 13 file**
+- [x] **Step 2: Đọc 13 file**
 
 Thứ tự: `main.py` → `state.py` → `schemas.py` → 6 router → `_smoke_test.py` → 2 `__init__.py` → `CLAUDE.md`.
 
-- [ ] **Step 3: Kiểm 4 rủi ro đặc thù của tầng API**
+- [x] **Step 3: Kiểm 4 rủi ro đặc thù của tầng API**
 
 ```bash
 # (a) API co bypass call_llm / build_submission khong? Ky vong: rong
@@ -508,7 +508,7 @@ Kết luận bắt buộc cho từng cái:
 - (c) [CLAUDE.md](../../../CLAUDE.md) nói backend giữ state queue/session **trong RAM**. Nêu thẳng ba hệ quả: restart là mất sạch hàng đợi đang dựng; không chạy được nhiều worker uvicorn; không có khóa thì hai tab UI cùng sửa queue sẽ đua nhau. Đây là finding loại (b) *điểm yếu*, mức độ tùy vào việc thi đấu có dùng nhiều máy/nhiều tab không.
 - (d) Router nào **không** có `HTTPException` (lệnh `grep -L`) ⇒ finding: lỗi rơi ra thành 500 trần, trái quy tắc "trong API endpoint, bắt lỗi và trả status rõ ràng".
 
-- [ ] **Step 4: Soi `images.py` và `videos.py` — hai router phục vụ file**
+- [x] **Step 4: Soi `images.py` và `videos.py` — hai router phục vụ file**
 
 Trả lời: chúng phục vụ file từ đâu dưới `data/`, có kiểm đường dẫn không (path traversal: request `../../.env` thì sao), có giới hạn kích thước/stream không. Backend chỉ chạy localhost nên mức độ thường là Thấp, **nhưng vẫn phải ghi** vì đây là code phục vụ file theo tham số người dùng.
 
@@ -516,11 +516,11 @@ Trả lời: chúng phục vụ file từ đâu dưới `data/`, có kiểm đư
 grep -n "Path\|resolve\|\.\.\|FileResponse\|StreamingResponse" scripts/api/routers/images.py scripts/api/routers/videos.py
 ```
 
-- [ ] **Step 5: Soi `_smoke_test.py`**
+- [x] **Step 5: Soi `_smoke_test.py`**
 
 Nó nằm trong `scripts/api/` chứ không phải `tests/` — giải thích vì sao (cần API key + server đang chạy, không phải pytest tất định) và nêu cái giá: nó không bao giờ chạy trong `pytest tests/unit`, nên không ai phát hiện khi nó mục nát. Kiểm nó có còn khớp với bảng endpoint ở Step 1 không — endpoint nào smoke test **không** chạm tới ⇒ ghi vào cột trống của bảng.
 
-- [ ] **Step 6: Viết 13 mục + bảng endpoint + tự kiểm + commit**
+- [x] **Step 6: Viết 13 mục + bảng endpoint + tự kiểm + commit**
 
 ```bash
 grep -c "^#### " docs/reports/source-code-audit-2026-08-31.md   # ky vong: 52
@@ -541,7 +541,7 @@ git commit -m "docs(audit): chuong 5 tang API — 13 file"
 - Consumes: bảng tín hiệu bằng chứng của Task 3 (**phải đóng hết dấu `?` ở cột "Sinh ra bởi"**).
 - Produces: §6 với 25 mục + **sơ đồ dòng dữ liệu offline** (script → file dưới `data/` → module runtime tiêu thụ). Task 9 nối tiếp sơ đồ này về phía GPU job.
 
-- [ ] **Step 1: Đọc 4 file `submit/` trước — đây là ranh giới đúng-sai của cuộc thi**
+- [x] **Step 1: Đọc 4 file `submit/` trước — đây là ranh giới đúng-sai của cuộc thi**
 
 Với `build_submission.py`: định dạng CSV chính xác (cột, thứ tự, có header không), quy tắc đặt tên file, cấu trúc ZIP, số dòng tối đa. Với `validate_submission.py`: nó kiểm **những gì**, và quan trọng hơn — nó **không** kiểm gì.
 
@@ -552,7 +552,7 @@ grep -n "def \|assert\|raise\|check" scripts/submit/validate_submission.py
 
 Câu hỏi phải trả lời dứt khoát: **validator có kiểm đủ mọi ràng buộc mà builder có thể vi phạm không?** Liệt kê ràng buộc từ [docs/rules/](../../rules/) mà validator bỏ sót ⇒ mỗi cái là một finding mức Cao (sai định dạng = mất điểm cả bài thi, và đây là loại lỗi chỉ lộ ra khi đã nộp).
 
-- [ ] **Step 2: Kiểm luật single-writer của file nộp bài**
+- [x] **Step 2: Kiểm luật single-writer của file nộp bài**
 
 ```bash
 grep -rn "to_csv\|csv.writer\|ZipFile\|\.zip" scripts tests --include=*.py | grep -v "scripts/submit/build_submission.py"
@@ -560,7 +560,7 @@ grep -rn "to_csv\|csv.writer\|ZipFile\|\.zip" scripts tests --include=*.py | gre
 
 Bất kỳ chỗ nào ngoài `build_submission.py` ghi CSV/ZIP nộp bài ⇒ finding mức Cao. Lưu ý phân biệt: script ghi CSV **đề thi** (`generate_sotuyen1_csv.py`, `generate_sotuyen2_csv.py`) là hợp lệ, không phải file nộp bài — nêu rõ sự phân biệt này trong báo cáo để người đọc sau không báo động nhầm.
 
-- [ ] **Step 3: Đọc 21 file `offline/`, nhóm theo 4 thư mục con**
+- [x] **Step 3: Đọc 21 file `offline/`, nhóm theo 4 thư mục con**
 
 Mỗi thư mục con viết **một đoạn dẫn** trước các mục file: thư mục này sinh ra artifact gì, chạy một lần hay lặp lại, chạy ở đâu (máy dev / Kaggle / Colab).
 
@@ -575,7 +575,7 @@ diff <(grep -o "def [a-z_]*" scripts/offline/shards/setup_kaggle_shards.py) <(gr
 
 Nếu hai file setup trùng lặp phần lớn logic ⇒ finding loại (b): 880 dòng code sinh-job gần như song sinh, sửa một bên quên bên kia.
 
-- [ ] **Step 4: Truy vết Elasticsearch — dependency hạ tầng khả nghi**
+- [x] **Step 4: Truy vết Elasticsearch — dependency hạ tầng khả nghi**
 
 ```bash
 grep -rn "elasticsearch\|Elasticsearch\|localhost:9200\|es_client" scripts tests --include=*.py
@@ -584,15 +584,15 @@ grep -in "elastic" requirements.txt README.md CLAUDE.md ARCHITECTURE.md
 
 [CLAUDE.md](../../../CLAUDE.md) khẳng định "No database, no ORM, no message queue — everything is files". Nhưng có `es_index.py` và `index_ocr_es.py`. Xác định dứt khoát: đường truy vấn production có cần ES đang chạy không? Nếu **có** ⇒ finding mức Cao (tài liệu sai + hệ thống có dependency hạ tầng không được khai báo trong Quick Start). Nếu **không** (chỉ là nhánh thử nghiệm bỏ dở) ⇒ finding mức Trung bình (code chết còn nằm trong bucket production, gây hiểu nhầm cho người mới).
 
-- [ ] **Step 5: Đóng hết dấu `?` trong bảng tín hiệu bằng chứng**
+- [x] **Step 5: Đóng hết dấu `?` trong bảng tín hiệu bằng chứng**
 
 Quay lại bảng cuối §3, điền cột "Sinh ra bởi" cho từng tín hiệu (OCR / Objects / ASR / caption). Dấu `?` nào không đóng được ⇒ ghi finding "tín hiệu runtime không truy được nguồn sinh" và nêu rõ đã tìm ở đâu.
 
-- [ ] **Step 6: Vẽ sơ đồ dòng dữ liệu offline**
+- [x] **Step 6: Vẽ sơ đồ dòng dữ liệu offline**
 
 ```mermaid `flowchart TD`: script offline → artifact dưới `data/` (ghi tên đường dẫn thật) → module runtime đọc nó. Artifact nào **không** module runtime nào đọc ⇒ đánh dấu đỏ và ghi finding "tiền xử lý sinh ra dữ liệu không ai dùng".
 
-- [ ] **Step 7: Viết 29 mục + tự kiểm + commit**
+- [x] **Step 7: Viết 29 mục + tự kiểm + commit**
 
 ```bash
 grep -c "^#### " docs/reports/source-code-audit-2026-08-31.md   # ky vong: 81
@@ -620,7 +620,7 @@ git commit -m "docs(audit): chuong 6 nop bai va offline — 29 file"
 - Consumes: bản đồ module của các Task 2–6 (để tính độ phủ theo module, không theo dòng).
 - Produces: §7 + **ma trận phủ kiểm thử** `| Module production | Unit test | E2E test | Harness nào chạm tới hằng số của nó |` — Task 10 dùng làm bằng chứng chính cho chương điểm yếu.
 
-- [ ] **Step 1: Chạy thật bộ unit test và ghi output**
+- [x] **Step 1: Chạy thật bộ unit test và ghi output**
 
 ```bash
 .venv\Scripts\python.exe -m pytest tests\unit -q
@@ -628,7 +628,7 @@ git commit -m "docs(audit): chuong 6 nop bai va offline — 29 file"
 
 Chép nguyên dòng tổng kết (số pass/fail/skip, thời gian) vào báo cáo. **Không bình luận số liệu.** Test nào `skip` ⇒ ghi lý do skip.
 
-- [ ] **Step 2: Đối chiếu test ↔ module, tìm vùng trống**
+- [x] **Step 2: Đối chiếu test ↔ module, tìm vùng trống**
 
 ```bash
 for f in $(git ls-files 'scripts/agent/**/*.py' | grep -v __init__); do
@@ -639,7 +639,7 @@ done | sort -n
 
 Module có `0` ⇒ không test nào nhắc tên. Ứng viên đứng đầu danh sách (đã biết từ khảo sát): `index_store.py`, `hybrid.py`, `multi_index.py`, `retrieve.py`, `objects_lookup.py`, `frames.py` — tức **lõi truy hồi gần như không có unit test**, trong khi các module pure nhỏ (`fusion`, `temporal_nms`, `trake_align`) lại có. Xác nhận bằng output thật rồi ghi finding loại (b) mức Cao, nêu nguyên nhân cấu trúc: lõi cần `data/` nên khó test tất định, và hệ thống chưa có fixture index giả.
 
-- [ ] **Step 3: Phân loại 5 harness đo lường — chúng đo *cái gì* và *bỏ sót cái gì***
+- [x] **Step 3: Phân loại 5 harness đo lường — chúng đo *cái gì* và *bỏ sót cái gì***
 
 Bảng `| Harness | Chạm tới code nào | Cần data/ | Cần API key | Tất định | Đo được hằng số nào |` cho: `pytest tests/unit`, `golden_kis_snapshot.py --check`, `score_pipelines.py`, `run_eval.py`, `sweep_rerank.py`.
 
@@ -651,7 +651,7 @@ grep -n "^import\|^from" tests/e2e/score_pipelines.py | head -30
 
 Xác nhận cảnh báo trong [CLAUDE.md](../../../CLAUDE.md): `run_eval.py` **không** import `rerank.py`, nên tune `MARGIN_THRESHOLD` bằng nó là đo nhầm chỗ. Đây là finding loại (b) **mức Cao**: hệ thống có hai harness trông giống nhau, cái phổ biến hơn lại không chạm tới các hằng số hay bị chỉnh nhất — một cái bẫy có thật, và [CLAUDE.md](../../../CLAUDE.md) phải viết cả một mục cảnh báo chính là bằng chứng nó đã cắn người rồi.
 
-- [ ] **Step 4: Soi 6 file ground truth và quan hệ giữa chúng**
+- [x] **Step 4: Soi 6 file ground truth và quan hệ giữa chúng**
 
 ```bash
 git status --short tests/eval/
@@ -668,7 +668,7 @@ Có **6** file ground truth cùng tồn tại: `eval_ground_truth.json` (bản h
 - `_thunghiem_draft` và `_v2_template` có script/test nào còn tham chiếu không (lệnh grep ở trên)? Nếu không ai dùng ⇒ finding "ground truth mồ côi", đặc biệt nguy hiểm ở thư mục ground truth vì người sau dễ sửa nhầm file chết.
 - Bản hợp nhất phủ bao nhiêu query cho **mỗi** loại KIS / Q&A / TRAKE? Lệch nặng về KIS ⇒ finding: hai loại còn lại gần như không được đo.
 
-- [ ] **Step 4b: Đối chiếu với `tests/eval/AUDIT_REPORT.md` — báo cáo rà soát đã có sẵn**
+- [x] **Step 4b: Đối chiếu với `tests/eval/AUDIT_REPORT.md` — báo cáo rà soát đã có sẵn**
 
 Repo **đã có** một file tên `AUDIT_REPORT.md` trong `tests/eval/`. Đọc trọn nó và trả lời trong §7:
 
@@ -676,11 +676,11 @@ Repo **đã có** một file tên `AUDIT_REPORT.md` trong `tests/eval/`. Đọc 
 - Kết luận của nó có còn đúng với code hiện tại không?
 - Ghi vào cuối §7 một đoạn **"Quan hệ với AUDIT_REPORT.md có sẵn"** nêu rõ ranh giới: cái nào bao trùm cái nào, chỗ nào hai bên nói khác nhau. Nếu mâu thuẫn ⇒ finding. Task 10 sẽ nhắc lại ranh giới này trong tóm tắt điều hành để người đọc không tưởng đây là bản thay thế.
 
-- [ ] **Step 5: Soi `normalize_gt.py` (303) và `widen_gt_windows.py` (116)**
+- [x] **Step 5: Soi `normalize_gt.py` (303) và `widen_gt_windows.py` (116)**
 
 Hai script này **sửa ground truth**. Trả lời câu hỏi khó: nới cửa sổ ground truth làm điểm số tăng lên — có ranh giới nào ngăn việc nới cho tới khi số đẹp không? Có ghi lại tham số nới đã dùng ở đâu không? Nếu không ⇒ finding loại (b) mức Cao: thước đo có thể bị dịch chuyển mà không để lại dấu vết, khiến mọi so sánh lịch sử trong `docs/reports/` mất giá trị.
 
-- [ ] **Step 6: Viết 49 mục + ma trận phủ + tự kiểm + commit**
+- [x] **Step 6: Viết 49 mục + ma trận phủ + tự kiểm + commit**
 
 Với 18 file unit test, mỗi mục ngắn gọn nhưng **vẫn đủ 1 mục/file** — nêu nó khóa hành vi nào và có monkeypatch đúng module sở hữu hàm không (quy tắc trong [CLAUDE.md](../../../CLAUDE.md), đã từng sai).
 
@@ -703,7 +703,7 @@ git commit -m "docs(audit): chuong 7 kiem thu va do luong — 49 file"
 - Consumes: bảng endpoint của Task 5.
 - Produces: §8 với 37 mục + **bảng đối chiếu hai chiều** endpoint backend ↔ lời gọi trong `client.ts`.
 
-- [ ] **Step 1: Đọc `client.ts` trước, rồi đối chiếu ngay với bảng endpoint Task 5**
+- [x] **Step 1: Đọc `client.ts` trước, rồi đối chiếu ngay với bảng endpoint Task 5**
 
 ```bash
 grep -n "fetch\|/api/" frontend/src/api/client.ts
@@ -713,7 +713,7 @@ Dựng bảng `| Path | Backend có? | client.ts gọi? |`. Hai loại lệch, m
 - Endpoint backend **không** frontend nào gọi ⇒ code chết hoặc tính năng chưa nối dây.
 - Lời gọi frontend **không** khớp endpoint backend nào ⇒ tính năng hỏng lúc chạy (TypeScript không bắt được vì URL là chuỗi).
 
-- [ ] **Step 2: Truy vết `mock/chatScenarios.ts` (161 dòng) — dữ liệu giả trong bundle production**
+- [x] **Step 2: Truy vết `mock/chatScenarios.ts` (161 dòng) — dữ liệu giả trong bundle production**
 
 ```bash
 grep -rn "chatScenarios\|mock" frontend/src --include=*.tsx --include=*.ts | grep -v "mock/chatScenarios.ts"
@@ -721,7 +721,7 @@ grep -rn "chatScenarios\|mock" frontend/src --include=*.tsx --include=*.ts | gre
 
 Xác định: `ChatScreen.tsx` dùng mock hay dùng API thật? Có cờ bật/tắt không, hay mock được hardwire? Nếu màn Chat chạy bằng dữ liệu giả mà nhìn như thật ⇒ finding **mức Cao**: người dùng (và người demo trước ban giám khảo) có thể tưởng tính năng đã chạy. Nêu rõ mức độ hoàn thiện thật của màn Chat.
 
-- [ ] **Step 3: Kiểm bù trừ cho việc KIS không tự dịch**
+- [x] **Step 3: Kiểm bù trừ cho việc KIS không tự dịch**
 
 Task 4 đã xác định `pipeline_kis.py` không tự dịch VN→EN. Kiểm frontend có bù không:
 
@@ -731,7 +731,7 @@ grep -rn "rewrite\|/api/rewrite\|dich\|translate" frontend/src --include=*.tsx -
 
 Nếu `RewriteChips.tsx` cho người dùng chủ động dịch trước khi tìm ⇒ bù được, hạ mức finding của Task 4 xuống và **ghi rõ đã hạ vì lý do gì**. Nếu không ⇒ giữ nguyên và nâng thành finding chung của hệ thống.
 
-- [ ] **Step 4: Đánh giá cấu trúc, không đánh giá thẩm mỹ**
+- [x] **Step 4: Đánh giá cấu trúc, không đánh giá thẩm mỹ**
 
 ```bash
 grep -c "useState" frontend/src/screens/*.tsx
@@ -744,7 +744,7 @@ Ba điều phải kết luận:
 - `TrakeScreen.tsx` 377 dòng + `QaScreen.tsx` 285 dòng: có phải màn hình đang ôm cả logic gọi API lẫn render không (không có tầng hook riêng)?
 - Hai file CSS 825 dòng tổng: `app.css` và `organic.css` chia theo tiêu chí gì, có chồng lấn không.
 
-- [ ] **Step 5: Kiểm quy ước ngôn ngữ ở frontend**
+- [x] **Step 5: Kiểm quy ước ngôn ngữ ở frontend**
 
 [CLAUDE.md](../../../CLAUDE.md) yêu cầu **UI text tiếng Việt có dấu**. Kiểm mẫu:
 
@@ -754,7 +754,7 @@ grep -rn "placeholder=\|>Search<\|>Submit<\|>Loading" frontend/src --include=*.t
 
 Chuỗi UI tiếng Anh còn sót ⇒ finding mức Thấp, nhưng **liệt kê cụ thể file:line**, không nói chung chung.
 
-- [ ] **Step 6: Viết 39 mục + tự kiểm + commit**
+- [x] **Step 6: Viết 39 mục + tự kiểm + commit**
 
 10 file config viết ngắn (1–2 dòng/mục là đủ, nhưng vẫn phải có mục). 9 component trong `chat/` gộp cùng một đoạn dẫn rồi liệt kê từng mục.
 
@@ -777,11 +777,11 @@ git commit -m "docs(audit): chuong 8 frontend — 39 file"
 - Consumes: sơ đồ dòng dữ liệu offline (Task 6) — chương này nối thêm đầu nguồn phía GPU.
 - Produces: §9 + bảng `| Job | Model | Sinh ra artifact gì | Artifact đó có được dùng ở runtime không | Còn sống hay đã bỏ |`.
 
-- [ ] **Step 1: Đọc 2 file CLAUDE.md + README trước để hiểu quy ước job**
+- [x] **Step 1: Đọc 2 file CLAUDE.md + README trước để hiểu quy ước job**
 
 Lưu ý ràng buộc: **không được tự đẩy job GPU thật** ([CLAUDE.md](../../../CLAUDE.md)). Task này chỉ đọc.
 
-- [ ] **Step 2: Đối chiếu job ↔ `MODEL_REGISTRY` trong `multi_index.py`**
+- [x] **Step 2: Đối chiếu job ↔ `MODEL_REGISTRY` trong `multi_index.py`**
 
 ```bash
 grep -n "MODEL_REGISTRY" -A 30 scripts/agent/tools/multi_index.py
@@ -792,7 +792,7 @@ ls kaggle_jobs/
 - Job đã chạy nhưng backbone **không** có trong registry ⇒ công GPU bỏ phí / thí nghiệm bỏ dở.
 - Registry khai backbone mà **không** job nào sinh embedding ⇒ chọn tag đó lúc chạy sẽ hỏng.
 
-- [ ] **Step 3: Xác minh mâu thuẫn `colab_jobs/`**
+- [x] **Step 3: Xác minh mâu thuẫn `colab_jobs/`**
 
 ```bash
 git ls-files colab_jobs
@@ -805,7 +805,7 @@ grep -rn "colab_jobs" CLAUDE.md ARCHITECTURE.md scripts --include=*.md --include
 - 3 notebook có khác nhau ngoài chỉ số shard không? Dùng cùng phép đo ở Step 4.
 - Đối chiếu với `kaggle_jobs/06_paddleocr_ocr_shard{0,1,2}/` — hai họ shard cùng làm PaddleOCR trên hai nền tảng. Có phải một cái đã thay thế cái kia mà bản cũ chưa được dọn không?
 
-- [ ] **Step 4: Đo mức trùng lặp giữa các job shard**
+- [x] **Step 4: Đo mức trùng lặp giữa các job shard**
 
 ```bash
 diff kaggle_jobs/06_paddleocr_ocr_shard0/main.py kaggle_jobs/06_paddleocr_ocr_shard1/main.py
@@ -814,7 +814,7 @@ diff kaggle_jobs/07_vintern_caption_shard0/main.py kaggle_jobs/07_vintern_captio
 
 Nếu các shard chỉ khác nhau một hằng số chỉ số shard ⇒ finding loại (b): 6 bản sao gần như y hệt, sửa bug phải sửa 6 chỗ. Ghi rõ **số dòng khác nhau thật** từ output `diff`, không ước lượng.
 
-- [ ] **Step 5: Viết 39 mục + tự kiểm + commit**
+- [x] **Step 5: Viết 39 mục + tự kiểm + commit**
 
 Các job na ná nhau vẫn phải có **mục riêng** (cấm "tương tự trên"), nhưng mục có thể ngắn 3 dòng và trỏ tới đoạn dẫn chung của nhóm.
 
@@ -835,7 +835,7 @@ git commit -m "docs(audit): chuong 9 job GPU ngoai — 39 file"
 - Consumes: toàn bộ FINDING của Task 1–9, ma trận phủ kiểm thử (Task 7), bảng endpoint (Task 5), sơ đồ dòng dữ liệu (Task 6).
 - Produces: chương cuối + tóm tắt điều hành. **Không phát sinh finding mới** — nếu trong lúc tổng hợp nảy ra phát hiện mới, phải quay lại chèn nó vào đúng mục file ở chương tương ứng rồi mới gom về đây.
 
-- [ ] **Step 1: Trích toàn bộ finding ra một chỗ**
+- [x] **Step 1: Trích toàn bộ finding ra một chỗ**
 
 ```bash
 grep -n "FINDING-" docs/reports/source-code-audit-2026-08-31.md | grep -v "xem FINDING"
@@ -845,7 +845,7 @@ grep -c "Mức độ:\*\* Cao" docs/reports/source-code-audit-2026-08-31.md
 
 Kiểm tính toàn vẹn: số liên tục, không nhảy cóc, không trùng. Số nào lệch ⇒ sửa tại chỗ trước khi viết tiếp.
 
-- [ ] **Step 2: Viết §10.1 — Bảng tổng hợp finding**
+- [x] **Step 2: Viết §10.1 — Bảng tổng hợp finding**
 
 Bảng đầy đủ, sắp xếp **Cao → Trung bình → Thấp**, rồi theo số thứ tự:
 
@@ -853,7 +853,7 @@ Bảng đầy đủ, sắp xếp **Cao → Trung bình → Thấp**, rồi theo 
 
 Cột "Loại" chỉ nhận hai giá trị: `Bất hợp lý` (a) hoặc `Điểm yếu` (b).
 
-- [ ] **Step 3: Viết §10.2 — Điểm yếu hệ thống theo chủ đề**
+- [x] **Step 3: Viết §10.2 — Điểm yếu hệ thống theo chủ đề**
 
 Đây là phần có giá trị nhất của báo cáo. **Không** lặp lại bảng §10.1; mỗi chủ đề là một luận điểm, dẫn 2–4 finding làm bằng chứng, và nêu vì sao nhiều triệu chứng rời rạc lại cùng một gốc. Bắt buộc đủ 7 chủ đề (thêm được, không bớt):
 
@@ -865,7 +865,7 @@ Cột "Loại" chỉ nhận hai giá trị: `Bất hợp lý` (a) hoặc `Điể
 6. **Trùng lặp bị nhân bản** — 6 job shard, 2 script setup Kaggle/Colab. Chi phí: mỗi lần sửa bug là N lần sửa, và N-1 cơ hội quên.
 7. **Rủi ro vận hành ngày thi** — state queue trong RAM (restart là mất); màn Chat có thể đang chạy mock; validator có thể không phủ hết luật BTC; `.env` sai mode là tiêu tiền hoặc đo bằng model yếu.
 
-- [ ] **Step 4: Viết §10.3 — Ba câu hỏi rủi ro cao nhất, có kèm cách kiểm chứng**
+- [x] **Step 4: Viết §10.3 — Ba câu hỏi rủi ro cao nhất, có kèm cách kiểm chứng**
 
 Chọn đúng **3** finding nguy hiểm nhất cho kết quả thi đấu. Với mỗi cái, viết một khối:
 
@@ -878,15 +878,15 @@ Chọn đúng **3** finding nguy hiểm nhất cho kết quả thi đấu. Với
 
 Không đề xuất giải pháp dài dòng — báo cáo này là chẩn đoán, không phải kế hoạch sửa. Việc sửa thuộc [PLAN.md](../../../PLAN.md).
 
-- [ ] **Step 5: Viết §10.4 — Những gì hệ thống làm ĐÚNG**
+- [x] **Step 5: Viết §10.4 — Những gì hệ thống làm ĐÚNG**
 
 Bắt buộc có, để báo cáo cân bằng và đáng tin. Nêu 4–6 điểm, mỗi điểm dẫn bằng chứng cụ thể (ví dụ: tách module pure để eval tái dùng đúng thuật toán production; 4 bucket phân theo *thời điểm code chạy* thay vì theo chủ đề; `decisions-log.md` ghi cả sai lầm; ba chế độ `AIC_MODE` chống tiêu tiền nhầm). Một báo cáo chỉ toàn lỗi là báo cáo chưa đọc kỹ.
 
-- [ ] **Step 6: Chèn Tóm tắt điều hành + hoàn thiện mục lục**
+- [x] **Step 6: Chèn Tóm tắt điều hành + hoàn thiện mục lục**
 
 Thay `<!-- TÓM TẮT ĐIỀU HÀNH — Task 10 điền -->` ở đầu file bằng **đúng 1 trang**: hệ thống làm gì, quy mô (số file / dòng theo tầng), tổng số finding chia theo mức độ, 3 rủi ro cao nhất (một dòng mỗi cái, link tới §10.3), và một câu đánh giá tổng thể về độ trưởng thành. Cập nhật mục lục thành link tới đủ 11 chương + các tiểu mục §10.1–§10.4.
 
-- [ ] **Step 7: Kiểm tra toàn vẹn lần cuối trên cả báo cáo**
+- [x] **Step 7: Kiểm tra toàn vẹn lần cuối trên cả báo cáo**
 
 ```bash
 # 1. Du 208 muc file?
@@ -904,7 +904,7 @@ grep -o "FINDING-[0-9]*" docs/reports/source-code-audit-2026-08-31.md | sort -u
 
 Kỳ vọng: (1) khớp (2) sau khi trừ các file đã loại trừ có ghi trong §0.2 — chênh lệch phải **giải thích được bằng danh sách loại trừ**, nếu không thì có file bị bỏ sót; (3) rỗng; (4) rỗng; (5) liên tục từ 01.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add docs/reports/source-code-audit-2026-08-31.md

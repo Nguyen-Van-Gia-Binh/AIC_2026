@@ -29,3 +29,7 @@ graphify-out/
 
 # Manifest cua model da retire (sinh lai duoc bang kaggle_jobs/) — khong commit
 docs/_archive/manifest_*.csv
+
+# Backend logs
+logs/
+*.log

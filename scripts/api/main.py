@@ -16,10 +16,16 @@ _ROOT = Path(__file__).resolve().parent.parent.parent
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
-from fastapi import FastAPI
+import time
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 
 from scripts.agent.tools.index_store import preload
+from scripts.api.logging_config import setup_logging, get_logger
+
+# Khởi tạo hệ thống per-session logging
+setup_logging()
+_http_logger = get_logger("api.http")
 
 app = FastAPI(title="AIC2026 Backend API")
 
@@ -29,6 +35,27 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def log_requests_middleware(request: Request, call_next):
+    start_time = time.perf_counter()
+    method = request.method
+    path = request.url.path
+    query = request.url.query
+    query_str = f"?{query}" if query else ""
+    client_ip = request.client.host if request.client else "unknown"
+
+    _http_logger.info(f"[REQ] {method} {path}{query_str} (client: {client_ip})")
+    try:
+        response: Response = await call_next(request)
+        duration_ms = (time.perf_counter() - start_time) * 1000.0
+        _http_logger.info(f"[RES] {method} {path} -> {response.status_code} ({duration_ms:.1f}ms)")
+        return response
+    except Exception as exc:
+        duration_ms = (time.perf_counter() - start_time) * 1000.0
+        _http_logger.error(f"[ERR] {method} {path} -> 500 ({duration_ms:.1f}ms): {exc}", exc_info=True)
+        raise exc
 
 
 @app.on_event("startup")

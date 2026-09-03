@@ -317,7 +317,7 @@ def main() -> int:
     return 0
 
 
-# Bo test: tests/unit/test_normalize_gt.py
+# Bộ test: tests/unit/test_normalize_gt.py
 
 if __name__ == "__main__":
     raise SystemExit(main())

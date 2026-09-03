@@ -58,7 +58,7 @@ hẳn giữa 2.x và 3.x (xem Global Constraints).
   - `format_ocr_hint(ocr_results: dict[int, list[str]]) -> str` — trả về `""` nếu `ocr_results` rỗng,
     ngược lại trả về đoạn text nhiều dòng liệt kê chữ đọc được theo từng candidate.
 
-- [ ] **Step 1: Thêm dependency vào `requirements.txt`**
+- [x] **Step 1: Thêm dependency vào `requirements.txt`**
 
 Mở [requirements.txt](../../../requirements.txt), thêm 2 dòng ngay sau `python-dotenv==1.2.3` (trước
 khối comment `# scripts/eval/`):
@@ -85,7 +85,7 @@ Nếu lệnh trên lỗi (mạng chặn tải model, xung đột đúng như r�
 lại lỗi cụ thể, đây là tín hiệu cần fallback graceful ở Step 3 (không phải lý do dừng task, vì
 `_get_engine()` đã thiết kế để không crash).
 
-- [ ] **Step 2: Sửa 2 chỗ PLAN.md còn ghi EasyOCR (khớp DECISION.md đã chốt PaddleOCR)**
+- [x] **Step 2: Sửa 2 chỗ PLAN.md còn ghi EasyOCR (khớp DECISION.md đã chốt PaddleOCR)**
 
 Ở [PLAN.md](../../../PLAN.md) dòng 28-29, đổi:
 
@@ -118,7 +118,7 @@ thành:
 (Đây đúng là nội dung DECISION.md mục "OCR on-demand (Phase 5)" đã chốt 2026-08-24 — commit `6838fd1`
 chỉ revert vì bị lẫn nhầm vào commit Phase 4, không phải đảo ngược quyết định.)
 
-- [ ] **Step 3: Viết `scripts/agent/tools/ocr_read.py`**
+- [x] **Step 3: Viết `scripts/agent/tools/ocr_read.py`**
 
 ```python
 """
@@ -258,7 +258,7 @@ if __name__ == "__main__":
           "chinh xac 100%).")
 ```
 
-- [ ] **Step 4: Chạy self-test, xác nhận không crash**
+- [x] **Step 4: Chạy self-test, xác nhận không crash**
 
 ```
 .venv\Scripts\python.exe scripts\agent\tools\ocr_read.py
@@ -270,7 +270,7 @@ theo đúng phiên bản cài được), sửa lại vòng lặp trong `_ocr_sin
 chạy lại bước này tới khi self-test 1 PASS và self-test 2 in ra được text hợp lý (không bắt buộc khớp
 100% GT, chỉ cần thấy rõ ràng có đọc được chữ/số, không phải toàn chuỗi rỗng cho cả 3 ảnh).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add requirements.txt PLAN.md scripts/agent/tools/ocr_read.py
@@ -290,7 +290,7 @@ git commit -m "feat(phase5): add ocr_read.py — PaddleOCR wrapper for on-demand
 - Produces: `answer_from_hits()` giữ nguyên signature/shape trả về — không đổi gì cho code gọi nó
   (`pipeline_qa.py` không cần sửa).
 
-- [ ] **Step 1: Thêm import**
+- [x] **Step 1: Thêm import**
 
 Trong [scripts/agent/tools/answer_qa.py](../../../scripts/agent/tools/answer_qa.py) dòng 27, ngay sau
 dòng import `ocr_lookup`:
@@ -300,7 +300,7 @@ from agent.tools.ocr_lookup import get_objects, objects_contain_keywords
 from agent.tools.ocr_read import read_text_from_hits, format_ocr_hint
 ```
 
-- [ ] **Step 2: Thêm placeholder `{ocr_hint}` vào `ANSWER_FROM_IMAGES_PROMPT` + hằng số hint template**
+- [x] **Step 2: Thêm placeholder `{ocr_hint}` vào `ANSWER_FROM_IMAGES_PROMPT` + hằng số hint template**
 
 Thay khối `ANSWER_FROM_IMAGES_PROMPT` (dòng 51-66) — chỉ thêm 1 dòng `{ocr_hint}` sau dòng Question,
 không đổi phần còn lại:
@@ -330,7 +330,7 @@ as a hint, verify every digit/word against what you actually see in the image be
 """
 ```
 
-- [ ] **Step 3: Chạy OCR khi cần, chèn hint vào prompt Tier 2**
+- [x] **Step 3: Chạy OCR khi cần, chèn hint vào prompt Tier 2**
 
 Trong hàm `answer_from_hits()`, thay khối Tier 2 (dòng 186-213):
 
@@ -375,7 +375,7 @@ Trong hàm `answer_from_hits()`, thay khối Tier 2 (dòng 186-213):
         }
 ```
 
-- [ ] **Step 4: Chạy self-test CLI có sẵn của `answer_qa.py`, xác nhận không crash**
+- [x] **Step 4: Chạy self-test CLI có sẵn của `answer_qa.py`, xác nhận không crash**
 
 ```
 .venv\Scripts\python.exe scripts\agent\tools\answer_qa.py
@@ -385,7 +385,7 @@ Expected: in ra `answer`/`confidence`/`method`/`best_hit` như trước (câu h�
 cần đọc chữ nên `ocr_hint` sẽ rỗng — đây là test "không regression", không phải test OCR thật; OCR
 thật được test ở Task 3).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add scripts/agent/tools/answer_qa.py
@@ -405,7 +405,7 @@ git commit -m "feat(phase5): wire OCR hint into answer_qa.py Tier 2 vision promp
   monkeypatch `read_text_from_hits` giống cách `test_phase4_trake.py` đã monkeypatch `rewrite_query`
   — xem file đó dòng 32-39 để tham khảo đúng kỹ thuật).
 
-- [ ] **Step 1: Viết `scripts/test_phase5_ocr.py`**
+- [x] **Step 1: Viết `scripts/test_phase5_ocr.py`**
 
 3 câu hỏi tự tạo tái dùng đúng `video_id`/`frame_id` GT đã có sẵn trong `queries/eval_ground_truth.json`
 (e-kis-ai-007, e-kis-ai-016, e-kis-ai-013 — cả 3 đều mô tả rõ chữ/số nhìn thấy trong frame, tra `n` từ
@@ -511,7 +511,7 @@ if __name__ == "__main__":
     main()
 ```
 
-- [ ] **Step 2: Chạy benchmark, dán nguyên output vào report cho người dùng**
+- [x] **Step 2: Chạy benchmark, dán nguyên output vào report cho người dùng**
 
 ```
 .venv\Scripts\python.exe scripts\test_phase5_ocr.py
@@ -521,13 +521,13 @@ Chỉ dán lại số liệu/output thô (answer/confidence/method mỗi pass) k
 định OCR "tốt hơn"/"chính xác hơn" hay chấm điểm chất lượng; đây là phần người dùng tự trải nghiệm và
 đánh giá lại (đã được người dùng yêu cầu rõ, xem hội thoại lúc lập plan này).
 
-- [ ] **Step 3: Cập nhật `PLAN.md` mục Phase 5**
+- [x] **Step 3: Cập nhật `PLAN.md` mục Phase 5**
 
 Thêm đoạn "Đã làm" ngay dưới đoạn success line hiện có của Phase 5 (dòng 177-178), theo đúng format
 các Phase 1-4 đã dùng: liệt kê file mới/sửa, tóm tắt cơ chế, kết quả self-test (PASS/FAIL thô), link
 tới chính plan file này. Đổi trạng thái heading từ `(⏳ Todo)` thành `(✅ Done)`.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add scripts/test_phase5_ocr.py PLAN.md
