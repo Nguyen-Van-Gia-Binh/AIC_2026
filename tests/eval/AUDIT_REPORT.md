@@ -5,7 +5,7 @@
 > **Ngày hợp nhất với origin/main:** 2026-09-03 (xem mục 7)  
 > **Trạng thái:** ✅ **ĐÃ KHẮC PHỤC TOÀN BỘ 100%**  
 > **Phạm vi:** Toàn bộ 103 câu chuẩn trong 3 file ground truth: [`eval_ground_truth_kis.json`](eval_ground_truth_kis.json) (70 câu), [`eval_ground_truth_qa.json`](eval_ground_truth_qa.json) (19 câu), [`eval_ground_truth_trake.json`](eval_ground_truth_trake.json) (14 câu).  
-> *(Ghi chú: Đã loại bỏ 2 câu thử nghiệm TRAKE `e-trake-thunghiem-002` và `e-trake-thunghiem-003` do không tìm thấy trong video gốc).*
+> *(Ghi chú: Đã loại bỏ 2 câu thử nghiệm TRAKE `e-trake-thunghiem-002`, `e-trake-thunghiem-003` và 2 câu QA nghi vấn `query-p1-9-qa`, `query-p1-15-qa` do đối chiếu video gốc xác nhận không tìm thấy / không liên quan).*
 
 ---
 
@@ -37,6 +37,8 @@
 | 11 | `query-p2-28-qa` | QA | **Thiếu `question` & `gt_answers`** | `question: ""`, `gt_answers: []`. | **ĐÃ KHẮC PHỤC:** Bổ sung `question: "Topping trong video là thịt của con gì?"`, `gt_answers: ["Cá hồi", "cá hồi", "ca hoi", "Cá Hồi", "thịt cá hồi"]`, tags `["naming"]`. |
 | 12 | `query-p2-29-qa` | QA | **Thiếu `question` & `gt_answers`** | `question: ""`, `gt_answers: []`. | **ĐÃ KHẮC PHỤC:** Bổ sung `question: "Phần thịt có trọng lượng bao nhiêu trong bảng nguyên liệu?"`, `gt_answers: ["300g", "300 g", "300 gam", "300 gram", "300gr", "300"]`, tags `["text_in_frame", "fine_detail"]`. |
 | 13 | `query-p2-30-qa` | QA | **Thiếu `question` & `gt_answers`** | `question: ""`, `gt_answers: []`. | **ĐÃ KHẮC PHỤC:** Bổ sung `question: "X là con gì?"`, `gt_answers: ["Nghêu", "nghêu", "ngheu", "Nghêu trắng", "con nghêu"]`, tags `["naming", "fine_detail"]`. |
+| 14 | `query-p1-9-qa` | QA | **Sai nhãn & Không liên quan** | Câu hỏi biển báo cầu nhưng nhãn `gt_answer: "37.05"` sao chép từ cân điện tử. | **ĐÃ LOẠI BỎ (03/09/2026):** Đã đối chiếu video gốc, xác nhận câu hỏi và nhãn không liên quan video. Loại bỏ vĩnh viễn khỏi ground truth. |
+| 15 | `query-p1-15-qa` | QA | **Trùng mốc frame sai video** | Mốc frame `26192-26210` sao chép từ query khác, không liên quan video `L21_V010`. | **ĐÃ LOẠI BỎ (03/09/2026):** Đã đối chiếu video gốc, xác nhận không liên quan. Loại bỏ vĩnh viễn khỏi ground truth. |
 
 ---
 
@@ -95,13 +97,12 @@ dòng ~1216) — không script nào từng load được nó.
 - **1 câu** (`query-p1-1-kis`) còn bị lặp 2 lần ngay trong chính file gốc trên `origin/main`.
 - **1 câu** (`query-p1-14-kis`) trùng y hệt `query-p1-8-kis` (cùng `text_vi`, cùng `gt_video_id`
   `L26_V171`, cùng frame `5410-5580`) → bỏ, giữ `query-p1-8-kis`.
-- **2 câu QA nghi vấn nhãn sai, TẠM LOẠI, chưa thêm vào bộ ground truth:**
+- **2 câu QA nghi vấn nhãn sai, ĐÃ LOẠI BỎ VĨNH VIỄN (03/09/2026):**
   - `query-p1-9-qa` — câu hỏi ("Con số trên biển báo bên trái cây cầu?") không liên quan gì đến
     `query-p1-3-qa` ("Con số hiển thị cuối cùng trên cân?") nhưng có `gt_answer` giống hệt `"37.05"`.
   - `query-p1-15-qa` — có `gt_frame_start`/`gt_frame_end` (`26192`–`26210`) giống hệt `query-p1-9-qa`
     nhưng khác `gt_video_id` (`L21_V010` so với `L21_V007`).
-  - Cả hai cần đối chiếu lại video gốc trước khi quyết định giữ, sửa nhãn, hay xoá. **Chưa được xử lý
-    — không tính vào 103 câu hiện tại.**
+  - **Kết quả kiểm tra video gốc:** Đã đối chiếu trực tiếp video, xác nhận nội dung hoàn toàn không liên quan và sai nhãn. Quyết định: **Xoá bỏ / loại bỏ vĩnh viễn**, không nạp vào bộ ground truth. Bộ ground truth QA chính thức chốt 19 câu chuẩn (tổng cộng 103 câu toàn hệ thống).
 - **14 câu còn lại là dữ liệu mới hợp lệ**, đã được thêm vào 3 file split (11 KIS, 2 QA, 1 TRAKE):
   `query-p1-3-qa`, `query-p1-8-kis`, `query-p1-10-kis`, `query-p1-11-kis`, `query-p1-12-kis`,
   `query-p1-13-kis`, `query-p1-16-trake`, `query-p1-17-qa`, `query-p1-18-kis`, `query-p1-19-kis`,
