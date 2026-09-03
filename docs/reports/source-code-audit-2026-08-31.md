@@ -1,6 +1,62 @@
 # Báo cáo Rà soát Source Code — Hệ thống AIC2026
 
-<!-- TÓM TẮT ĐIỀU HÀNH — Task 10 điền -->
+### Tóm tắt điều hành
+
+**Hệ thống.** AIC2026 là hệ thống truy hồi frame video bằng ngôn ngữ tự nhiên cho cuộc thi AIC
+2026: một retriever dùng chung (ma trận embedding SigLIP / SigLIP 2 trên ~177K keyframe), ba
+pipeline riêng KIS / Q&A / TRAKE, một tầng agent LLM cho Q&A + TRAKE, bộ dựng + validate file
+nộp CSV/ZIP, và UI React tách khỏi backend FastAPI. Chấm điểm BTC:
+`Final Score = (1/5)·Σ R@k` với `k ∈ {1,5,20,50,100}`, trung bình trên mọi truy vấn — chỉ cú
+trúng đầu tiên trong top-k có giá trị, và top-20 nặng ký hơn hẳn phần đuôi; Q&A còn cần
+`answer` khớp.
+
+**Quy mô (phạm vi đóng băng tại `7d7bcea` — 208 file; báo cáo mang 209 mục `####` do cây `tests/`
+đổi giữa đợt, xem [§0.5](#05-giới-hạn-của-chính-đợt-audit)).**
+
+| Tầng | Nhóm file | Số file |
+|---|---|---|
+| Tài liệu điều hướng + config ở repo root | `CLAUDE.md`, `README.md`, `ARCHITECTURE.md`, `PLAN.md`, `requirements.txt`, … | 11 |
+| Lõi truy hồi | `scripts/agent/tools/` (retrieval) | 10 |
+| Tool nghiệp vụ Q&A / TRAKE / bằng chứng | `scripts/agent/tools/` | 12 |
+| Pipeline + cổng LLM | `scripts/agent/` | 6 |
+| API | `scripts/api/` | 13 |
+| Nộp bài + tiền xử lý offline | `scripts/submit/` (4) + `scripts/offline/` (25) | 29 |
+| Kiểm thử + đo chất lượng | `tests/` | 49 → 50 |
+| Frontend | `frontend/` | 39 |
+| Job GPU ngoài | `kaggle_jobs/` (35) + `colab_jobs/` (4) | 39 |
+
+**Phát hiện.** 66 finding có nội dung (không tính 2 tham chiếu dangling ở chương 7):
+
+| Mức độ | Số lượng | Số hiệu |
+|---|---|---|
+| **Cao** | 7 | 2.2 · 6.1 · 6.2 · 7.1 · 7.2 · 7.3 · 8.1 |
+| **Trung bình** | 34 | 1.2–1.5 · 2.1 · 2.3–2.5 · 3.2 · 3.3 · 3.6 · 3.7 · 4.1 · 4.3 · 5.1 · 5.3 · 6.3–6.10 · 7.4–7.6 · 8.2 · 8.3 · 8.5 · 8.6 · 9.1–9.3 |
+| **Thấp** | 25 | 1.1 · 1.6 · 2.6 · 2.7 · 3.1 · 3.4 · 3.5 · 3.8 · 4.2 · 5.2 · 5.4 · 6.11–6.13 · 7.7 · 7.9 · 7.10 · 8.4 · 8.7–8.9 · 9.4–9.7 |
+
+Bảng đầy đủ ở [§10.1](#101-bảng-tổng-hợp-toàn-bộ-finding); tám chủ đề xuyên suốt ở
+[§10.2](#102-điểm-yếu-hệ-thống-theo-chủ-đề); những gì hệ thống làm **đúng** ở
+[§10.4](#104-những-gì-hệ-thống-làm-đúng).
+
+**Ba rủi ro cao nhất cho kết quả thi đấu** (chi tiết + cách kiểm chứng ở
+[§10.3](#103-ba-rủi-ro-cao-nhất-cho-kết-quả-thi-đấu)):
+
+1. **Hybrid retrieval âm thầm rơi về dense-only** khi thiếu cache BM25 trên máy thi
+   (FINDING-2.2) — tín hiệu object/OCR/caption biến mất khỏi xếp hạng, R@1…R@20 tụt trên mọi
+   truy vấn cần khớp chữ/tên riêng/số, **không có cảnh báo** và không harness nào phân biệt được.
+2. **`AIC_MODE=contest` mà `OPENROUTER_MODEL_CONTEST` trống → chạy tiếp bằng model rẻ**
+   (FINDING-4.1) — Q&A mất nửa điểm `answer` kể cả khi frame đúng; cross-check TRAKE yếu đi.
+3. **Bug đóng gói file nộp lọt qua validator** (FINDING-6.1, 6.2) — validator không kiểm tên
+   file khớp loại truy vấn hay số dòng TRAKE khớp N; kênh bắt lỗi thủ công (`test_smoke_pipelines.py`)
+   thì đang hỏng vì import sai (FINDING-7.5) — một gói "validate PASS" vẫn có thể cho cả một loại
+   truy vấn hoặc các dòng TRAKE 0 điểm.
+
+**Đánh giá độ trưởng thành.** Kiến trúc phân tầng rành mạch và kỷ luật tài liệu cao bất thường
+cho một dự án thi (4 bucket chia theo *thời điểm code chạy*, module pure tách để eval tái dùng,
+`decisions-log.md` ghi cả sai lầm cũ). Nhưng **tầng đo lường và bảo vệ hồi quy yếu hơn hẳn tầng
+nó phải bảo vệ**: lõi truy hồi gần như không có unit test, lưới regression tất định duy nhất
+đang đỏ vĩnh viễn vì lệch dữ liệu, và nhiều invariant quan trọng (`frame_id+1`, luật on-demand
+OCR, nhãn "pure") chỉ sống trong văn bản, không test nào canh. Hệ thống **chạy được**, nhưng
+chưa có lưới an toàn để thay đổi nhanh mà an toàn trong tuần cuối trước hạn nộp.
 
 - **Ngày:** 2026-08-31
 - **Commit:** `7d7bcea`
@@ -14,6 +70,7 @@ từ tài liệu; khi code mâu thuẫn tài liệu thì chính điều đó là
 ### Mục lục
 
 - [0. Bối cảnh, phạm vi và phương pháp](#0-bối-cảnh-phạm-vi-và-phương-pháp)
+  - [0.5. Giới hạn của chính đợt audit](#05-giới-hạn-của-chính-đợt-audit)
 - [1. Tầng gốc: tài liệu điều hướng và cấu hình](#1-tầng-gốc-tài-liệu-điều-hướng-và-cấu-hình)
 - [2. Lõi truy hồi (retrieval core)](#2-lõi-truy-hồi-retrieval-core)
 - [3. Tool nghiệp vụ: Q&A, TRAKE, bằng chứng](#3-tool-nghiệp-vụ-qa-trake-bằng-chứng)
@@ -24,6 +81,11 @@ từ tài liệu; khi code mâu thuẫn tài liệu thì chính điều đó là
 - [8. Frontend (React + Vite)](#8-frontend-react--vite)
 - [9. Job GPU ngoài (Kaggle / Colab)](#9-job-gpu-ngoài-kaggle--colab)
 - [10. Tổng hợp: bất hợp lý và điểm yếu hệ thống](#10-tổng-hợp-bất-hợp-lý-và-điểm-yếu-hệ-thống)
+  - [§10.1. Bảng tổng hợp toàn bộ finding](#101-bảng-tổng-hợp-toàn-bộ-finding)
+  - [§10.2. Điểm yếu hệ thống theo chủ đề](#102-điểm-yếu-hệ-thống-theo-chủ-đề)
+  - [§10.3. Ba rủi ro cao nhất cho kết quả thi đấu](#103-ba-rủi-ro-cao-nhất-cho-kết-quả-thi-đấu)
+  - [§10.4. Những gì hệ thống làm đúng](#104-những-gì-hệ-thống-làm-đúng)
+  - [§10.5. Đề xuất kiểm chứng: `tests/unit/test_invariants.py`](#105-đề-xuất-kiểm-chứng-testsunittest_invariantspy)
 
 ## 0. Bối cảnh, phạm vi và phương pháp
 
@@ -138,6 +200,39 @@ mâu thuẫn tài liệu; **(b) Điểm yếu hệ thống** — code đúng nh�
 | 7 | Kiểm thử + đo chất lượng | `tests/` | 49 | 130 |
 | 8 | Frontend | `frontend/` | 39 | 169 |
 | 9 | Job GPU ngoài | `kaggle_jobs/` (35) + `colab_jobs/` (4) | 39 | 208 |
+
+Bảng trên là ảnh chụp phạm vi tại `7d7bcea`. Cây `tests/` đã đổi giữa đợt (xem §0.5): chương 7
+thực tế mang **50** file / **131** mục `####` lũy kế, dồn chương 8 → 170, chương 9 → **209**.
+Con số 209 là số `#### ` thật trong báo cáo này; 208 là phạm vi đóng băng ban đầu.
+
+### 0.5. Giới hạn của chính đợt audit
+
+Báo cáo này trung thực về điều nó **không** phủ được:
+
+- **Baseline một điểm.** Toàn bộ phép đếm file, trích dòng code, và kết quả `grep`/`pytest` lấy tại
+  `7d7bcea` (chương 0–1 ghi mốc này; chương 7 chạy `pytest` tại `b5df442`, hậu duệ trực tiếp).
+  Không có lần chạy lại toàn bộ ở HEAD hiện tại.
+- **Cây repo đã dịch chuyển giữa đợt.** Trong lúc audit chạy, nhánh `fix/phase2` nhận thêm loạt
+  commit `c3eea7f..9ef7f5d` ("split ground truth"): xoá bản hợp nhất
+  `tests/eval/eval_ground_truth.json` (`2ee24cf`), thêm `tests/eval/gt_loader.py` +
+  `tests/unit/test_gt_loader.py`, repoint mọi harness đo lường sang 3 file con. Chương 7 đã được
+  rà lại và cập nhật cho khớp (mục `####` của bản hợp nhất chuyển thành ghi chú văn xuôi ở §7.8;
+  hai file mới có mục riêng; các FINDING-7.2/7.3/7.4/7.6/7.9/7.10 được đối chiếu lại — không cái
+  nào bị vô hiệu, chi tiết trong §7.8). Các chương 1–6, 8, 9 **chưa** được rà lại ở HEAD mới;
+  nếu loạt commit đó chạm file ngoài `tests/eval/` thì báo cáo không phản ánh.
+- **Chương 6, 7, 9 mất ghi chú làm việc thô.** Phiên chạy 3 chương này gặp giới hạn tần suất
+  (rate limit) và transcript lệnh (output thô của từng `grep`/`diff`/`json.load` đã chạy) **không
+  được lưu lại**. Kết luận và số liệu của 3 chương nằm trong báo cáo, nhưng người đọc muốn tái
+  lập phải tự chạy lại các lệnh mà mục finding mô tả, không có log gốc để đối chiếu từng bước.
+- **Hai tham chiếu dangling trong chương 7.** `FINDING-7.8` (được nhắc 3 lần) và `FINDING-7.11`
+  (nhắc 2 lần) **chưa bao giờ được viết thành mục finding** — chúng là dấu vết của phần ghi chú
+  bị mất ở trên. Bảng §10.1 chỉ tổng hợp **66 finding thực sự có nội dung**; hai số hiệu đó không
+  có trong bảng.
+- **Đọc code, không chạy hệ thống.** Trừ `pytest tests/unit` (chương 7), báo cáo không chạy
+  `run_kis`/`run_qa`/`run_trake`, không dựng index, không gọi LLM. Mọi phát biểu hành vi suy từ
+  đọc code + `grep`, đúng ràng buộc read-only.
+- **Không bình luận chất lượng số eval.** Mọi con số eval trích trong báo cáo chép nguyên kèm
+  nguồn, không kèm đánh giá "tốt"/"kém".
 
 ## 1. Tầng gốc: tài liệu điều hướng và cấu hình
 
@@ -2878,6 +2973,16 @@ chạy (HEAD `b5df442`): 3 ở gốc, 3 trong `data/`, 11 trong `e2e/`, 14 trong
 **đã bị xoá khỏi cây làm việc** (`git status` báo ` D`) nhưng vẫn còn trong index nên vẫn tính
 là 1 trong 49 — vẫn có mục riêng bên dưới.
 
+> **Cây `tests/eval/` đã đổi GIỮA đợt audit.** Sau baseline, loạt commit `c3eea7f..9ef7f5d`
+> ("split ground truth") đã: xoá bản hợp nhất `eval_ground_truth.json` (`2ee24cf`); thêm
+> [`tests/eval/gt_loader.py`](../../tests/eval/gt_loader.py) và
+> [`tests/unit/test_gt_loader.py`](../../tests/unit/test_gt_loader.py); repoint mọi harness sang
+> 3 file con qua `gt_loader`. Chương 7 đã được cập nhật cho khớp: mục `####` của bản hợp nhất
+> chuyển thành ghi chú văn xuôi ở §7.8, hai file mới có mục riêng. Net **+1** mục file so với
+> phạm vi 208-file đóng băng tại `7d7bcea` — báo cáo do đó mang **209** mục `#### `; chi tiết ở
+> §0.5 ("Giới hạn của chính đợt audit"). Không finding chương 7 nào bị vô hiệu; bản chất
+> FINDING-7.2/7.3/7.4/7.6/7.9/7.10 giữ nguyên (§7.8 giải thích từng cái).
+
 Những chỗ tôi phải tự dẫn xuất (không nhận từ chương khác đang chạy song song): bản đồ module
 production dưới `scripts/agent/` (tự chạy `git ls-files 'scripts/agent/**/*.py'` + `grep`), danh
 sách hằng số tune của `rerank.py` / `pipeline_trake.py` (tự đọc code), quan hệ import của các
@@ -2995,28 +3100,34 @@ Bảng lập từ việc đọc `import` đầu mỗi file và thân hàm:
   (cần API key, chậm) hoặc `sweep_rerank.py` (cần `data/`) mới đo đúng.
 - **Mức độ:** Cao.
 
-### 7.4. Sáu file ground truth — nguồn sự thật, dẫn xuất, và độ phủ theo loại
+### 7.4. Các file ground truth — nguồn sự thật, dẫn xuất, và độ phủ theo loại
 
-Chạy thật `python -c "json.load..."` trên từng file:
+Chạy thật `python -c "json.load..."` trên từng file (số entry bên dưới là con số tại thời điểm
+audit; xem ghi chú §7.8 về việc `2ee24cf` xoá bản hợp nhất giữa đợt):
 
 | File | Kiểu | Số entry | Vai trò |
 |---|---|---|---|
-| [`eval_ground_truth.json`](../../tests/eval/eval_ground_truth.json) | list | **91** (KIS 59 · QA 17 · TRAKE 15) | **NGUỒN SỰ THẬT** — bản hợp nhất, mọi harness đọc file này |
-| [`eval_ground_truth_kis.json`](../../tests/eval/eval_ground_truth_kis.json) | list | 59 | Dẫn xuất từ bản hợp nhất qua `split_eval_gt.py` |
-| [`eval_ground_truth_qa.json`](../../tests/eval/eval_ground_truth_qa.json) | list | 17 | Dẫn xuất |
-| [`eval_ground_truth_trake.json`](../../tests/eval/eval_ground_truth_trake.json) | list | 15 | Dẫn xuất |
+| `eval_ground_truth.json` *(đã xoá bởi `2ee24cf` giữa đợt audit)* | list | **91** (KIS 59 · QA 17 · TRAKE 15) | Nguồn sự thật **tại thời điểm audit**; nay thay bằng 3 file con nạp qua `gt_loader.py` |
+| [`eval_ground_truth_kis.json`](../../tests/eval/eval_ground_truth_kis.json) | list | 59 | Trước `2ee24cf`: dẫn xuất qua `split_eval_gt.py`. Sau: **nguồn sự thật** cho câu KIS |
+| [`eval_ground_truth_qa.json`](../../tests/eval/eval_ground_truth_qa.json) | list | 17 | Nguồn sự thật cho câu QA (trước là dẫn xuất) |
+| [`eval_ground_truth_trake.json`](../../tests/eval/eval_ground_truth_trake.json) | list | 15 | Nguồn sự thật cho câu TRAKE (trước là dẫn xuất) |
 | [`eval_ground_truth_v2_template.json`](../../tests/eval/eval_ground_truth_v2_template.json) | dict (`entries`) | 6 mẫu | Ví dụ format "người ghi" (v2) cho `normalize_gt.py --check` |
 | [`eval_ground_truth_thunghiem_draft.json`](../../tests/eval/eval_ground_truth_thunghiem_draft.json) | list | 24 (đã xoá khỏi cây làm việc) | Bản nháp vòng thử nghiệm |
 
-**Chiều dẫn xuất:** `split_eval_gt.py` đọc bản hợp nhất → sinh 3 bản tách (không có chiều ngược
-lại). 3 bản tách **được commit** (nằm trong `git ls-files`), tức dẫn xuất bị check-in.
+**Chiều dẫn xuất (sau `2ee24cf`):** không còn bản hợp nhất; 3 file con
+`eval_ground_truth_{kis,qa,trake}.json` **là nguồn sự thật**, không phải dẫn xuất — mọi harness
+nạp chúng qua [`gt_loader.py`](../../tests/eval/gt_loader.py). `split_eval_gt.py` giờ bắt buộc
+`--source` và chỉ còn là công cụ tách một lần (khi nhập một mảng v1 mới); `normalize_gt.py
+--merge <thư mục>` nối câu mới thẳng vào đúng file con.
 
-**Có chống lệch:** [`tests/unit/test_split_eval_gt.py:49`](../../tests/unit/test_split_eval_gt.py#L49)
-(`test_split_files_on_disk_match_master_eval_ground_truth`) so từng byte 3 file tách trên đĩa với
-master (`kis == master_kis`, …) và hardcode `len(kis) == 59` / `17` / `15`. Test này **pass**
-trong lần chạy §7.1 → hiện 3 bản tách **đang đồng bộ**. Nhược điểm: số 59/17/15 nằm cứng trong
-test nên mỗi lần thêm câu vào master phải sửa cả test (đây là chỗ thứ ba con số này sống, sau
-master và 3 file tách).
+**Có chống lệch (đã yếu đi):** trước `2ee24cf`,
+`test_split_files_on_disk_match_master_eval_ground_truth`
+([`tests/unit/test_split_eval_gt.py`](../../tests/unit/test_split_eval_gt.py)) so từng byte 3
+file tách với master. `2ee24cf` đổi test này thành
+`test_split_files_on_disk_match_expected_counts_and_types` và **bỏ phần so nội dung** — chỉ còn
+assert `len == 59/17/15` (tổng 91) + mọi entry đúng `type`. Test **pass** trong lần chạy §7.1.
+Vì không còn master để đối chiếu, việc "3 file con không lệch/không thất thoát nội dung"
+**không còn test nào phủ**; số 59/17/15 vẫn nằm cứng trong test (sửa tay mỗi lần thêm câu).
 
 **Độ phủ theo loại (bản hợp nhất, 91 câu):** KIS 59 (65%), QA 17 (19%), TRAKE 15 (16%). Lệch
 nặng về KIS. [`EVAL_GUIDE.md`](../../tests/eval/EVAL_GUIDE.md) §"Cỡ mẫu" tự ghi sai số chuẩn
@@ -3033,8 +3144,11 @@ làm ví dụ `--check`. Xem FINDING-7.9.
 ### ⚠️ FINDING-7.3 (Cao) — Thước đo có thể bị nới mà không để lại dấu vết
 
 - **Hiện trạng:** [`tests/eval/widen_gt_windows.py`](../../tests/eval/widen_gt_windows.py) ghi đè
-  trực tiếp [`eval_ground_truth.json`](../../tests/eval/eval_ground_truth.json)
-  ([widen_gt_windows.py:109](../../tests/eval/widen_gt_windows.py#L109)), nới mọi entry
+  trực tiếp các file ground truth con ([`_kis`](../../tests/eval/eval_ground_truth_kis.json) /
+  [`_qa`](../../tests/eval/eval_ground_truth_qa.json) /
+  [`_trake`](../../tests/eval/eval_ground_truth_trake.json) — trước `2ee24cf` là ghi đè bản hợp
+  nhất `eval_ground_truth.json`), qua `widen_file()`
+  ([widen_gt_windows.py:69-113](../../tests/eval/widen_gt_windows.py#L69)), nới mọi entry
   `gt_frame_start == gt_frame_end` ra keyframe lân cận. Bảng before→after **chỉ in ra stdout**,
   không lưu vào file. File ground truth **không có** trường version/hash/changelog. Output của
   `run_eval.py` (`docs/reports/eval_baseline_comparison.md`) và `score_pipelines.py`
@@ -3116,7 +3230,7 @@ làm ví dụ `--check`. Xem FINDING-7.9.
 - **Ai gọi nó:** `grep` không thấy file `.py` nào trong `tests/`/`scripts/` đọc trực tiếp file
   này — không file nào tham chiếu. Con người đọc khi ghi ground truth.
 - **Điểm cần biết:** `noi_dung` là tiếng Việt có dấu; `query_id` dạng `p1-1-kis` khớp `query_id`
-  trong `eval_ground_truth.json`. Là "phân phối thật của BTC" — EVAL_GUIDE.md cấm bịa thêm câu.
+  trong bộ ground truth. Là "phân phối thật của BTC" — EVAL_GUIDE.md cấm bịa thêm câu.
 
 #### [`tests/data/thunghiem_bo_de_thi.csv`](../../tests/data/thunghiem_bo_de_thi.csv) — `42` dòng · `test`
 
@@ -3139,7 +3253,7 @@ làm ví dụ `--check`. Xem FINDING-7.9.
 - **Ai gọi nó:** [`tests/e2e/score_pipelines.py:45`](../../tests/e2e/score_pipelines.py#L45)
   (`_DEFAULT_BASELINE`). Không test unit nào đọc file này (chúng dựng baseline tạm trong `tmp_path`).
 - **Điểm cần biết:** `saved_at: 2026-08-31 14:29:24`, `n_by_type: {KIS:23, QA:5, TRAKE:10}` — tổng
-  **38 câu**, trong khi `eval_ground_truth.json` hiện là 91. Xem FINDING-7.6.
+  **38 câu**, trong khi bộ ground truth hiện là 91. Xem FINDING-7.6.
 
 ### ⚠️ FINDING-7.6 (Trung bình) — Baseline chống suy thoái được lưu trên bộ ground truth cũ 38 câu
 
@@ -3180,13 +3294,14 @@ làm ví dụ `--check`. Xem FINDING-7.9.
 - **Ai gọi nó:** [`tests/e2e/golden_kis_snapshot.py:39`](../../tests/e2e/golden_kis_snapshot.py#L39)
   (`_SNAPSHOT`). Không file khác.
 - **Điểm cần biết:** `top_k: 100`, `digest: a67ade7f22d881cf`, **`results` chỉ có 23 câu** (id
-  `e-kis-ai-001..`), trong khi `eval_ground_truth.json` hiện có **59 câu KIS**. Xem FINDING-7.4.
+  `e-kis-ai-001..`), trong khi `eval_ground_truth_kis.json` hiện có **59 câu**. Xem FINDING-7.4.
 
 ### ⚠️ FINDING-7.4 (Trung bình) — Ảnh chụp vàng KIS đã lệch khỏi bộ ground truth nó dựa vào
 
 - **Hiện trạng:** [`golden_kis_snapshot.json`](../../tests/e2e/golden_kis_snapshot.json) chứa 23
-  entry. [`golden_kis_snapshot.py:53`](../../tests/e2e/golden_kis_snapshot.py#L53) lọc *tất cả*
-  câu KIS từ `eval_ground_truth.json` (hiện 59) và `_report_diff()`
+  entry. [`golden_kis_snapshot.py:53`](../../tests/e2e/golden_kis_snapshot.py#L53) đọc
+  `eval_ground_truth_kis.json` (hiện 59 câu; trước `2ee24cf` là lọc KIS từ bản hợp nhất) và
+  `_report_diff()`
   ([:86](../../tests/e2e/golden_kis_snapshot.py#L86)) so hai tập theo `query_id`; 36 câu KIS mới
   sẽ rơi vào nhánh "CHỈ có ở lần chạy mới" ⇒ `n_bad = 36` ⇒ hàm `main()` trả về `1` ("LỆCH").
 - **Vì sao bất hợp lý:** [CLAUDE.md](../../CLAUDE.md) và [tests/README.md](../../tests/README.md)
@@ -3203,9 +3318,9 @@ làm ví dụ `--check`. Xem FINDING-7.9.
 
 - **Vai trò:** Chạy `run_kis()` cho mọi câu KIS của bộ eval, so kết quả 100-hit từng câu với ảnh
   chụp vàng; thoát code 1 nếu lệch. Lưới regression tất định cho toàn đường KIS production.
-- **Đầu vào:** `tests/eval/eval_ground_truth.json` (câu KIS), `golden_kis_snapshot.json` (mốc),
-  `data/extracted/` (index + keyframe). Import `scripts.agent.pipeline_kis.run_kis`. `argparse`,
-  `hashlib`.
+- **Đầu vào:** `tests/eval/eval_ground_truth_kis.json` (sau `2ee24cf`; trước là câu KIS lọc từ
+  `eval_ground_truth.json`), `golden_kis_snapshot.json` (mốc), `data/extracted/` (index +
+  keyframe). Import `scripts.agent.pipeline_kis.run_kis`. `argparse`, `hashlib`.
 - **Đầu ra:** `--save` ghi `golden_kis_snapshot.json`; `--check` in diff + exit 0/1/2.
 - **Ai gọi nó:** Không file nào import; [CLAUDE.md:42,174](../../CLAUDE.md) và
   [tests/README.md](../../tests/README.md) chỉ dẫn chạy tay. `pytest` **không** thu được test nào
@@ -3220,7 +3335,8 @@ làm ví dụ `--check`. Xem FINDING-7.9.
 - **Vai trò:** Final Score BTC **thật** end-to-end: chạy trọn `run_kis`/`run_qa`/`run_trake` trên
   bộ eval rồi chấm đúng §2.1–2.2 (KIS: video∧frame; QA: thêm `answer_matches`; TRAKE:
   `(1/N)Σ`), kèm Regression Guard so với `e2e_baseline.json`.
-- **Đầu vào:** `tests/eval/eval_ground_truth.json`, `e2e_baseline.json`; import
+- **Đầu vào:** bộ ground truth con nạp qua `tests.eval.gt_loader.load_ground_truth` (sau
+  `2ee24cf`; `--eval-set` nhận file hoặc thư mục), `e2e_baseline.json`; import
   `scripts.agent.config`, `scripts.agent.pipeline_{kis,qa,trake}`. Cần `OPENROUTER_API_KEY` hoặc
   `GEMINI_API_KEY`. `re`, `argparse`.
 - **Đầu ra:** `docs/reports/eval_e2e_scores.md`; `--save-baseline` ghi `e2e_baseline.json`;
@@ -3253,7 +3369,9 @@ làm ví dụ `--check`. Xem FINDING-7.9.
 
 - **Vai trò:** So R@k KIS/QA **trước/sau** `apply_risk_aware_ranking` (Phase 3), qua đúng đường
   `retrieve.py` production — khác `run_eval.py` (chỉ đo backbone qua `multi_index`).
-- **Đầu vào:** `tests/eval/eval_ground_truth.json`; import `scripts.agent.tools.retrieve.fast_retrieve`,
+- **Đầu vào:** câu KIS/QA nạp qua `tests.eval.gt_loader.load_ground_truth(["KIS","QA"])` (sau
+  `2ee24cf`; trước đọc thẳng `eval_ground_truth.json`); import
+  `scripts.agent.tools.retrieve.fast_retrieve`,
   `scripts.agent.tools.rerank.{apply_risk_aware_ranking, RETRIEVAL_POOL_SIZE}`. Cần `data/`.
 - **Đầu ra:** In bảng R@k trước/sau ra stdout.
 - **Ai gọi nó:** Không file nào import. `pytest` **không thu được test** (không có hàm `test_*`,
@@ -3267,7 +3385,8 @@ làm ví dụ `--check`. Xem FINDING-7.9.
 - **Vai trò:** Benchmark 2-pass cho `pipeline_trake` (Phase 4): Pass 1 tắt cross-check
   (`TRAKE_CROSSCHECK_MARGIN=-1.0`), Pass 2 bật (margin thật) — trên cùng một lần retrieval tất
   định để quy chênh lệch cho cross-check.
-- **Đầu vào:** `tests/eval/eval_ground_truth.json`; import `scripts.agent.pipeline_trake.run_trake`.
+- **Đầu vào:** `tests/eval/eval_ground_truth_trake.json` (sau `2ee24cf`; trước là
+  `eval_ground_truth.json` lọc TRAKE); import `scripts.agent.pipeline_trake.run_trake`.
   Cần `data/` + LLM key (`run_trake` gọi `rewrite_query` từng event — đã bị patch identity).
 - **Đầu ra:** In bảng video_rank / events_matched trước/sau.
 - **Ai gọi nó:** [`tests/e2e/test_phase6_margin_sweep.py:39`](../../tests/e2e/test_phase6_margin_sweep.py#L39)
@@ -3350,7 +3469,8 @@ làm ví dụ `--check`. Xem FINDING-7.9.
 - **Vai trò:** Báo cáo kiểm toán **bộ dữ liệu ground truth** đã có sẵn trong repo (ngày
   2026-08-31) — rà nhãn type, chất lượng dịch `text_vi`↔`text_en`, tính nhất quán QA/TRAKE, lỗi
   cấu trúc.
-- **Đầu vào:** Không (phân tích tay 91 câu `eval_ground_truth.json`).
+- **Đầu vào:** Không (phân tích tay 91 câu ground truth). `2ee24cf` cập nhật header file trỏ
+  sang 3 file con thay cho bản hợp nhất.
 - **Đầu ra:** Không.
 - **Ai gọi nó:** Không file nào import; là tài liệu.
 - **Điểm cần biết:** Phạm vi **chỉ** ground truth, không đụng code harness. Xem tiểu mục 7.10.
@@ -3368,54 +3488,72 @@ làm ví dụ `--check`. Xem FINDING-7.9.
   **luôn** trên `text_en` dịch sẵn ⇒ đang đo một bài **dễ hơn** bài thi thật (một *giả định* đã
   ghi nhận, không phải bug). Xác nhận `widen_gt_windows.py` "không nằm trong quy trình chuẩn nữa".
 
-#### [`tests/eval/eval_ground_truth.json`](../../tests/eval/eval_ground_truth.json) — `1388` dòng · `test`
-
-- **Vai trò:** Bộ ground truth hand-label hợp nhất — **nguồn sự thật** cho mọi harness đo lường.
-  91 câu (KIS 59 · QA 17 · TRAKE 15).
-- **Đầu vào:** Ghi tay + `normalize_gt.py --merge`. Schema: `query_id`, `type`, `text_vi`,
-  `text_en`, `difficulty_tags`, `gt_video_id`, `gt_frame_start/end` (KIS/QA) hoặc `events[]`
-  (TRAKE); QA thêm `question`, `gt_answers`.
-- **Đầu ra:** Đọc bởi `run_eval.py`, `score_pipelines.py`, `golden_kis_snapshot.py`,
-  `test_phase3/4/6`, `sweep_rerank.py`, `split_eval_gt.py`, `widen_gt_windows.py`,
-  `test_eval_ground_truth.py`, `test_normalize_gt.py`, `test_split_eval_gt.py`.
-- **Ai gọi nó:** 12+ chỗ (grep `eval_ground_truth` trong `scripts tests`); `rerank.py` chỉ nhắc
-  trong comment ("đo thật trên 18 câu KIS của eval_ground_truth.json" — con số comment này cũng
-  đã cũ).
-- **Điểm cần biết:** Không có trường version/hash/ngày — không neo được so sánh lịch sử
-  (FINDING-7.3). `test_eval_ground_truth.py` khoá: `query_id` không trùng, mọi câu có `query_id`,
-  `type` hợp lệ, `difficulty_tags ⊆ TAG_CHUAN`.
+> **Ghi chú — file hợp nhất `eval_ground_truth.json` đã bị xoá GIỮA đợt audit.** Tại thời điểm
+> chương này rà soát (HEAD `b5df442`), `tests/eval/eval_ground_truth.json` là một mảng 1388 dòng,
+> 91 câu (KIS 59 · QA 17 · TRAKE 15), ghi tay + `normalize_gt.py --merge`, và là **nguồn sự
+> thật** mà mọi harness đo lường đọc trực tiếp (`run_eval.py`, `score_pipelines.py`,
+> `golden_kis_snapshot.py`, `test_phase3/4/6`, `sweep_rerank.py`, `split_eval_gt.py`,
+> `widen_gt_windows.py`, `test_eval_ground_truth.py`, `test_normalize_gt.py`,
+> `test_split_eval_gt.py`). Commit `2ee24cf` ("chore(eval): delete monolithic
+> eval_ground_truth.json…" — nằm trong loạt `c3eea7f..9ef7f5d` được đẩy lên nhánh này *sau*
+> baseline audit) đã **xoá** file đó và chuyển vai trò nguồn sự thật sang 3 file tách
+> `eval_ground_truth_{kis,qa,trake}.json` (cùng nội dung, cùng schema), nạp qua module mới
+> [`gt_loader.py`](../../tests/eval/gt_loader.py). Mọi chỗ trong chương 7 còn viết
+> `eval_ground_truth.json` — phần **Đầu vào** của các mục file harness dưới đây, các
+> FINDING-7.2 / 7.3 / 7.4 / 7.10 — đọc là "bộ ground truth, nay là 3 file tách". Bản chất các
+> finding **không đổi**: 3 file tách thừa hưởng nguyên nội dung cũ và **vẫn không có** trường
+> version/hash/ngày, nên FINDING-7.3 (nới khoảng không để lại dấu vết) và FINDING-7.10 (harness
+> giữ bản sao thuật toán + hằng số) vẫn đúng nguyên văn; FINDING-7.4 (ảnh chụp vàng lệch 23 vs
+> 59 câu KIS) và FINDING-7.6 (baseline 38 câu) không bị ảnh hưởng vì `golden_kis_snapshot.py` và
+> `e2e_baseline.json` không đổi số câu. Một điểm **yếu đi** sau migration: không còn bản master
+> để `split_eval_gt.py` tách ra, nên test `test_split_files_on_disk_match_master_eval_ground_truth`
+> (so từng byte 3 file tách với master) đã đổi tên thành
+> `test_split_files_on_disk_match_expected_counts_and_types` và **bỏ phần so nội dung** — chỉ còn
+> assert đủ 59/17/15 câu + đúng `type`; việc "3 file con không lệch nội dung" nay **không test nào
+> phủ**. Bất biến `test_eval_ground_truth.py` khoá (nay nạp qua `gt_loader.load_ground_truth()`):
+> `query_id` không trùng, mọi câu có `query_id`, `type` hợp lệ, `difficulty_tags ⊆ TAG_CHUAN`.
 
 #### [`tests/eval/eval_ground_truth_kis.json`](../../tests/eval/eval_ground_truth_kis.json) — `639` dòng · `test`
 
-- **Vai trò:** 59 câu KIS tách ra từ bản hợp nhất — dẫn xuất, phục vụ tiêu thụ theo loại.
-- **Đầu vào:** Sinh bởi `split_eval_gt.py` (`json.dumps(..., indent=2)`, **không** newline cuối).
+- **Vai trò:** 59 câu KIS. Trước `2ee24cf`: dẫn xuất từ bản hợp nhất. Sau: **nguồn sự thật** cho
+  câu KIS.
+- **Đầu vào:** Ban đầu sinh bởi `split_eval_gt.py`; nay ghi/nối trực tiếp qua `normalize_gt.py
+  --merge <thư mục>` / `gt_loader.save_ground_truth` (`json.dumps(..., indent=2) + "\n"`).
 - **Đầu ra:** Không (là dữ liệu).
 - **Ai gọi nó:** [`tests/unit/test_split_eval_gt.py`](../../tests/unit/test_split_eval_gt.py),
-  [`tests/unit/test_eval_ground_truth.py:71`](../../tests/unit/test_eval_ground_truth.py#L71). Không
-  harness đo lường nào đọc bản tách (tất cả đọc bản hợp nhất).
-- **Điểm cần biết:** Dẫn xuất **được commit** ⇒ có thể lệch khỏi master; chống lệch bằng
-  `test_split_files_on_disk_match_master_eval_ground_truth` (hardcode `len == 59`). Hiện đồng bộ
-  (test pass §7.1).
+  [`tests/unit/test_eval_ground_truth.py:20`](../../tests/unit/test_eval_ground_truth.py#L20), và
+  (sau `2ee24cf`) **mọi harness đo lường** qua `gt_loader.load_ground_truth` —
+  `run_eval.py`, `score_pipelines.py`, `test_phase3_rerank.py`; `golden_kis_snapshot.py` /
+  `sweep_rerank.py` đọc thẳng file này.
+- **Điểm cần biết:** Trước là dẫn xuất được commit (rủi ro lệch khỏi master); sau `2ee24cf`
+  **không còn master** — test byte-compare đã đổi thành
+  `test_split_files_on_disk_match_expected_counts_and_types` (chỉ assert `len == 59` + `type`),
+  nên "3 file con có đồng bộ nội dung với nhau không" **không còn test nào phủ**. Pass §7.1 chỉ
+  xác nhận đủ số câu, không xác nhận nội dung.
 
 #### [`tests/eval/eval_ground_truth_qa.json`](../../tests/eval/eval_ground_truth_qa.json) — `277` dòng · `test`
 
-- **Vai trò:** 17 câu QA tách ra — dẫn xuất.
-- **Đầu vào:** `split_eval_gt.py`.
+- **Vai trò:** 17 câu QA. Sau `2ee24cf`: nguồn sự thật cho câu QA (trước là dẫn xuất).
+- **Đầu vào:** Ban đầu `split_eval_gt.py`; nay nối qua `normalize_gt.py --merge <thư mục>`.
 - **Đầu ra:** Không.
-- **Ai gọi nó:** `test_split_eval_gt.py`, `test_eval_ground_truth.py:72`. Không harness đo lường.
-- **Điểm cần biết:** `AUDIT_REPORT.md` §2 báo 9/17 câu QA thiếu `question`/`gt_answers` trong bản
-  hợp nhất — lỗi này được **chép nguyên** sang bản tách (script phi huỷ diệt, không sửa).
+- **Ai gọi nó:** `test_split_eval_gt.py`, `test_eval_ground_truth.py`, và (sau `2ee24cf`) mọi
+  harness đo lường qua `gt_loader` (`run_eval.py`, `score_pipelines.py`).
+- **Điểm cần biết:** `AUDIT_REPORT.md` §2 báo 9/17 câu QA thiếu `question`/`gt_answers` — lỗi này
+  vẫn còn trong file hiện tại (xác nhận bằng đọc file); `split_eval_gt.py` phi huỷ diệt nên
+  không tự sửa.
 
 #### [`tests/eval/eval_ground_truth_trake.json`](../../tests/eval/eval_ground_truth_trake.json) — `473` dòng · `test`
 
-- **Vai trò:** 15 câu TRAKE tách ra — dẫn xuất.
-- **Đầu vào:** `split_eval_gt.py`.
+- **Vai trò:** 15 câu TRAKE. Sau `2ee24cf`: nguồn sự thật cho câu TRAKE (trước là dẫn xuất).
+- **Đầu vào:** Ban đầu `split_eval_gt.py`; nay nối qua `normalize_gt.py --merge <thư mục>`.
 - **Đầu ra:** Không.
-- **Ai gọi nó:** `test_split_eval_gt.py`, `test_eval_ground_truth.py:73`. Không harness đo lường.
+- **Ai gọi nó:** `test_split_eval_gt.py`, `test_eval_ground_truth.py`; `test_phase4_trake.py` đọc
+  thẳng file này; `run_eval.py`/`score_pipelines.py` qua `gt_loader`.
 - **Điểm cần biết:** `AUDIT_REPORT.md` §2 báo 3/15 câu có `gt_video_id` rỗng hoặc khoảng frame
   ngược (`e-trake-thunghiem-001/003`, `query-p2-8-trake`) — `run_eval._validate_query()` và
   `normalize_gt.check_entries()` sẽ bắt các lỗi này (`SystemExit`), nhưng `split_eval_gt.py`
-  không kiểm nên bản tách vẫn chứa entry hỏng.
+  không kiểm nên file vẫn chứa entry hỏng. (`widen_gt_windows.py` sau `2ee24cf` thêm điều kiện
+  `and vid` — bỏ qua đúng các entry thiếu `gt_video_id` này.)
 
 #### [`tests/eval/eval_ground_truth_thunghiem_draft.json`](../../tests/eval/eval_ground_truth_thunghiem_draft.json) — `404` dòng (theo `git show HEAD`) · `test`
 
@@ -3437,7 +3575,9 @@ làm ví dụ `--check`. Xem FINDING-7.9.
   [`main()`](../../tests/eval/normalize_gt.py#L277) biết bỏ qua.
 - **Vì sao bất hợp lý:** Một file ground truth "chết" nằm ngay trong thư mục ground truth, còn
   được tài liệu chỉ tên, là mồi cho việc sửa nhầm: người sau mở README, thấy file, tưởng nó
-  sống, sửa vào đó thay vì `eval_ground_truth.json`.
+  sống, sửa vào đó thay vì các file ground truth con đang dùng. (Loạt migration `2ee24cf` cập
+  nhật README/EVAL_GUIDE nhưng **không** đụng hàng bảng liệt kê `_thunghiem_draft` — finding này
+  vẫn đúng nguyên; README nay ở [dòng 68](../../tests/README.md#L68).)
 - **Hệ quả thực tế:** Công sức ghi nhãn có thể đổ vào file không harness nào đọc; hoặc nếu ai
   `--merge` nó vào bản hợp nhất, 24 entry `needs_labeling` (không phải `unresolved`) sẽ **lọt
   vào** mẫu đo vì bộ lọc chỉ nhận đúng chuỗi `"unresolved"`.
@@ -3455,6 +3595,31 @@ làm ví dụ `--check`. Xem FINDING-7.9.
   tự do (`"counting"` hợp lệ nhưng `"graph interpretation"`, `"too many similar candidates..."`
   **ngoài** `TAG_CHUAN`) — cố ý, vì đây là file *mẫu* để `--check` báo lỗi, không phải ground
   truth thật; `test_eval_ground_truth.py` không quét file này.
+
+#### [`tests/eval/gt_loader.py`](../../tests/eval/gt_loader.py) — `73` dòng · `io`
+
+- **Vai trò:** Module nạp ground truth tập trung — thêm bởi commit `c3eea7f` khi tách bộ hợp
+  nhất thành 3 file con; chỗ **duy nhất** biết tên `eval_ground_truth_{kis,qa,trake}.json` và
+  ánh xạ `type → file`.
+- **Đầu vào:** `json`, `pathlib`. Đọc `tests/eval/eval_ground_truth_{kis,qa,trake}.json` (mặc
+  định `_EVAL_DIR = tests/eval/`; nhận `eval_dir` để test trỏ `tmp_path`). Không import
+  `scripts.`, không `data/`, không mạng.
+- **Đầu ra:** `load_ground_truth(types=None|str|iterable, eval_dir=None)` → list entry gộp theo
+  thứ tự KIS → QA → TRAKE (file thiếu thì bỏ qua, không lỗi); `get_gt_path(type)` → `Path`;
+  `save_ground_truth(entries, type)` ghi `json.dumps(..., ensure_ascii=False, indent=2) + "\n"`.
+- **Ai gọi nó:** `grep -rn "gt_loader"` → [`run_eval.py:66`](../../tests/eval/run_eval.py#L66),
+  [`score_pipelines.py:43`](../../tests/e2e/score_pipelines.py#L43),
+  [`test_phase3_rerank.py:23`](../../tests/e2e/test_phase3_rerank.py#L23),
+  [`normalize_gt.py:45`](../../tests/eval/normalize_gt.py#L45),
+  [`test_eval_ground_truth.py:20`](../../tests/unit/test_eval_ground_truth.py#L20),
+  [`test_normalize_gt.py:161`](../../tests/unit/test_normalize_gt.py#L161),
+  [`test_gt_loader.py`](../../tests/unit/test_gt_loader.py). `golden_kis_snapshot.py`,
+  `test_phase4_trake.py`, `sweep_rerank.py` đọc thẳng file con, **không** qua module này.
+- **Điểm cần biết:** `_EVAL_DIR` là biến "private" nhưng bị `normalize_gt.py:45` import lại
+  (`from tests.eval.gt_loader import ... _EVAL_DIR`) — dùng xuyên module. `load_ground_truth`
+  **không** validate `type` lạ (chỉ `get_gt_path` mới `raise ValueError`); file con thiếu bị bỏ
+  qua âm thầm (`if not path.exists(): continue`) nên nạp thiếu một loại không báo lỗi. Bốn hàm
+  test ở `test_gt_loader.py` chỉ chạy trên dữ liệu giả `tmp_path`.
 
 #### [`tests/eval/lookup_frame.py`](../../tests/eval/lookup_frame.py) — `123` dòng · `cli+io`
 
@@ -3475,11 +3640,14 @@ làm ví dụ `--check`. Xem FINDING-7.9.
 
 - **Vai trò:** Chuyển ground truth từ format người ghi (v2 `{"entries":[…]}`, `query_text`,
   `gt_frame`) sang format harness (v1 mảng, `text_vi`+`text_en`, `[gt_frame_start, gt_frame_end]`);
-  kiểm tra toàn vẹn; `--merge` nối vào bản hợp nhất (báo lỗi trùng `query_id`).
+  kiểm tra toàn vẹn; `--merge` nối câu mới vào bộ ground truth (báo lỗi trùng `query_id`) — sau
+  `2ee24cf`, `--merge <thư mục>` phân loại theo `type` rồi nối vào đúng file con.
 - **Đầu vào:** File v2/v1; `data/extracted/map-keyframes/` (kiểm `gt_frame` có trùng keyframe
-  không). Import động `scripts.agent.tools.translate_raw.translate_raw` (dịch máy, **không LLM**).
+  không). Import `scripts.agent.tools.translate_raw.translate_raw` (dịch máy, **không LLM**) và
+  (sau `2ee24cf`) `tests.eval.gt_loader.{get_gt_path, save_ground_truth, _EVAL_DIR}`.
   `pandas` (lazy).
-- **Đầu ra:** `--out` ghi v1; `--merge` ghi đè bản hợp nhất; `--check` exit 0/1.
+- **Đầu ra:** `--out` ghi v1; `--merge <thư mục>` tự phân loại rồi nối vào đúng file con
+  KIS/QA/TRAKE (`--merge <file>` vẫn nối vào một file như cũ); `--check` exit 0/1.
 - **Ai gọi nó:** [`tests/unit/test_normalize_gt.py`](../../tests/unit/test_normalize_gt.py),
   [`tests/unit/test_eval_ground_truth.py:24`](../../tests/unit/test_eval_ground_truth.py#L24)
   (import `TAG_CHUAN`). EVAL_GUIDE.md chỉ dẫn chạy tay.
@@ -3494,9 +3662,10 @@ làm ví dụ `--check`. Xem FINDING-7.9.
 - **Vai trò:** Bake-off backbone embedding (clip_vitb32 vs siglip/siglip2/dfn…) bằng R@{1,5,20,50,100}
   + `Final`, retrieval-only, **không LLM**, tất định. Kèm cờ bật/tắt từng bước thuật toán mới
   (hybrid/expand/nms/strict_dp/coverage_pool) để đo đóng góp riêng.
-- **Đầu vào:** `tests/eval/eval_ground_truth.json`, features `.npy` từ `kaggle_jobs/` (qua
-  `multi_index`). Import `scripts.agent.tools.{multi_index, fusion, temporal_nms, query_expand}`,
-  lazy `sparse_index`. `numpy`, `pandas`.
+- **Đầu vào:** bộ ground truth nạp qua `tests.eval.gt_loader.load_ground_truth` (sau `2ee24cf`;
+  `--eval-set` nhận file hoặc thư mục), features `.npy` từ `kaggle_jobs/` (qua `multi_index`).
+  Import `scripts.agent.tools.{multi_index, fusion, temporal_nms, query_expand}`,
+  `tests.eval.gt_loader`, lazy `sparse_index`. `numpy`, `pandas`.
 - **Đầu ra:** `docs/reports/eval_baseline_comparison.md` + in bảng markdown.
 - **Ai gọi nó:** **Không file nào import** (`grep`). [CLAUDE.md:47](../../CLAUDE.md),
   EVAL_GUIDE.md, ARCHITECTURE.md chỉ dẫn chạy tay.
@@ -3526,24 +3695,26 @@ làm ví dụ `--check`. Xem FINDING-7.9.
 
 #### [`tests/eval/split_eval_gt.py`](../../tests/eval/split_eval_gt.py) — `91` dòng · `cli+io`
 
-- **Vai trò:** Tách `eval_ground_truth.json` thành 3 file con KIS/QA/TRAKE, phi huỷ diệt (giữ
-  nguyên 100% nội dung + thứ tự entry).
-- **Đầu vào:** `eval_ground_truth.json` (mặc định). `argparse`.
+- **Vai trò:** Tách một mảng ground truth v1 thành 3 file con KIS/QA/TRAKE, phi huỷ diệt (giữ
+  nguyên 100% nội dung + thứ tự entry). Sau `2ee24cf` (xoá bản hợp nhất) đây chỉ còn là công cụ
+  tách một lần khi nhập một mảng v1 mới.
+- **Đầu vào:** `--source <file>` — sau `77f024f` **bắt buộc** (trước mặc định
+  `eval_ground_truth.json`). `argparse`.
 - **Đầu ra:** `eval_ground_truth_{kis,qa,trake}.json` (`json.dumps(..., ensure_ascii=False,
   indent=2)`, **không** `+ "\n"` cuối).
 - **Ai gọi nó:** [`tests/unit/test_split_eval_gt.py:10`](../../tests/unit/test_split_eval_gt.py#L10)
-  import `split_ground_truth`. Không nằm trong daily commands của CLAUDE.md — chạy tay sau khi
-  sửa master.
+  import `split_ground_truth`. Không nằm trong daily commands của CLAUDE.md — chạy tay.
 - **Điểm cần biết:** `ValueError` nếu entry có `type` lạ (không phải KIS/QA/TRAKE) — nhưng
   **không** kiểm `gt_video_id` rỗng / khoảng frame ngược (khác `normalize_gt`/`run_eval`), nên
-  bản tách có thể chứa entry mà `run_eval` sẽ từ chối. Chiều dẫn xuất: master → 3 con (một chiều).
+  bản tách có thể chứa entry mà `run_eval` sẽ từ chối.
 
 #### [`tests/eval/sweep_rerank.py`](../../tests/eval/sweep_rerank.py) — `197` dòng · `cli+io`
 
 - **Vai trò:** Grid search tham số Risk-Aware Re-ranking (`margin_threshold`, `head_n`,
   `preserve_recall_tail`) trên câu KIS có GT, in bảng markdown sắp theo `Final` — hỗ trợ chọn tay
   khi có ≥100 câu.
-- **Đầu vào:** `tests/eval/eval_ground_truth.json` (fallback `data/extracted/THUNGHIEM-bo-de-thi/`).
+- **Đầu vào:** `tests/eval/eval_ground_truth_kis.json` (sau `2ee24cf`; fallback
+  `data/extracted/THUNGHIEM-bo-de-thi/eval_ground_truth_kis.json`).
   Import **thật** `scripts.agent.tools.{retrieve.fast_retrieve, hybrid.hybrid_retrieve,
   rerank.apply_risk_aware_ranking, rerank.RETRIEVAL_POOL_SIZE, temporal_nms}` +
   `tests.e2e.score_pipelines._final`. Cần `data/`. Không LLM.
@@ -3556,20 +3727,23 @@ làm ví dụ `--check`. Xem FINDING-7.9.
   phải chép tay vào `rerank.py`. `SPREAD_MAX_PER_VIDEO` không có trong grid (docstring nhắc
   "bet/spread" nhưng vòng lặp không quét spread).
 
-#### [`tests/eval/widen_gt_windows.py`](../../tests/eval/widen_gt_windows.py) — `116` dòng · `cli+io`
+#### [`tests/eval/widen_gt_windows.py`](../../tests/eval/widen_gt_windows.py) — `128` dòng · `cli+io`
 
 - **Vai trò:** Nới các khoảng `gt_frame_start == gt_frame_end` (1 frame) ra ±1 keyframe lân cận
-  từ `map-keyframes`, in bảng before→after; ghi đè `eval_ground_truth.json`.
-- **Đầu vào:** `eval_ground_truth.json`, `data/extracted/map-keyframes/{video_id}.csv`. `pandas`,
+  từ `map-keyframes`, in bảng before→after; ghi đè các file ground truth con.
+- **Đầu vào:** `eval_ground_truth_{kis,qa,trake}.json` (sau `2ee24cf`; trước là
+  `eval_ground_truth.json`), `data/extracted/map-keyframes/{video_id}.csv`. `pandas`,
   `argparse`. Không import `scripts.`.
-- **Đầu ra:** Ghi đè `eval_ground_truth.json` (trừ khi `--dry-run`); in bảng ra stdout.
+- **Đầu ra:** Ghi đè từng file con (`widen_file()`, trừ khi `--dry-run`); in bảng ra stdout.
+  `--eval-set <file>` để chỉ xử lý một file.
 - **Ai gọi nó:** **Không file nào import** (`grep`). EVAL_GUIDE.md nói nó "không nằm trong quy
   trình chuẩn nữa".
-- **Điểm cần biết:** Xem FINDING-7.3. Lằn ranh kỹ thuật một phần: chỉ sửa entry `s == e`, biên
-  độ ±1 keyframe hardcode ([:60-62](../../tests/eval/widen_gt_windows.py#L60)), TRAKE nới trong
-  `events[]`. Bảng before→after **không được lưu** — chạy xong chỉ còn `git diff` làm bằng chứng.
+- **Điểm cần biết:** Xem FINDING-7.3. Lằn ranh kỹ thuật một phần: chỉ sửa entry `s == e` (và
+  `2ee24cf` thêm điều kiện `and vid` — bỏ qua entry thiếu `gt_video_id`), biên độ ±1 keyframe
+  hardcode ([:56-66](../../tests/eval/widen_gt_windows.py#L56)), TRAKE nới trong `events[]`. Bảng
+  before→after **không được lưu** — chạy xong chỉ còn `git diff` làm bằng chứng.
 
-### 7.9. Mục từng file — `tests/unit/` (18 file pytest)
+### 7.9. Mục từng file — `tests/unit/` (19 file pytest — 18 tại baseline audit + `test_gt_loader.py` thêm bởi `c3eea7f`)
 
 Mọi file dưới đây là hàm pytest tất định, không cần `data/`/API key (trừ chỗ ghi rõ). Trọng tâm
 rà soát: **khoá hành vi gì** và **monkeypatch có nhắm đúng module sở hữu hàm không** (luật
@@ -3602,9 +3776,10 @@ rà soát: **khoá hành vi gì** và **monkeypatch có nhắm đúng module s�
 
 #### [`tests/unit/test_eval_ground_truth.py`](../../tests/unit/test_eval_ground_truth.py) — `118` dòng · `test`
 
-- **Vai trò:** Khoá tính toàn vẹn `eval_ground_truth.json` + 3 file tách + 2 test Regression
-  Guard (7 hàm test).
-- **Đầu vào:** Đọc `eval/eval_ground_truth*.json` (trong git). Import `TAG_CHUAN` từ
+- **Vai trò:** Khoá tính toàn vẹn bộ ground truth (3 file con) + 2 test Regression Guard (7 hàm
+  test).
+- **Đầu vào:** Nạp qua `tests.eval.gt_loader.{load_ground_truth, get_gt_path, GT_FILENAMES}`
+  (sau `c3eea7f`; trước đọc thẳng `eval_ground_truth.json`). Import `TAG_CHUAN` từ
   `tests.eval.normalize_gt`, `check_regression` từ `tests.e2e.score_pipelines`.
 - **Đầu ra:** pytest.
 - **Ai gọi nó:** pytest.
@@ -3622,6 +3797,20 @@ rà soát: **khoá hành vi gì** và **monkeypatch có nhắm đúng module s�
 - **Điểm cần biết:** Khoá tính chất cốt lõi: RRF **chỉ phụ thuộc thứ hạng, không phụ thuộc điểm
   gốc** (`w/(k+rank)`), key được cả 2 hệ thống xếp cao thắng key chỉ 1 hệ thống, trọng số 0 /
   danh sách rỗng không làm hỏng. Không cần monkeypatch (pure). `rrf_fuse_hits` có file test riêng.
+
+#### [`tests/unit/test_gt_loader.py`](../../tests/unit/test_gt_loader.py) — `48` dòng · `test`
+
+- **Vai trò:** Khoá hợp đồng của [`gt_loader.py`](../../tests/eval/gt_loader.py) — thêm cùng
+  commit `c3eea7f` (4 hàm test).
+- **Đầu vào:** Import `tests.eval.gt_loader.{get_gt_path, load_ground_truth, save_ground_truth}`.
+  Dùng `tmp_path` — **không** đọc bộ ground truth thật, không `data/`, không mạng.
+- **Đầu ra:** pytest.
+- **Ai gọi nó:** pytest.
+- **Điểm cần biết:** Khoá: `get_gt_path` map đúng 3 tên file con + chuẩn hoá hoa/thường + `raise
+  ValueError` cho type lạ; `load_ground_truth` nạp 1 type, và gộp cả 3 đúng thứ tự
+  KIS → QA → TRAKE; `save_ground_truth` ghi đúng file. Không monkeypatch (module đẩy hết I/O vào
+  `tmp_path`). **Không** kiểm nhánh "file con thiếu thì bỏ qua" hay giá trị 91 câu thật — việc đó
+  ở `test_eval_ground_truth.py` / `test_split_eval_gt.py`.
 
 #### [`tests/unit/test_normalize_gt.py`](../../tests/unit/test_normalize_gt.py) — `167` dòng · `test`
 
@@ -3748,16 +3937,18 @@ rà soát: **khoá hành vi gì** và **monkeypatch có nhắm đúng module s�
   `sparse_index` (module sở hữu `search_sparse`). Khoá: doc chứa term hiếm xếp đầu, term ngoài
   vocab → rỗng.
 
-#### [`tests/unit/test_split_eval_gt.py`](../../tests/unit/test_split_eval_gt.py) — `100` dòng · `test`
+#### [`tests/unit/test_split_eval_gt.py`](../../tests/unit/test_split_eval_gt.py) — `86` dòng · `test`
 
-- **Vai trò:** Khoá `split_ground_truth` phi huỷ diệt + 3 file tách trên đĩa khớp master + bắt
-  input lỗi (3 hàm test).
-- **Đầu vào:** Import `tests.eval.split_eval_gt.split_ground_truth`. Đọc `eval/eval_ground_truth*.json`.
+- **Vai trò:** Khoá `split_ground_truth` phi huỷ diệt + 3 file con trên đĩa đủ số câu/đúng type
+  + bắt input lỗi (3 hàm test).
+- **Đầu vào:** Import `tests.eval.split_eval_gt.split_ground_truth`. Đọc `eval/eval_ground_truth_{kis,qa,trake}.json`.
 - **Đầu ra:** pytest.
 - **Ai gọi nó:** pytest.
-- **Điểm cần biết:** `test_split_files_on_disk_match_master_eval_ground_truth` là **cơ chế chống
-  lệch** cho dẫn xuất đã commit (§7.4): so từng byte `kis == master_kis` + hardcode `len == 59/17/15`.
-  Không monkeypatch. Điểm yếu nhỏ: 3 con số cứng phải sửa mỗi lần thêm câu.
+- **Điểm cần biết:** `2ee24cf` đổi `test_split_files_on_disk_match_master_eval_ground_truth` (so
+  từng byte `kis == master_kis`) thành `test_split_files_on_disk_match_expected_counts_and_types`
+  và **xoá phần so nội dung** — vì không còn bản master. Nay chỉ assert `len == 59/17/15` (tổng
+  91) + mọi entry đúng `type`. 3 con số cứng vẫn phải sửa tay mỗi lần thêm câu; và "3 file con
+  có lệch nội dung với nhau không" nay **không test nào phủ**. Không monkeypatch.
 
 #### [`tests/unit/test_sweep_rerank.py`](../../tests/unit/test_sweep_rerank.py) — `34` dòng · `test`
 
@@ -3799,16 +3990,18 @@ rà soát: **khoá hành vi gì** và **monkeypatch có nhắm đúng module s�
 Repo **đã có** [`tests/eval/AUDIT_REPORT.md`](../../tests/eval/AUDIT_REPORT.md) (84 dòng, ngày
 2026-08-31). Đọc trọn:
 
-- **Nó rà soát cái gì:** **Chỉ nội dung dữ liệu** của 91 câu trong `eval_ground_truth.json` —
+- **Nó rà soát cái gì:** **Chỉ nội dung dữ liệu** của 91 câu ground truth (bản hợp nhất tại thời
+  điểm đó; nay là 3 file con) —
   nhãn `type` có đúng không (11 câu KIS nghi nên là TRAKE), chất lượng dịch `text_vi`↔`text_en`
   (lỗi gõ "nột"→"một" ở `e-kis-ai-022`, tên món ăn địa phương dịch thô), câu QA thiếu
   `question`/`gt_answers` (9 câu), TRAKE trống `gt_video_id` / khoảng frame ngược (3 câu), 35/91
   câu thiếu `difficulty_tags`. Kết thúc bằng "Action Plan" 3 bước sửa dữ liệu (chưa thực hiện —
   các lỗi này vẫn còn trong file hiện tại, xác nhận bằng đọc `eval_ground_truth_qa.json`).
-- **Kết luận còn đúng không:** Còn đúng về mặt dữ liệu — bản hợp nhất vẫn 91 câu (59/17/15) như
-  báo cáo đó ghi, và các lỗi cấu trúc nó liệt kê chưa được vá. Một chi tiết đã đổi: 3 file tách
-  KIS/QA/TRAKE (do `split_eval_gt.py`) ra đời **sau** báo cáo đó nên không nằm trong phạm vi nó;
-  các lỗi dữ liệu được chép nguyên sang bản tách.
+- **Kết luận còn đúng không:** Còn đúng về mặt dữ liệu — bộ ground truth vẫn 91 câu (59/17/15)
+  như báo cáo đó ghi, và các lỗi cấu trúc nó liệt kê chưa được vá. Hai chi tiết đã đổi: (1) 3
+  file tách KIS/QA/TRAKE ra đời **sau** báo cáo đó; (2) `2ee24cf` sau đó xoá bản hợp nhất và
+  biến 3 file tách thành nguồn sự thật (`2ee24cf` cũng cập nhật header `AUDIT_REPORT.md` cho
+  khớp). Các lỗi dữ liệu được chép nguyên sang 3 file con.
 - **Chồng lấn:** Chương 7 này và `AUDIT_REPORT.md` **giao nhau ở đúng một điểm** — cả hai đều
   đếm phân bố 59/17/15 và đều coi độ lệch về KIS + cỡ mẫu QA/TRAKE nhỏ là vấn đề (mục 7.4 ở đây,
   §1 + §5 ở đó). Ngoài điểm đó, hai bên **không chồng lấn**: `AUDIT_REPORT.md` soi *giá trị từng
@@ -5223,4 +5416,246 @@ và [`answer_qa.py:45`](../../scripts/agent/tools/answer_qa.py#L45) (evidence Q&
 
 ## 10. Tổng hợp: bất hợp lý và điểm yếu hệ thống
 
-<!-- Task 10 điền -->
+Chương này gom **66 finding** của chương 1–9 về một chỗ, rồi đọc chúng theo **chủ đề** thay vì
+theo file: nhiều triệu chứng rời rạc ở các tầng khác nhau thường cùng một gốc. Không phát sinh
+finding mới ở đây — mọi dòng trong bảng §10.1 truy về một mục đã viết ở chương tương ứng. Hai số
+hiệu `FINDING-7.8` và `FINDING-7.11` được nhắc trong chương 7 nhưng **chưa bao giờ thành mục**
+(xem [§0.5](#05-giới-hạn-của-chính-đợt-audit)) — không tính vào 66 và không có trong bảng.
+
+### §10.1. Bảng tổng hợp toàn bộ finding
+
+Sắp xếp **Cao → Trung bình → Thấp**, trong mỗi mức theo số hiệu.
+
+| Mã | Mức độ | Chương | Một dòng mô tả |
+|---|---|---|---|
+| FINDING-2.2 | Cao | 2 | Thiếu cache BM25 → `hybrid_retrieve` im lặng suy biến về dense-only (chỉ `print` một dòng), không harness nào phân biệt |
+| FINDING-6.1 | Cao | 6 | `validate_submission` không kiểm tên file khớp `query-N-{type}`; `_detect_query_type` mặc định `kis` → file qa/trake sai tên vẫn PASS luật KIS |
+| FINDING-6.2 | Cao | 6 | `validate_submission` không kiểm số `frame_id` / số dòng TRAKE khớp N hay nhất quán giữa các dòng của cùng truy vấn |
+| FINDING-7.1 | Cao | 7 | Lõi truy hồi (`index_store`/`retrieve`/`hybrid`/`multi_index`/`objects_lookup`/`frames`) không có unit test nào; module pure nhỏ thì phủ kín |
+| FINDING-7.2 | Cao | 7 | `run_eval.py` (harness "so backbone" trong daily commands) không import `rerank.py` — chỉnh `MARGIN_THRESHOLD` rồi chạy nó thấy "số không đổi", kết luận sai |
+| FINDING-7.3 | Cao | 7 | `widen_gt_windows.py` nới khoảng ground truth, ghi đè tại chỗ; file không có version/hash/changelog → mọi số cũ trong `docs/reports/` mất neo so sánh |
+| FINDING-8.1 | Cao | 8 | Màn Chat trả lời bằng mock hardcode (`setTimeout` + `pickScenario`), không lời gọi API nào, không cờ bật/tắt |
+| FINDING-1.2 | Trung bình | 1 | Bốn tài liệu điều hướng mô tả bốn kiến trúc provider LLM không tương thích nhau |
+| FINDING-1.3 | Trung bình | 1 | README/ARCHITECTURE/GEMINI nói `frame_id = frame_idx + 1` xảy ra ở `retrieve.py`; dòng code thật ở `index_store.row_to_hit()` |
+| FINDING-1.4 | Trung bình | 1 | `GEMINI.md` trôi lệch nặng so với cây repo (tên thư mục test `test_eval/`, tên file `ocr_lookup.py` đã đổi) |
+| FINDING-1.5 | Trung bình | 1 | `CLAUDE.md` ghi `torch 2.8.0+cu129` + RTX 5050 như hiện hành; `requirements.txt` ghim `torch==2.13.0+cpu` |
+| FINDING-2.1 | Trung bình | 2 | `frame_idx + 1` được tính lại ngoài `row_to_hit()` tại `hybrid.py:156` và `multi_index.py:78` — trái tuyên bố "the only place" |
+| FINDING-2.3 | Trung bình | 2 | `run_eval.py` không với tới bất kỳ hằng số tune nào của `rerank.py` (`MARGIN_THRESHOLD`/`RECALL_HEAD_N`/`SPREAD_MAX_PER_VIDEO`) |
+| FINDING-2.4 | Trung bình | 2 | `MARGIN_THRESHOLD = 0.012` căn trên thang cosine `clip_vitb32` (đã retire 2026-08-28); comment tự nhận thiết kế bet/spread "bị trội hoàn toàn" |
+| FINDING-2.5 | Trung bình | 2 | Docstring `index_store.py` nói "cố ý KHÔNG import `index_store`/`multi_index`" nhưng `index_store.py:96` `from ...multi_index import ...` |
+| FINDING-3.2 | Trung bình | 3 | Tầng fallback kiến thức của Q&A nộp chuỗi LLM làm `answer` (`confidence=0.1`) khi không có bằng chứng video — trừ khi model tự trả đúng chữ `CANNOT_ANSWER` |
+| FINDING-3.3 | Trung bình | 3 | Cross-check "NO" của Q&A chỉ hạ `confidence`, không loại answer / không ép xuống tầng sau; 3 tình huống khác nhau quy về một `False` |
+| FINDING-3.6 | Trung bình | 3 | `trake_align.py` bị gán nhãn **pure** trong `CLAUDE.md` nhưng `rule_plausibility()` gọi `get_objects` → đọc `data/extracted/objects/` |
+| FINDING-3.7 | Trung bình | 3 | Luật "chỉ OCR/VLM on-demand trên candidate đã retrieve" không được thực thi trong `ocr_read.py` — `top_n` do caller truyền, không `min()`/`assert` chặn |
+| FINDING-4.1 | Trung bình | 4 | `AIC_MODE=contest` mà `OPENROUTER_MODEL_CONTEST` trống → chỉ `print` WARNING rồi chạy tiếp bằng `OPENROUTER_MODEL` (mặc định `gemini-2.5-flash`) |
+| FINDING-4.3 | Trung bình | 4 | `run_kis` đưa thẳng `query_text` chưa dịch vào retrieval (Q&A/TRAKE đều `rewrite_query`); SigLIP mạnh nhất với tiếng Anh |
+| FINDING-5.1 | Trung bình | 5 | State hàng đợi/session là dict toàn cục trong RAM, không `Lock`, không đường ghi đĩa — restart backend là mất sạch |
+| FINDING-5.3 | Trung bình | 5 | `run_kis`/`run_qa`/`run_trake` trong router không bọc `try/except` → exception từ pipeline/LLM thoát ra thành HTTP 500 trần |
+| FINDING-6.3 | Trung bình | 6 | Validator không kiểm "không có header row" và "`.csv` thật không phải `.xlsx`" — trái claim "kiểm tất cả rules" |
+| FINDING-6.4 | Trung bình | 6 | `csv.reader(content.splitlines())` không ghép được `answer` Q&A nhiều dòng → validate sai định dạng đúng |
+| FINDING-6.5 | Trung bình | 6 | Validator không phát hiện gói ZIP thiếu CSV cho một truy vấn nào đó |
+| FINDING-6.6 | Trung bình | 6 | Nhánh Elasticsearch (`es_index.py`/`index_ocr_es.py`/`vlm_ocr_caption.py` + dep `elasticsearch`) là mã chết; runtime đọc JSONL thẳng, README gọi nhầm là "đường dùng thật" |
+| FINDING-6.7 | Trung bình | 6 | `scripts/offline/README.md` dùng đường dẫn cũ `scripts/preprocess/…`, thiếu `analysis/` và `generate_sotuyen2_csv.py` |
+| FINDING-6.8 | Trung bình | 6 | `analyze_frame_similarity.py` `_ROOT` sai một cấp `.parent` sau khi chuyển thư mục → trỏ vào `scripts/` thay vì repo root, script chết |
+| FINDING-6.9 | Trung bình | 6 | `setup_kaggle_shards.py` và `bundle_shards_self_contained.py` (~800 dòng) cùng sinh `kaggle_jobs/07_*/main.py`, nhúng pipeline caption gần y hệt; bản thứ 3 ở `run_caption_shard_local.py` |
+| FINDING-6.10 | Trung bình | 6 | `check_shards_status.py` + `download_all_shards.py` chỉ dùng `KAGGLE_ACC0` cho cả 3 shard, trong khi `push_all_shards.py` đẩy lên 3 tài khoản khác nhau |
+| FINDING-7.4 | Trung bình | 7 | Ảnh chụp vàng KIS có 23 câu, `eval_ground_truth_kis.json` có 59 → `--check` **luôn** báo LỆCH vì dữ liệu, không phải hành vi |
+| FINDING-7.5 | Trung bình | 7 | `test_smoke_pipelines.py` import `from submit.…` (thiếu prefix `scripts.`) → `ModuleNotFoundError` ngay dòng đầu, smoke test không chạy được lần nào |
+| FINDING-7.6 | Trung bình | 7 | `e2e_baseline.json` lưu Final trên 38 câu; bộ ground truth nay 91 → Regression Guard so KIS Final khác đơn vị mẫu, báo động giả |
+| FINDING-8.2 | Trung bình | 8 | `client.ts` `chatMessage()` gọi `POST /api/chat/{session_id}/message` — không router backend nào khai báo path `/chat` |
+| FINDING-8.3 | Trung bình | 8 | `removeFromQueue()` (client + endpoint backend đều tồn tại) không component nào gọi — nửa tính năng bỏ dở |
+| FINDING-8.5 | Trung bình | 8 | Bù VN→EN cho KIS chỉ tồn tại ở nút "Dịch thô" trên UI (ghi đè ô `query`), không ở pipeline — phụ thuộc người dùng nhớ bấm |
+| FINDING-8.6 | Trung bình | 8 | Cùng khối `reorder`/`removeAt`/validate `frame_id`/`addToQueue` lặp ở Kis/Qa/TrakeScreen, không custom hook nào |
+| FINDING-9.1 | Trung bình | 9 | `features_siglip2/*.npy` do người dùng encode ngoài repo; `multi_index.py` docstring không rõ `model_id`, đoán `siglip2-base` (dim 768) khác job `02_siglip2` (dim 1152) |
+| FINDING-9.2 | Trung bình | 9 | `features_jina/` từng 100% NaN; README không có mục xác nhận lần chạy sạch trọn vẹn sau đó; tag `jina` vẫn là entry sống trong registry |
+| FINDING-9.3 | Trung bình | 9 | `fast_retrieve_multi_model` không caller nào trong `pipeline_kis`/`scripts/api/` — multi-model RRF fusion là code chết |
+| FINDING-1.1 | Thấp | 1 | `package-lock.json` rỗng ở repo root, không có `package.json` — trái "repo ngoài `frontend/` stays Node/JS-free" |
+| FINDING-1.6 | Thấp | 1 | `einops`/`timm`/`accelerate`/`protobuf` không ghim version, phá quy ước ghim `==` tuyệt đối của chính file |
+| FINDING-2.6 | Thấp | 2 | Docstring/comment `index_store.py` tham chiếu `build_index()` và `index.py` — cả hai không tồn tại trong repo |
+| FINDING-2.7 | Thấp | 2 | `query_expand.py` bị gán nhãn `pure` nhưng `expand_aspects_llm()` `from scripts.agent.config import call_llm` và gọi nó |
+| FINDING-3.1 | Thấp | 3 | Docstring `answer_qa.py` nói "Workflow 3 tầng" chỉ liệt kê 2; danh sách `method` thiếu `ocr_direct` và `knowledge_fallback` |
+| FINDING-3.4 | Thấp | 3 | `max_tier==1` trả `answer=""` được lưu vào `answers[vid]` → build submission thấy key tồn tại, dùng `""` thay vì `best_answer` |
+| FINDING-3.5 | Thấp | 3 | `_trace_evidence()` luôn in cứng `caption: not used` trong khi `_build_evidence_bundle()` có nạp caption Vintern vào bundle gửi Vision |
+| FINDING-3.8 | Thấp | 3 | `ocr_read.py` 573 dòng (file lớn nhất repo) gánh ≥8 trách nhiệm tách bạch |
+| FINDING-4.2 | Thấp | 4 | (Cùng bản chất 2.7 ở tầng chương 4) `scripts/agent/CLAUDE.md` + root `CLAUDE.md` gọi `query_expand.py` là **pure**, nhưng có `expand_aspects_llm()` gọi `call_llm` |
+| FINDING-5.2 | Thấp | 5 | `ExportResponse.zip_path` trả đường dẫn file tuyệt đối phía server — trái quy ước "không lộ path ra JSON" mà chính `schemas.py` đặt ra |
+| FINDING-5.4 | Thấp | 5 | `video_meta` dựng path từ `video_id` param, không `.resolve()` + kiểm nằm trong thư mục → `../` leo ra ngoài `_MAPKF_DIR`/`_MEDIAINFO_DIR` |
+| FINDING-6.11 | Thấp | 6 | `generate_sotuyen1_csv.py`/`generate_sotuyen2_csv.py` trùng lặp, đặt sai bucket (`shards/`), ghi ra `tests/` thay vì `data/` |
+| FINDING-6.12 | Thấp | 6 | Logic OCR (`get_rotate_crop_image`/`sort_boxes_reading_order`/`ocr_frame`/`SCORE_THRESH=0.5`) chép ≥3 nơi, kể cả runtime `agent/tools/ocr_read.py` |
+| FINDING-6.13 | Thấp | 6 | Tín hiệu ASR runtime (`data/extracted/ASR_json_PhoWhisper_base/`) không truy được script sinh trong repo — không tái tạo được nếu mất |
+| FINDING-7.7 | Thấp | 7 | Ghi chú đầu `eval_e2e_scores.md` (do `score_pipelines.py` viết) nói TRAKE mặc định `top_k_video=20`; code + `test_pipeline_trake.py` nói 100 |
+| FINDING-7.9 | Thấp | 7 | `eval_ground_truth_thunghiem_draft.json` mồ côi (không `.py` nào đọc), đã xoá khỏi disk nhưng còn tracked ở HEAD và README vẫn liệt kê |
+| FINDING-7.10 | Thấp | 7 | `run_eval.py` chép tay TRAKE-DP + `_POOL_SIZE`/`_TRAKE_*` từ production, không test nào ép bản chép bằng bản gốc |
+| FINDING-8.4 | Thấp | 8 | `keyframeNeighbors()` + endpoint `GET /api/keyframes/{id}/neighbors` chết cả hai phía (không component nào gọi) |
+| FINDING-8.7 | Thấp | 8 | 7 chuỗi UI hiển thị tiếng Anh ("Run"/"Refresh"/"Export"/"quota"…) — trái luật UI tiếng Việt có dấu, repo-wide |
+| FINDING-8.8 | Thấp | 8 | Nhiều block CSS chết trong `app.css` (`.kis-body`, `.shortlist-*`, `.detail-strip`, `.strip-frame`…) không `.tsx` nào dùng |
+| FINDING-8.9 | Thấp | 8 | `frontend/README.md` toàn văn tiếng Anh template; `index.html` `lang="en"` + `<title>frontend</title>` chưa chỉnh |
+| FINDING-9.4 | Thấp | 9 | 3 notebook `colab_jobs/06_paddleocr_vietocr_shard*` là output sinh 100% từ `setup_colab_shards.py`, chỉ khác `SHARD_IDX` — commit cả generator lẫn sản phẩm |
+| FINDING-9.5 | Thấp | 9 | `07_vintern_caption_shard*/main.py` nhúng `MANIFEST` ~68 KB "tự chứa" — sinh từ `bundle_shards_self_contained.py`, commit cả sản phẩm |
+| FINDING-9.6 | Thấp | 9 | `05_qwen_vl_ocr_caption/` + `06_paddleocr_ocr/` đã bị bản Colab (PaddleOCR-detect + VietOCR) thay thế nhưng vẫn nằm trong cây |
+| FINDING-9.7 | Thấp | 9 | `07_vintern_caption/main.py` mô tả Phase 1 là "RapidOCR / `06_rapidocr_ocr/`" — thư mục đó đã xoá, đã đổi sang PaddleOCR sau smoke-test 2026-08-23 |
+
+### §10.2. Điểm yếu hệ thống theo chủ đề
+
+Tám chủ đề dưới đây là phần có giá trị nhất của báo cáo. Mỗi chủ đề là **một luận điểm** + 2–4
+finding làm bằng chứng + lý do vì sao nhiều triệu chứng rời rạc lại cùng một gốc.
+
+**1. Invariant tuyên bố nhưng không có gì thực thi.** Tài liệu khẳng định nhiều bất biến quan
+trọng; **không test nào canh chúng.** `frame_id = frame_idx + 1` được `CLAUDE.md` gọi là "the
+only place" nhưng có 3 bản trong code (FINDING-2.1) và 3 tài liệu chỉ sai chỗ nó nằm
+(FINDING-1.3). Luật "chỉ OCR/VLM on-demand" là mục "DO NOT" nhưng `ocr_read.py` không có
+`assert`/`min()` nào chặn (FINDING-3.7). Nhãn "pure" (không index/model/LLM/I/O) trong `CLAUDE.md`
+sai với `query_expand.py` (FINDING-2.7 / 4.2) và `trake_align.py` (FINDING-3.6). Gốc rễ: các
+invariant chỉ sống trong văn xuôi; không có cơ chế kỹ thuật nào biến "tài liệu bảo đừng" thành
+"CI sẽ chặn". Đề xuất kiểm chứng được viết ở [§10.5](#105-đề-xuất-kiểm-chứng-testsunittest_invariantspy).
+
+**2. Lỗ hổng harness đo lường.** `run_eval.py` — harness được `CLAUDE.md` daily commands nêu để
+"so backbone" — **không import `rerank.py`** (FINDING-7.2 / 2.3), nên hằng số bị chỉnh nhiều nhất
+(`MARGIN_THRESHOLD`, `RECALL_HEAD_N`, `SPREAD_MAX_PER_VIDEO`) không hề chạy khi ai đó "chạy eval
+để xem có tốt lên không". Cùng file còn giữ bản **chép tay** của TRAKE-DP + pool size, không test
+chống lệch (FINDING-7.10). Ghi chú đầu báo cáo `eval_e2e_scores.md` thì mô tả sai hành vi mặc
+định của TRAKE (FINDING-7.7). Gốc rễ: hai harness (`run_eval.py` và `score_pipelines.py`) trông
+giống nhau nhưng chạm hai tập code khác nhau; tài liệu phải viết hẳn một khối cảnh báo về đúng
+cái bẫy này — bằng chứng nó đã cắn người.
+
+**3. Lõi truy hồi gần như không có unit test.** 6 module lõi (`index_store`, `retrieve`,
+`hybrid`, `multi_index`, `objects_lookup`, `frames`) **không có file `tests/unit/test_*.py` nào**
+(FINDING-7.1); ngược lại 3 module pure nhỏ (`fusion`, `temporal_nms`, `trake_align`) và `rerank`
+đều có test riêng. Nguyên nhân cấu trúc: lõi cần ma trận embedding + metadata trong `data/` để
+khởi tạo, và repo **chưa có fixture index giả** (kiểu `test_sparse_index.py` đã làm cho BM25).
+Mọi kiểm thử lõi bị đẩy sang `golden_kis_snapshot.py` (cần `data/`, đang đỏ vĩnh viễn —
+FINDING-7.4) hoặc `score_pipelines.py` (cần API key). Trên máy chỉ có source, một refactor làm
+hỏng `row_to_hit()` hay phép chuẩn hoá embedding **không bị test nào bắt**.
+
+**4. Suy biến âm thầm thay vì fail loud.** Ba cơ chế, khi một nửa chết, hệ thống **vẫn trả kết
+quả** và chỉ `print` một dòng: thiếu cache BM25 → `hybrid_retrieve` chạy dense-only (FINDING-2.2);
+`OPENROUTER_MODEL_CONTEST` trống ở chế độ `contest` → chạy tiếp bằng model rẻ (FINDING-4.1);
+Q&A hết bằng chứng → tầng "knowledge_fallback" nộp câu trả lời LLM không neo vào video
+(FINDING-3.2). Gốc rễ: lựa chọn mặc định ở mỗi nhánh lỗi là "tiếp tục", không phải "dừng và báo";
+và không harness nào phân biệt được "chạy đủ" với "chạy một nửa". Trái hẳn quy ước `CLAUDE.md`
+"fail loud với thông báo rõ cho lỗi setup/data".
+
+**5. Validator không kiểm cái builder có thể làm sai.** `validate_submission` kiểm tính hợp lệ cú
+pháp của từng dòng, nhưng **không** kiểm sự tương ứng giữa gói nộp và bộ đề: tên file không khớp
+`query-N-{type}` mà `_detect_query_type` âm thầm mặc định `kis` (FINDING-6.1); số dòng TRAKE
+không khớp N (FINDING-6.2); thiếu hẳn CSV cho một truy vấn (FINDING-6.5); `.csv` thật là `.xlsx`
+/ có header row (FINDING-6.3); `answer` Q&A nhiều dòng bị `splitlines()` cắt (FINDING-6.4). Đúng
+lớp lỗi mà `build_submission.py` (single-writer) có thể tạo ra. Và kênh phát hiện thủ công —
+`test_smoke_pipelines.py` — **đang hỏng** (FINDING-7.5).
+
+**6. Tài liệu trôi lệch khỏi code.** 4 file điều hướng (`CLAUDE.md`, `README.md`,
+`ARCHITECTURE.md`, `PLAN.md`) + 9 `CLAUDE.md` con, cập nhật thủ công, **không cái nào được kiểm
+tự động**. Hệ quả: 4 mô tả provider LLM khác nhau (FINDING-1.2), `torch` version lệch
+(FINDING-1.5), `GEMINI.md` dùng tên thư mục tiền-refactor (FINDING-1.4), `frame_id+1` chỉ sai
+chỗ (FINDING-1.3), README/docstring gọi nhánh Elasticsearch đã chết là "đường dùng thật"
+(FINDING-6.6), `scripts/offline/README.md` đường dẫn cũ (FINDING-6.7), docstring `index_store.py`
+mô tả sai chính nó (FINDING-2.5, 2.6). Mỗi lần code đổi mà quên sửa một trong số đó là một
+finding — và số lượng file cần đồng bộ đảm bảo sẽ luôn quên.
+
+**7. Trùng lặp bị nhân bản.** Cùng một logic sống ở N bản: pipeline caption ở
+`setup_kaggle_shards.py` + `bundle_shards_self_contained.py` + `run_caption_shard_local.py`
+(~800 dòng, FINDING-6.9); logic OCR ở ≥3 nơi kể cả runtime (FINDING-6.12); `generate_sotuyen*_csv.py`
+(FINDING-6.11); state 3 màn Kis/Qa/Trake (FINDING-8.6); CSS chết (FINDING-8.8). Thêm vào đó,
+`colab_jobs/06_*` và `kaggle_jobs/07_*` commit **cả generator lẫn sản phẩm sinh tự động**
+(FINDING-9.4, 9.5). Chi phí: mỗi lần sửa bug là N lần sửa và N−1 cơ hội quên; và khi cả generator
+lẫn output cùng nằm trong git, người sau không biết sửa bên nào.
+
+**8. Rủi ro vận hành ngày thi.** Các quyết định "đủ dùng cho dev" chưa được nâng cấp cho điều
+kiện thi: state hàng đợi/session trong RAM, restart là mất (FINDING-5.1); màn Chat vẫn chạy mock
+(FINDING-8.1); `.env` sai mode = tiêu tiền hoặc đo bằng model yếu, chỉ cảnh báo bằng một dòng
+`print` (FINDING-4.1); exception pipeline thành HTTP 500 trần cho UI (FINDING-5.3); lưới
+regression tất định đang đỏ và baseline lệch mẫu (FINDING-7.4, 7.6). Gốc rễ: nơi một lần restart,
+một màn hình nhầm, hay một threshold chỉnh vội đều đắt, hệ thống chưa có lớp phòng thủ tương ứng.
+
+### §10.3. Ba rủi ro cao nhất cho kết quả thi đấu
+
+Chọn 3 finding nguy hiểm nhất cho Final Score, có tính đến cách chấm (`R@k` lấy `max` trên k dòng
+đầu, `k ∈ {1,5,20,50,100}`, top-20 nặng ký nhất; Q&A cần thêm `answer` khớp).
+
+**Rủi ro 1: Hybrid retrieval âm thầm chạy dense-only trên máy thi.**
+- Bằng chứng: FINDING-2.2 (Cao); phụ: FINDING-6.13 (tín hiệu ASR/OCR không tái tạo được từ repo).
+- Kiểm chứng trong 5 phút: `ls data/extracted/bm25_index/tf_matrix.npz` — nếu thiếu, chạy
+  `.venv\Scripts\python.exe scripts\agent\pipeline_kis.py "<câu có tên riêng / biển số / chữ trên màn hình>"`
+  và tìm dòng `[sparse_index] CẢNH BÁO: chưa có BM25 cache ... chạy dense-only`. (Dựng cache:
+  `.venv\Scripts\python.exe scripts\agent\tools\sparse_index.py --build`, ~3.5 phút.)
+- Nếu đúng thì mất gì: mọi truy vấn KIS/Q&A phụ thuộc khớp lexical (tên riêng, con số, chữ OCR)
+  mất phần đóng góp RRF từ nhánh sparse → cú trúng đầu tiên tụt hạng → `R@1…R@20` giảm trên diện
+  rộng. Không có hàng log nào báo động ở tầng `pipeline`/`API`; điểm tụt trông y như "retrieval
+  hôm nay kém".
+
+**Rủi ro 2: Chấm và nộp bằng model rẻ do cấu hình `.env`.**
+- Bằng chứng: FINDING-4.1 (Trung bình); phụ: FINDING-1.2 (4 tài liệu mô tả provider khác nhau),
+  FINDING-1.5 (doc/`.env` không được canh).
+- Kiểm chứng trong 5 phút: `set AIC_MODE=contest` rồi
+  `.venv\Scripts\python.exe -c "import scripts.agent.config as c; print(c._SELECTED_MODEL)"` —
+  nếu in `google/gemini-2.5-flash` (không phải model contest mong muốn) là đã rơi fallback.
+- Nếu đúng thì mất gì: mỗi truy vấn Q&A chỉ còn ăn điểm phần frame, mất toàn bộ phần
+  `answer_matches`; cross-check TRAKE (`_llm_crosscheck_chain`) chạy bằng model yếu → chuỗi N mốc
+  dễ sai thứ tự/nhầm frame → `(1/N)Σ` tụt. Chỉ dấu hiệu là một dòng `WARNING` lúc khởi động.
+
+**Rủi ro 3: Gói nộp sai lọt qua validator, không kênh nào chặn.**
+- Bằng chứng: FINDING-6.1 (Cao), FINDING-6.2 (Cao); phụ: FINDING-7.5 (smoke test e2e hỏng),
+  FINDING-6.5 (thiếu CSV không bị bắt).
+- Kiểm chứng trong 5 phút: dựng một gói thử có 1 file đổi sai tên (ví dụ `query-3-qa.csv` →
+  `query-3.csv`) rồi `.venv\Scripts\python.exe scripts\submit\validate_submission.py` — nếu PASS
+  là lỗ hổng thật. Chạy `.venv\Scripts\python.exe tests\e2e\test_smoke_pipelines.py` → sẽ
+  `ModuleNotFoundError` ngay, xác nhận kênh e2e không hoạt động.
+- Nếu đúng thì mất gì: một loại truy vấn (qa/trake) hoặc các dòng TRAKE bị BTC chấm **0** dù
+  "validate PASS". Vì `R@k` lấy `max` trên k dòng đầu, một file TRAKE sai số dòng/không nhất quán
+  làm hỏng toàn bộ điểm của mọi truy vấn trong file đó — mất mát tính bằng phần trăm tổng, không
+  phải một câu lẻ.
+
+### §10.4. Những gì hệ thống làm đúng
+
+Để báo cáo cân bằng và đáng tin — một báo cáo chỉ toàn lỗi là báo cáo chưa đọc kỹ:
+
+- **Tách module pure để eval tái dùng đúng thuật toán production.** `fusion.py`,
+  `temporal_nms.py`, `query_expand.py`, `trake_align.py` được tách riêng để `run_eval.py` gọi
+  lại chính hàm production thay vì giữ bản thứ hai dễ lệch. FINDING-7.10 chỉ ra khoảng trống
+  đúng ở chỗ **chưa** tách (TRAKE-DP, pool size) — tức mô hình này hiệu quả ở nơi đã áp dụng.
+- **Bốn bucket `scripts/` chia theo *thời điểm code chạy*** (`agent` runtime / `api` / `submit` /
+  `offline`), không theo chủ đề. Kiểm chứng: chương 2–6 map sạch, không file nào "không biết để
+  đâu"; `CLAUDE.md` nói thẳng "đừng thêm bucket thứ năm".
+- **`docs/decisions-log.md` ghi cả sai lầm cũ**, không chỉ quyết định đúng (bug nạp index 2 bản,
+  patch nhầm module trong test). Báo cáo này dùng chính nó làm bằng chứng nhiều lần (FINDING-7.2,
+  ghi chú monkeypatch chương 7).
+- **Ba chế độ `AIC_MODE` (`local` / `test` / `contest`) tách chi phí có chủ đích**, và `local`
+  **cố ý không có fallback trả tiền** — LM Studio hỏng thì fail loud thay vì âm thầm tiêu tiền;
+  `CLAUDE.md` cấm lấy số so sánh từ `local` vì model yếu.
+- **`conftest.py` đặt duy nhất repo root lên `sys.path`** (không bao giờ `scripts/`) — khoá đúng
+  invariant từng bị vi phạm 3 lần và từng gây bug nạp index + SigLIP hai bản.
+- **Có nỗ lực rào invariant `frame_id` dù chưa đủ:** ý định quy đổi tập trung ở `row_to_hit()`;
+  `test_eval_ground_truth.py` khoá `query_id` không trùng; `golden_kis_snapshot._load_kis_queries()`
+  fail loud khi `query_id` trùng (comment ghi lại sự cố `e-kis-ai-008` × 3). Phần lớn unit test
+  monkeypatch đúng module sở hữu hàm, nhiều file có docstring ghi lại bài học patch nhầm.
+
+### §10.5. Đề xuất kiểm chứng: `tests/unit/test_invariants.py`
+
+**Đây là đề xuất bằng văn bản. Đợt audit là read-only — KHÔNG tạo file này.** Việc hiện thực hoá
+thuộc [PLAN.md](../../PLAN.md).
+
+Chủ đề [§10.2 #1](#102-điểm-yếu-hệ-thống-theo-chủ-đề) cho thấy mọi invariant của dự án chỉ sống
+trong tài liệu. Một file `tests/unit/test_invariants.py` — tất định, không cần `data/` hay API
+key, hợp đúng "tầng mặc định cho test mới" của `tests/README.md` — có thể biến chính các lệnh
+`grep` của báo cáo này thành test chặn ở CI:
+
+- **`frame_id = frame_idx + 1` chỉ ở một chỗ.** `grep -rn "frame_idx + 1" scripts --include=*.py`
+  phải trả về đúng một allowlist (`index_store.py:row_to_hit`). Hiện sẽ **fail** — bắt được
+  FINDING-2.1 (`hybrid.py`, `multi_index.py`).
+- **`scripts/` đúng 4 bucket.** `sorted(p.name for p in Path("scripts").iterdir() if p.is_dir())
+  == ["agent", "api", "offline", "submit"]`.
+- **Chỉ `config.py` gọi `litellm`.** `grep -rn "import litellm\|from litellm" scripts` chỉ khớp
+  `scripts/agent/config.py`.
+- **Không đẩy `scripts/` lên `sys.path`.** `grep -rn "sys.path.*scripts" scripts tests` rỗng
+  (trừ `conftest.py` chèn repo root).
+- **Nhãn "pure" đúng nghĩa.** Với mỗi module `CLAUDE.md` gán `pure`, thân file không được chứa
+  `call_llm`/`get_objects`/`read_text`/`open(`/`json.load`. Hiện sẽ **fail** trên `query_expand.py`
+  và `trake_align.py` — buộc hoặc sửa nhãn, hoặc sửa code (FINDING-2.7 / 3.6 / 4.2).
+- **`contest` mode fail loud.** Test import `scripts.agent.config` với `AIC_MODE=contest` +
+  `OPENROUTER_MODEL_CONTEST=""` phải `raise`, không phải `print` rồi tiếp (FINDING-4.1).
+- **Không mục `#### ` mồ côi / không finding dangling** trong `docs/reports/source-code-audit-*.md`:
+  mọi `FINDING-x.y` được `xem`/`→` tham chiếu phải có một dòng định nghĩa `### ⚠️ FINDING-x.y`
+  hoặc `- **⚠️ FINDING-x.y` (bắt FINDING-7.8 / 7.11).
+
+Mỗi mục là một `def test_...` riêng với thông báo `assert` nói rõ finding tương ứng, để khi fail
+người đọc biết ngay đang vi phạm bất biến nào.
