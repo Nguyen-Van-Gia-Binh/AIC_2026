@@ -45,6 +45,7 @@ from scripts.agent.tools.rerank import RETRIEVAL_POOL_SIZE
 from scripts.agent.tools.objects_lookup import get_objects
 from scripts.agent.tools.trake_align import find_best_increasing_chain, rule_plausibility
 from scripts.agent.tools.asr_lookup import get_transcript
+from scripts.agent.tools.run_trace import NULL_TRACE, RunTrace
 
 
 # Trọng số của điểm LLM crosscheck (0.0-1.0) khi cộng vào trake_score (trung bình cosine similarity,
@@ -121,6 +122,7 @@ def run_trake(
     top_k_frame: int = 20,
     query_en: str | None = None,
     strict_monotonic: bool = True,
+    trace: "RunTrace | None" = None,
 ) -> dict:
     """
     Chạy pipeline TRAKE đầy đủ.
@@ -144,6 +146,7 @@ def run_trake(
           best      (dict):       Kết quả tốt nhất.
           n_events  (int):        Số khoảnh khắc.
     """
+    tr = trace if trace is not None else NULL_TRACE
     n_events = len(events)
     print(f"[trake] {n_events} events, finding video candidates...", flush=True)
 
@@ -151,16 +154,18 @@ def run_trake(
     if query_en:
         print(f"[trake]   Global query có sẵn (bỏ qua rewrite): {query_en!r}")
     else:
-        query_en = rewrite_query(query_text)
+        with tr.stage("global_query"):
+            query_en = rewrite_query(query_text)
         print(f"[trake]   Global query: {query_en!r}")
 
     # Rewrite từng event query TRƯỚC giai đoạn 1 — cần chúng ngay để tính độ phủ N mốc khi lọc video
     # (chỉ rewrite 1 lần, dùng chung cho mọi video ở giai đoạn 2).
     event_queries_en = []
-    for i, ev in enumerate(events):
-        eq = rewrite_query(ev)
-        event_queries_en.append(eq)
-        print(f"[trake]   Event {i+1}: {ev!r} -> {eq!r}")
+    with tr.stage("per_event_query"):
+        for i, ev in enumerate(events):
+            eq = rewrite_query(ev)
+            event_queries_en.append(eq)
+            print(f"[trake]   Event {i+1}: {ev!r} -> {eq!r}")
 
     # Multi-Event Coverage Pooling (§5.1): thay vì chỉ lọc video bằng 1 global query chung chung,
     # chấm điểm video = Sim_global(V) + tổng các max_{f in V} Sim(e_i, f). Video "phủ" đủ cả N mốc sẽ
@@ -191,33 +196,41 @@ def run_trake(
     )[:top_k_video]
     print(f"[trake]   Top {len(top_videos)} videos (phu {[coverage_count[v] for v in top_videos]}"
           f"/{n_events} moc): {top_videos}")
+    tr.record("trake", {
+        "events": list(events),
+        "global_query": query_en,
+        "event_queries": event_queries_en,
+        "video_candidates": top_videos[:10],
+        "alignment": None,
+    })
 
     # ─── Giai đoạn 2: Alignment cho từng video ─────────────────────────────────
     video_results = []
 
-    for vid in top_videos:
-        event_hits = [fast_retrieve_for_video(eq, vid, top_k=top_k_frame) for eq in event_queries_en]
-        chain = find_best_increasing_chain(event_hits, strict=strict_monotonic)
-        is_strict = True
-        if chain is None and strict_monotonic:
-            # Thử nới lỏng strict=False để cứu video (vd keyframe thưa, 2 mốc rơi cùng 1 keyframe)
-            chain = find_best_increasing_chain(event_hits, strict=False)
-            is_strict = False
-            if chain is not None:
-                print(f"[trake]   {vid}: cứu video bằng chuỗi nới lỏng (strict=False)")
+    with tr.stage("align"):
+        for vid in top_videos:
+            event_hits = [fast_retrieve_for_video(eq, vid, top_k=top_k_frame) for eq in event_queries_en]
+            chain = find_best_increasing_chain(event_hits, strict=strict_monotonic)
+            is_strict = True
+            if chain is None and strict_monotonic:
+                # Thử nới lỏng strict=False để cứu video (vd keyframe thưa, 2 mốc rơi cùng 1 keyframe)
+                chain = find_best_increasing_chain(event_hits, strict=False)
+                is_strict = False
+                if chain is not None:
+                    print(f"[trake]   {vid}: cứu video bằng chuỗi nới lỏng (strict=False)")
 
-        if chain is None:
-            print(f"[trake]   {vid}: không tìm được chuỗi mốc hợp lệ -> loại")
-            continue
+            if chain is None:
+                print(f"[trake]   {vid}: không tìm được chuỗi mốc hợp lệ -> loại")
+                continue
 
-        trake_score = sum(h["score"] for h in chain) / len(chain)
-        video_results.append({
-            "video_id":    vid,
-            "frame_ids":   [h["frame_id"] for h in chain],
-            "trake_score": trake_score,
-            "strict_chain": is_strict,
-            "chain":       chain,  # giữ hit đầy đủ (có "n") để cross-check tầng 3 đúng — không vào CSV
-        })
+            trake_score = sum(h["score"] for h in chain) / len(chain)
+            video_results.append({
+                "video_id":    vid,
+                "frame_ids":   [h["frame_id"] for h in chain],
+                "trake_score": trake_score,
+                "strict_chain": is_strict,
+                "chain":       chain,  # giữ hit đầy đủ (có "n") để cross-check tầng 3 đúng — không vào CSV
+            })
 
     # ─── Giai doan 3: Gated Multi-Modal Verification (§5.3) ────────────────────
     # Cổng 1 — lọc nhanh rule-based (Objects JSON vs mô tả event): miễn phí, chạy cho TẤT CẢ candidate.
@@ -237,17 +250,20 @@ def run_trake(
     # Cổng 2 — LLM/VLM: CHỈ chạy khi #1 và #2 sát nhau (<= GATE_MARGIN). Thay cho bản trước gọi LLM
     # cho MỌI candidate (tối đa 20 lượt/lần chạy TRAKE) — khi 1 video đã thắng cách biệt thì LLM
     # không thể đổi thứ tự, lượt gọi đó chỉ tốn tiền/thời gian.
+    gate_opened = False
     if len(video_results) >= 2:
         margin = video_results[0]["score"] - video_results[1]["score"]
         if margin <= GATE_MARGIN:
+            gate_opened = True
             print(f"[trake]   margin #1-#2 = {margin:.4f} <= {GATE_MARGIN} -> mở cổng LLM cho top "
                   f"{GATE_MAX_VIDEOS} video")
-            for vr in video_results[:GATE_MAX_VIDEOS]:
-                llm_score = _llm_crosscheck_chain(query_en, event_queries_en, vr["chain"])
-                vr["llm_score"] = llm_score
-                vr["score"] = (vr["trake_score"] + RULE_GATE_WEIGHT * vr["rule_score"]
-                               + LLM_SCORE_WEIGHT * llm_score)
-                print(f"[trake]   {vr['video_id']}: llm={llm_score:.2f} -> final={vr['score']:.4f}")
+            with tr.stage("llm_gate"):
+                for vr in video_results[:GATE_MAX_VIDEOS]:
+                    llm_score = _llm_crosscheck_chain(query_en, event_queries_en, vr["chain"])
+                    vr["llm_score"] = llm_score
+                    vr["score"] = (vr["trake_score"] + RULE_GATE_WEIGHT * vr["rule_score"]
+                                   + LLM_SCORE_WEIGHT * llm_score)
+                    print(f"[trake]   {vr['video_id']}: llm={llm_score:.2f} -> final={vr['score']:.4f}")
             video_results.sort(
                 key=lambda x: (1 if x.get("strict_chain", True) else 0, x["score"]),
                 reverse=True,
@@ -268,6 +284,20 @@ def run_trake(
     best = results[0] if results else {}
     print(f"[trake]   Best video: {best.get('video_id')}  score={best.get('score', 0):.4f}")
     print(f"[trake]   Frame IDs: {best.get('frame_ids')}")
+
+    tr.record("trake", {
+        "events": list(events),
+        "global_query": query_en,
+        "event_queries": event_queries_en,
+        "video_candidates": top_videos[:10],
+        "gate_opened": gate_opened,
+        "alignment": {
+            "video_id": best.get("video_id"),
+            "frame_ids": best.get("frame_ids"),
+            "score": round(float(best.get("score", 0.0)), 4),
+        } if best else None,
+    })
+    tr.set_result(video_id=best.get("video_id"), frame_ids=best.get("frame_ids"))
 
     return {
         "results":  results,
@@ -291,7 +321,9 @@ if __name__ == "__main__":
     print(f"Query: {query!r}")
     print(f"Events ({len(events)}): {events}\n")
 
-    out = run_trake(query, events, top_k_video=3, top_k_frame=5)
+    with RunTrace("trake", query, {"events": events, "top_k_video": 3, "top_k_frame": 5}) as _tr:
+        out = run_trake(query, events, top_k_video=3, top_k_frame=5, trace=_tr)
+    print(f"[TRAKE Pipeline] run_id={_tr.run_id}  (xem logs/runs/{_tr.run_id[:8]}/{_tr.run_id}.txt)")
 
     print("\n=== KẾT QUẢ ===")
     print(f"  N events:  {out['n_events']}")

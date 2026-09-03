@@ -18,10 +18,19 @@ from __future__ import annotations
 import base64
 import os
 import re
+import time
 from pathlib import Path
 
 import litellm
 from dotenv import load_dotenv
+
+try:
+    # Dấu vết run — chỉ để config.py biết "có trace đang mở không" mà ghi mỗi lần gọi LLM.
+    # run_trace là module thuần stdlib, không import ngược config → không vòng.
+    from scripts.agent.tools.run_trace import current_trace as _current_trace
+except Exception:  # chạy trực tiếp file này ngoài repo root
+    def _current_trace():  # type: ignore[misc]
+        return None
 
 _ROOT = Path(__file__).resolve().parent.parent.parent
 load_dotenv(_ROOT / ".env", override=False)
@@ -222,8 +231,13 @@ def call_llm(
     model: str = "auto",
     temperature: float = 0.1,
     max_tokens: int = 512,
+    purpose: str = "unknown",
 ) -> str:
-    """Gọi LLM theo PROVIDER_CHAIN: ưu tiên Gemini trực tiếp (AIC_MODE=test), fallback OpenRouter."""
+    """Gọi LLM theo PROVIDER_CHAIN: ưu tiên Gemini trực tiếp (AIC_MODE=test), fallback OpenRouter.
+
+    `purpose` chỉ dùng cho dấu vết run (run_trace) — nhãn ngắn cho biết lời gọi này để làm gì
+    (vd "qa_tier2", "trake_event_rewrite"). Không ảnh hưởng hành vi gọi LLM.
+    """
     global _call_counter
     is_vision = model == "vision" or bool(image_paths)
     actual_max = max(max_tokens, MIN_OUTPUT_TOKENS)
@@ -240,8 +254,20 @@ def call_llm(
         for key_index, api_key in _rotate_keys(api_keys):
             try:
                 print(f"[config] {provider['name']} model={chosen_model} key {key_index}/{len(api_keys)} ({'vision' if is_vision else 'text'})")
-                return _call_one(chosen_model, api_key, messages, temperature, actual_max,
-                                 api_base=provider.get("api_base"))
+                _t0 = time.perf_counter()
+                result = _call_one(chosen_model, api_key, messages, temperature, actual_max,
+                                   api_base=provider.get("api_base"))
+                _trace = _current_trace()
+                if _trace is not None:
+                    _trace.add_llm_call(
+                        purpose=purpose,
+                        model=chosen_model,
+                        key_index=f"{key_index}/{len(api_keys)}",
+                        ms=(time.perf_counter() - _t0) * 1000.0,
+                        response=result,
+                        prompt_chars=len(prompt),
+                    )
+                return result
             except Exception as error:
                 print(f"[config] {provider['name']} key {key_index}/{len(api_keys)} loi {type(error).__name__}: {error}")
                 last_error = error

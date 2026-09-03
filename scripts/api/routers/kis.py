@@ -7,6 +7,7 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException
 
 from scripts.agent.pipeline_kis import run_kis
+from scripts.agent.tools.run_trace import RunTrace
 from scripts.agent.tools.rewrite import rewrite_query_candidates
 from scripts.agent.tools.translate_raw import translate_raw
 from scripts.agent.tools.frames import get_neighbor_frames, get_all_frames
@@ -49,8 +50,12 @@ def translate_raw_endpoint(req: TranslateRawRequest) -> TranslateRawResponse:
 def kis_search(req: KisSearchRequest) -> KisSearchResponse:
     if not req.query.strip():
         raise HTTPException(400, "query rong")
-    hits = run_kis(req.query, top_k=req.top_k)
-    return KisSearchResponse(hits=[Hit(**h) for h in _strip_extra(hits)])
+    with RunTrace("kis", req.query, {"top_k": req.top_k}) as tr:
+        hits = run_kis(req.query, top_k=req.top_k, trace=tr)
+    return KisSearchResponse(
+        hits=[Hit(**h) for h in _strip_extra(hits)],
+        run_id=tr.run_id or None,
+    )
 
 
 @router.get("/keyframes/{video_id}/neighbors", response_model=list[NeighborFrame])

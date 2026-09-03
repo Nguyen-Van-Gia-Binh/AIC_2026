@@ -57,6 +57,7 @@ class KisSearchRequest(BaseModel):
 
 class KisSearchResponse(BaseModel):
     hits: list[Hit]
+    run_id: str | None = None  # định danh dấu vết run (logs/runs/<ngày>/<run_id>.txt) — có thể None nếu tracing tắt
 
 
 class QaRunRequest(BaseModel):
@@ -75,6 +76,7 @@ class QaRunResponse(BaseModel):
     answer: str
     confidence: float
     n_loops: int
+    run_id: str | None = None
 
 
 class TrakeRunRequest(BaseModel):
@@ -93,6 +95,7 @@ class TrakeCandidate(BaseModel):
 class TrakeRunResponse(BaseModel):
     candidates: list[TrakeCandidate]
     n_events: int
+    run_id: str | None = None
 
 
 class QueueRowIn(BaseModel):

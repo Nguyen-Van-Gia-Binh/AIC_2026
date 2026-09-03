@@ -36,6 +36,7 @@ from scripts.agent.tools.hybrid import hybrid_retrieve
 from scripts.agent.tools.rewrite import rewrite_query
 from scripts.agent.tools.answer_qa import answer_from_hits
 from scripts.agent.tools.rerank import apply_risk_aware_ranking, RETRIEVAL_POOL_SIZE
+from scripts.agent.tools.run_trace import NULL_TRACE, RunTrace
 
 CONFIDENCE_THRESHOLD = 0.5  # Dưới ngưỡng này: thử lại vòng 2
 
@@ -98,6 +99,7 @@ def run_qa(
     top_k: int = 100,
     query_en: str | None = None,
     use_hybrid: bool = True,
+    trace: "RunTrace | None" = None,
 ) -> dict:
     """
     Chạy pipeline Q&A đầy đủ.
@@ -124,11 +126,14 @@ def run_qa(
     if question is None:
         question = query_text
 
+    tr = trace if trace is not None else NULL_TRACE
     pool_size = max(top_k, RETRIEVAL_POOL_SIZE)
 
     def _retrieve_and_rank(q_en: str) -> list[dict]:
-        raw = hybrid_retrieve(q_en, top_k=pool_size, use_sparse=use_hybrid, qa=True)
-        return apply_risk_aware_ranking(raw, top_k=top_k, query_text=q_en, score_key="rrf_score")
+        with tr.stage("retrieve"):
+            raw = hybrid_retrieve(q_en, top_k=pool_size, use_sparse=use_hybrid, qa=True)
+        with tr.stage("rank"):
+            return apply_risk_aware_ranking(raw, top_k=top_k, query_text=q_en, score_key="rrf_score")
 
     # ─── Vòng 1 ────────────────────────────────────────────────────────────────
     if query_en:
@@ -187,6 +192,23 @@ def run_qa(
     print(f"[qa]   {n_own}/{len(results)} dòng mang answer riêng của video mình "
           f"({len(answers)} cum da trich xuat)")
 
+    best_hit = qa_result["best_hit"] or {}
+    tr.record("qa", {
+        "rewrite": query_en,
+        "tier": qa_result.get("method"),
+        "evidence_source": qa_result.get("method"),
+        "answer_raw": best_answer,
+        "normalized": best_answer,
+        "confidence": round(float(qa_result.get("confidence", 0.0)), 3),
+        "n_loops": n_loops,
+        "answers_by_video": answers,
+    })
+    tr.set_result(
+        video_id=best_hit.get("video_id"),
+        frame_ids=[best_hit["frame_id"]] if best_hit.get("frame_id") is not None else None,
+        answer=best_answer,
+    )
+
     return {
         "results":  results,
         "answer":   best_answer,
@@ -217,7 +239,9 @@ if __name__ == "__main__":
     print(f"\n[QA Pipeline] Query: {query!r}")
     print(f"[QA Pipeline] Question: {question!r}\n")
 
-    out = run_qa(query, question, top_k=20)
+    with RunTrace("qa", query, {"question": question, "top_k": 20}) as _tr:
+        out = run_qa(query, question, top_k=20, trace=_tr)
+    print(f"[QA Pipeline] run_id={_tr.run_id}  (xem logs/runs/{_tr.run_id[:8]}/{_tr.run_id}.txt)")
 
     print("\n=== KẾT QUẢ ===")
     print(f"  Answer:     {out['answer']!r}")

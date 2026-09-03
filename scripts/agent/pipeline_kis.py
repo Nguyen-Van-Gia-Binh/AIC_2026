@@ -44,6 +44,19 @@ from scripts.agent.tools.hybrid import hybrid_retrieve
 from scripts.agent.tools.rerank import apply_risk_aware_ranking, RETRIEVAL_POOL_SIZE
 from scripts.agent.tools.query_expand import expand_aspects
 from scripts.agent.tools.ocr_read import query_likely_has_readable_text, rerank_by_ocr
+from scripts.agent.tools.run_trace import NULL_TRACE, RunTrace
+
+
+def _cand_rows(hits: list[dict], n: int = 20) -> list[dict]:
+    """Rút gọn danh sách ứng viên cho dấu vết run — chỉ giữ các trường cần để truy lỗi."""
+    rows = []
+    for rank, h in enumerate(hits[:n], 1):
+        rows.append({
+            "rank": rank, "video_id": h.get("video_id"), "frame_id": h.get("frame_id"),
+            "score": round(float(h.get("score", 0.0)), 4),
+            "rrf_score": round(float(h.get("rrf_score", 0.0)), 5),
+        })
+    return rows
 
 
 def run_kis(
@@ -53,6 +66,7 @@ def run_kis(
     use_hybrid: bool = True,
     use_expansion: bool = False,
     use_nms: bool = True,
+    trace: "RunTrace | None" = None,
 ) -> list[dict]:
     """
     Chạy pipeline KIS tuyến tính.
@@ -76,27 +90,40 @@ def run_kis(
         list[dict] đã xếp hạng, mỗi item có: video_id, frame_id, frame_idx, pts_time, score
         (cosine gốc), rrf_score (điểm dung hợp — thứ tự list bám theo điểm này), jpg_path.
     """
+    tr = trace if trace is not None else NULL_TRACE
+
     pool_size = max(top_k, RETRIEVAL_POOL_SIZE)
     aspects = expand_aspects(query_text) if use_expansion else [query_text]
     if len(aspects) > 1:
         print(f"[kis] Multi-aspect: {len(aspects)} góc nhìn cho cùng 1 truy vấn")
 
-    results = hybrid_retrieve(
-        query_text, top_k=pool_size, aspects=aspects, use_sparse=use_hybrid
-    )
+    with tr.stage("retrieve"):
+        results = hybrid_retrieve(
+            query_text, top_k=pool_size, aspects=aspects, use_sparse=use_hybrid
+        )
     print(f"[kis] Lấy {len(results)} ứng viên thô (pool={pool_size}), rerank cắt về top_k={top_k}")
+    tr.record("retrieval", {
+        "backbone": "siglip", "pool_size": pool_size, "use_hybrid": use_hybrid,
+        "candidates": _cand_rows(results),
+    })
 
-    results = apply_risk_aware_ranking(
-        results, top_k=top_k, query_text=query_text,
-        score_key="rrf_score", apply_nms=use_nms,
-    )
+    with tr.stage("rank"):
+        results = apply_risk_aware_ranking(
+            results, top_k=top_k, query_text=query_text,
+            score_key="rrf_score", apply_nms=use_nms,
+        )
 
     if use_ocr_rerank and query_likely_has_readable_text(query_text):
         print("[kis] Query có dấu hiệu chứa chữ/số cụ thể -> chạy rerank_by_ocr() trên top ứng viên")
-        results = rerank_by_ocr(
-            results, query_text, top_n_ocr=min(20, len(results)), score_key="rrf_score",
-        )
+        with tr.stage("ocr_rerank"):
+            results = rerank_by_ocr(
+                results, query_text, top_n_ocr=min(20, len(results)), score_key="rrf_score",
+            )
 
+    tr.record("rerank", {"final": _cand_rows(results, 10)})
+    if results:
+        tr.set_result(video_id=results[0].get("video_id"),
+                      frame_ids=[results[0].get("frame_id")])
     return results
 
 
@@ -104,7 +131,9 @@ def run_kis(
 if __name__ == "__main__":
     query = " ".join(sys.argv[1:]) if len(sys.argv) > 1 else "a red car parked on the street"
     print(f"\n[KIS Pipeline] Query: {query!r}")
-    hits = run_kis(query, top_k=10)
+    with RunTrace("kis", query, {"top_k": 10}) as _tr:
+        hits = run_kis(query, top_k=10, trace=_tr)
+    print(f"[KIS Pipeline] run_id={_tr.run_id}  (xem logs/runs/{_tr.run_id[:8]}/{_tr.run_id}.txt)")
 
     print(f"\nTop {len(hits)} results:")
     for i, h in enumerate(hits, 1):
