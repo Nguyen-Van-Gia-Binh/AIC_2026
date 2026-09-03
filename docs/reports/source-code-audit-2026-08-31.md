@@ -25,13 +25,14 @@ trúng đầu tiên trong top-k có giá trị, và top-20 nặng ký hơn hẳn
 | Frontend | `frontend/` | 39 |
 | Job GPU ngoài | `kaggle_jobs/` (35) + `colab_jobs/` (4) | 39 |
 
-**Phát hiện.** 66 finding có nội dung (không tính 2 tham chiếu dangling ở chương 7):
+**Phát hiện.** 68 finding có nội dung (gồm `FINDING-7.8` và `FINDING-7.11` bổ sung sau, xem
+[§0.5](#05-giới-hạn-của-chính-đợt-audit)):
 
 | Mức độ | Số lượng | Số hiệu |
 |---|---|---|
 | **Cao** | 7 | 2.2 · 6.1 · 6.2 · 7.1 · 7.2 · 7.3 · 8.1 |
 | **Trung bình** | 34 | 1.2–1.5 · 2.1 · 2.3–2.5 · 3.2 · 3.3 · 3.6 · 3.7 · 4.1 · 4.3 · 5.1 · 5.3 · 6.3–6.10 · 7.4–7.6 · 8.2 · 8.3 · 8.5 · 8.6 · 9.1–9.3 |
-| **Thấp** | 25 | 1.1 · 1.6 · 2.6 · 2.7 · 3.1 · 3.4 · 3.5 · 3.8 · 4.2 · 5.2 · 5.4 · 6.11–6.13 · 7.7 · 7.9 · 7.10 · 8.4 · 8.7–8.9 · 9.4–9.7 |
+| **Thấp** | 27 | 1.1 · 1.6 · 2.6 · 2.7 · 3.1 · 3.4 · 3.5 · 3.8 · 4.2 · 5.2 · 5.4 · 6.11–6.13 · 7.7–7.11 · 8.4 · 8.7–8.9 · 9.4–9.7 |
 
 Bảng đầy đủ ở [§10.1](#101-bảng-tổng-hợp-toàn-bộ-finding); tám chủ đề xuyên suốt ở
 [§10.2](#102-điểm-yếu-hệ-thống-theo-chủ-đề); những gì hệ thống làm **đúng** ở
@@ -224,10 +225,10 @@ Báo cáo này trung thực về điều nó **không** phủ được:
   (rate limit) và transcript lệnh (output thô của từng `grep`/`diff`/`json.load` đã chạy) **không
   được lưu lại**. Kết luận và số liệu của 3 chương nằm trong báo cáo, nhưng người đọc muốn tái
   lập phải tự chạy lại các lệnh mà mục finding mô tả, không có log gốc để đối chiếu từng bước.
-- **Hai tham chiếu dangling trong chương 7.** `FINDING-7.8` (được nhắc 3 lần) và `FINDING-7.11`
-  (nhắc 2 lần) **chưa bao giờ được viết thành mục finding** — chúng là dấu vết của phần ghi chú
-  bị mất ở trên. Bảng §10.1 chỉ tổng hợp **66 finding thực sự có nội dung**; hai số hiệu đó không
-  có trong bảng.
+- **`FINDING-7.8` và `FINDING-7.11` được bổ sung sau.** Hai số hiệu này ban đầu chỉ được *nhắc*
+  trong chương 7 (7.8 ba lần, 7.11 hai lần) mà chưa có mục — dấu vết của phần ghi chú bị mất ở
+  trên. Nay đã được viết đầy đủ ở chương 7 (7.8 đặt cạnh cụm mục `tests/e2e/`, 7.11 cạnh mục
+  [`EVAL_GUIDE.md`](../../tests/eval/EVAL_GUIDE.md)) và tính vào tổng **68 finding** của bảng §10.1.
 - **Đọc code, không chạy hệ thống.** Trừ `pytest tests/unit` (chương 7), báo cáo không chạy
   `run_kis`/`run_qa`/`run_trake`, không dựng index, không gọi LLM. Mọi phát biểu hành vi suy từ
   đọc code + `grep`, đúng ràng buộc read-only.
@@ -250,7 +251,7 @@ lệnh xác minh tại commit `7d7bcea`:
 |---|---|---|---|
 | 1 | `call_llm()` trong `scripts/agent/config.py` là nơi **duy nhất** gọi litellm | [CLAUDE.md:179](../../CLAUDE.md#L179) | `grep -rn "litellm" scripts tests` (trừ `config.py`) → **rỗng**. Đúng như tài liệu. |
 | 2 | `row_to_hit()` trong `index_store.py` là nơi **duy nhất** tính `frame_id = frame_idx + 1` | [CLAUDE.md:155](../../CLAUDE.md#L155) | `grep -rn "frame_idx + 1"` → có **dòng code** ở [hybrid.py:156](../../scripts/agent/tools/hybrid.py#L156) và [multi_index.py:78](../../scripts/agent/tools/multi_index.py#L78) ngoài `index_store.py:150`. **Vi phạm** — bàn giao cho chương 2 (xem cuối FINDING-1.3). |
-| 3 | `build_submission.py` là nơi duy nhất ghi CSV/ZIP nộp bài | [CLAUDE.md:180](../../CLAUDE.md#L180) | `grep -rln "build_submission"` → import bởi `scripts/agent/pipeline_kis.py`, `scripts/agent/tools/rerank.py`, `scripts/api/routers/queue.py`, `tests/e2e/test_smoke_pipelines.py`. Việc `rerank.py` (module ranking) import module serialize là bất đối xứng tầng — bàn giao cho chương 4. |
+| 3 | `build_submission.py` là nơi duy nhất ghi CSV/ZIP nộp bài | [CLAUDE.md:180](../../CLAUDE.md#L180) | `grep -rln "build_submission"` khớp **mọi** chuỗi (kể cả comment/docstring) → sai lệnh cho một tuyên bố *import*. Chạy lại đúng bằng `grep -n "^from\|^import\|    from\|    import" <file> \| grep build_submission`: chỉ **`scripts/api/routers/queue.py`** ([L13](../../scripts/api/routers/queue.py#L13)) import thật; `tests/e2e/test_smoke_pipelines.py` ([L30](../../tests/e2e/test_smoke_pipelines.py#L30)) có câu `import` nhưng sai package (`from submit.…`, thiếu prefix `scripts.`) nên chết trước khi chạy (xem FINDING-7.5). `scripts/agent/pipeline_kis.py` (comment [L31](../../scripts/agent/pipeline_kis.py#L31)) và `scripts/agent/tools/rerank.py` (docstring [L90](../../scripts/agent/tools/rerank.py#L90)) **chỉ nhắc tên trong chú thích, không có câu `import`**. Phụ thuộc thật chạy **ngược chiều**: [`build_submission.py:193`](../../scripts/submit/build_submission.py#L193) `from scripts.agent.pipeline_kis import run_kis` (lazy, trong `__main__`) — bàn giao xác minh cho chương 4. |
 | 4 | `fusion.py` / `temporal_nms.py` / `query_expand.py` / `trake_align.py` là module **pure** | [CLAUDE.md:100](../../CLAUDE.md#L100), [ARCHITECTURE.md:54](../../ARCHITECTURE.md#L54) | `grep -n "^import\|^from" … | grep -E "torch|transformers|litellm|index_store|pandas|numpy"` → **rỗng**. Không import nặng. Lưu ý: [ARCHITECTURE.md:56](../../ARCHITECTURE.md#L56) tự nhận `query_expand.py` có "nhánh LLM tuỳ chọn" — mâu thuẫn với nhãn "no LLM" của [CLAUDE.md:100](../../CLAUDE.md#L100); bàn giao xác minh cho chương 2/4. |
 | 5 | Chỉ repo root nằm trên `sys.path`; không bao giờ đặt `scripts/` lên `sys.path` | [CLAUDE.md:148](../../CLAUDE.md#L148) | `grep -rn "sys.path"` → chỉ có `setup_colab_shards.py` (đẩy `/content/paddle_pkgs_isolated`, không phải `scripts/`) và `tests/e2e/test_phase6_margin_sweep.py` (đẩy repo root + `tests/e2e/`). Đúng như tài liệu. |
 | 6 | `scripts/` có **đúng 4** bucket: `agent/`, `api/`, `submit/`, `offline/` | [CLAUDE.md:57](../../CLAUDE.md#L57) | `git ls-files scripts | cut -d/ -f2 | sort -u` → `agent api offline submit`. Đúng như tài liệu. |
@@ -1125,7 +1126,6 @@ flowchart LR
     rerank --> fusion
 
     query_expand -. "lazy: call_llm (ngoài lõi)" .-> cfg[config.call_llm]
-    rerank -. "lazy: build_submission (ngoài lõi)" .-> bs[submit/build_submission]
     trake_align[trake_align - chương 3] -. "lazy: chỉ tokenize()" .-> sparse_index
 
     eval[tests/eval/run_eval.py] --> multi_index
@@ -3462,6 +3462,40 @@ làm ví dụ `--check`. Xem FINDING-7.9.
   `test_smoke_pipelines.py`). Là file `e2e/` duy nhất chạm `objects_lookup` — coverage `objects_lookup`
   hoàn toàn nằm ở đây, không có unit test.
 
+### ⚠️ FINDING-7.8 (Thấp) — Sáu file `tests/e2e/test_*.py` không phải test pytest; khối `assert` giấu sau `--self-test` thay vì nằm trong `tests/unit/`
+
+- **Hiện trạng:** Cả sáu file mang tiền tố `test_` dưới `tests/e2e/` —
+  [`test_phase3_rerank.py`](../../tests/e2e/test_phase3_rerank.py),
+  [`test_phase4_trake.py`](../../tests/e2e/test_phase4_trake.py),
+  [`test_phase5_ocr.py`](../../tests/e2e/test_phase5_ocr.py),
+  [`test_phase6_margin_sweep.py`](../../tests/e2e/test_phase6_margin_sweep.py),
+  [`test_smoke_pipelines.py`](../../tests/e2e/test_smoke_pipelines.py),
+  [`test_smoke_tools.py`](../../tests/e2e/test_smoke_tools.py) — **không có một hàm `def test_` nào**
+  (`grep -rn "def test_" tests/e2e/` → rỗng), nên `pytest tests/e2e/` thu về **0 test**. Chúng là
+  benchmark/CLI: `main()` + `if __name__ == "__main__"`. Hai file lại chứa khối `assert` thật nhưng
+  giấu sau cờ `--self-test`: [`score_pipelines.py:247-267`](../../tests/e2e/score_pipelines.py#L247)
+  (`_run_self_tests()` — một chuỗi `assert` cho `answer_matches` / `_r_at_k` / `_final` /
+  `check_regression` / `summarize_finals`, toàn logic thuần tất định) và
+  [`test_phase6_margin_sweep.py:68-105`](../../tests/e2e/test_phase6_margin_sweep.py#L68)
+  (`_self_test()` — `assert` trên dữ liệu giả). Ngoài ra
+  [`test_phase4_trake.py:40`](../../tests/e2e/test_phase4_trake.py#L40) gán đè
+  `_trake_module.rewrite_query = lambda text: text` **ngay ở tầng module** (chạy lúc `import`),
+  mutate `scripts.agent.pipeline_trake`.
+- **Vì sao bất hợp lý:** [tests/CLAUDE.md](../../tests/CLAUDE.md) chốt hai luật mà cụm file này vi
+  phạm: (1) "block có `assert` phải thành hàm pytest trong `unit/`, không nhét `__main__`"; (2)
+  monkeypatch phải qua fixture `monkeypatch` nhắm **module sở hữu hàm được gọi**, không gán đè
+  global. Tên `test_*` khiến mọi bộ gom test theo mẫu `test_*.py` (kể cả pytest mặc định) nhặt các
+  file này lên rồi báo "PASS" trong khi không chạy dòng kiểm tra nào. Các `assert` trong
+  `_run_self_tests` đúng ra là unit test thuần — không cần `data/` hay API key — nên thuộc
+  `tests/unit/`.
+- **Hệ quả thực tế:** `pytest tests/` cho "xanh" giả: sáu file không đóng góp test nào, và phần
+  logic thuần trong `score_pipelines._run_self_tests` chỉ chạy khi có người nhớ gõ `--self-test`
+  bằng tay. Gán đè `rewrite_query` lúc `import` là mìn chờ: nếu sau này có ai thêm một `def test_`
+  vào `test_phase4_trake.py`, bản vá identity sẽ rò sang mọi test gom sau nó trong cùng tiến trình
+  — đúng loại lỗi "patch nhầm phạm vi" mà repo đã dính (xem [docs/decisions-log.md](../decisions-log.md)).
+  Chưa có hành vi sai *hiện tại* vì pytest đang bỏ qua toàn bộ nhóm.
+- **Mức độ:** Thấp.
+
 ### 7.8. Mục từng file — `tests/eval/`
 
 #### [`tests/eval/AUDIT_REPORT.md`](../../tests/eval/AUDIT_REPORT.md) — `84` dòng · `doc`
@@ -3742,6 +3776,29 @@ làm ví dụ `--check`. Xem FINDING-7.9.
   `2ee24cf` thêm điều kiện `and vid` — bỏ qua entry thiếu `gt_video_id`), biên độ ±1 keyframe
   hardcode ([:56-66](../../tests/eval/widen_gt_windows.py#L56)), TRAKE nới trong `events[]`. Bảng
   before→after **không được lưu** — chạy xong chỉ còn `git diff` làm bằng chứng.
+
+### ⚠️ FINDING-7.11 (Thấp) — Tài liệu `tests/` còn số liệu và đường dẫn cũ: `EVAL_GUIDE.md` bảng "Cỡ mẫu" ghi 38 câu, `tests/README.md` trỏ `multi_index.py` sai chỗ
+
+- **Hiện trạng:** [`EVAL_GUIDE.md`](../../tests/eval/EVAL_GUIDE.md) tự mâu thuẫn: blockquote đầu
+  file ([:3](../../tests/eval/EVAL_GUIDE.md#L3)) đã cập nhật thành "91 câu tính đến 2026-08-31",
+  nhưng bảng "Cỡ mẫu" ([:141-146](../../tests/eval/EVAL_GUIDE.md#L141)) vẫn ghi cột "Hiện có" =
+  KIS 23 / Q&A 5 / TRAKE 10, tổng **38**, đích **140**. Số thật trong ba file con hiện tại (đếm
+  bằng `json.load`): KIS **59** / Q&A **17** / TRAKE **15** = **91** (khớp §7.4 và
+  [`test_split_eval_gt.py`](../../tests/unit/test_split_eval_gt.py) `len == 59/17/15`). Ngoài ra
+  [`tests/README.md`](../../tests/README.md) vẫn liệt kê `multi_index.py` trong bảng `eval/`
+  ([:64](../../tests/README.md#L64)) với lệnh `.venv\Scripts\python.exe tests\eval\multi_index.py`
+  và câu giải thích ([:26](../../tests/README.md#L26)) "`run_eval.py` chạy trên `eval/multi_index.py`"
+  — file này **đã chuyển** sang [`scripts/agent/tools/multi_index.py`](../../scripts/agent/tools/multi_index.py)
+  (P2.8; [`run_eval.py:55`](../../tests/eval/run_eval.py#L55) `from scripts.agent.tools.multi_index import …`).
+- **Vì sao bất hợp lý:** Loạt commit "split ground truth" (`c3eea7f..9ef7f5d`) và lần chuyển
+  `multi_index.py` sang `scripts/` chỉ cập nhật một nửa: header `EVAL_GUIDE.md` và thân
+  `run_eval.py` đổi theo, còn bảng "Cỡ mẫu" và `tests/README.md` thì không. Cùng một sự thật, tra
+  hai chỗ ra hai con số / hai đường dẫn khác nhau.
+- **Hệ quả thực tế:** Ai lập kế hoạch mở rộng ground truth theo bảng "Cỡ mẫu" sẽ tưởng còn thiếu
+  ~102 câu so với đích 140 (thực tế còn ~49) và đặt sai ưu tiên loại; ai theo `tests/README.md`
+  chạy `python tests\eval\multi_index.py` sẽ gặp `FileNotFoundError`. Không sai lệch số đo — chỉ
+  là tài liệu dẫn nhầm.
+- **Mức độ:** Thấp.
 
 ### 7.9. Mục từng file — `tests/unit/` (19 file pytest — 18 tại baseline audit + `test_gt_loader.py` thêm bởi `c3eea7f`)
 
@@ -5416,11 +5473,11 @@ và [`answer_qa.py:45`](../../scripts/agent/tools/answer_qa.py#L45) (evidence Q&
 
 ## 10. Tổng hợp: bất hợp lý và điểm yếu hệ thống
 
-Chương này gom **66 finding** của chương 1–9 về một chỗ, rồi đọc chúng theo **chủ đề** thay vì
+Chương này gom **68 finding** của chương 1–9 về một chỗ, rồi đọc chúng theo **chủ đề** thay vì
 theo file: nhiều triệu chứng rời rạc ở các tầng khác nhau thường cùng một gốc. Không phát sinh
-finding mới ở đây — mọi dòng trong bảng §10.1 truy về một mục đã viết ở chương tương ứng. Hai số
-hiệu `FINDING-7.8` và `FINDING-7.11` được nhắc trong chương 7 nhưng **chưa bao giờ thành mục**
-(xem [§0.5](#05-giới-hạn-của-chính-đợt-audit)) — không tính vào 66 và không có trong bảng.
+finding mới ở đây — mọi dòng trong bảng §10.1 truy về một mục đã viết ở chương tương ứng, bao gồm
+`FINDING-7.8` và `FINDING-7.11` (ban đầu chỉ được nhắc trong chương 7, nay đã viết thành mục —
+xem [§0.5](#05-giới-hạn-của-chính-đợt-audit)).
 
 ### §10.1. Bảng tổng hợp toàn bộ finding
 
@@ -5484,8 +5541,10 @@ Sắp xếp **Cao → Trung bình → Thấp**, trong mỗi mức theo số hi�
 | FINDING-6.12 | Thấp | 6 | Logic OCR (`get_rotate_crop_image`/`sort_boxes_reading_order`/`ocr_frame`/`SCORE_THRESH=0.5`) chép ≥3 nơi, kể cả runtime `agent/tools/ocr_read.py` |
 | FINDING-6.13 | Thấp | 6 | Tín hiệu ASR runtime (`data/extracted/ASR_json_PhoWhisper_base/`) không truy được script sinh trong repo — không tái tạo được nếu mất |
 | FINDING-7.7 | Thấp | 7 | Ghi chú đầu `eval_e2e_scores.md` (do `score_pipelines.py` viết) nói TRAKE mặc định `top_k_video=20`; code + `test_pipeline_trake.py` nói 100 |
+| FINDING-7.8 | Thấp | 7 | Sáu file `tests/e2e/test_*.py` không có hàm `def test_` (pytest thu 0 test); khối `assert` thuần giấu sau `--self-test`, và `test_phase4_trake.py` gán đè `rewrite_query` lúc `import` |
 | FINDING-7.9 | Thấp | 7 | `eval_ground_truth_thunghiem_draft.json` mồ côi (không `.py` nào đọc), đã xoá khỏi disk nhưng còn tracked ở HEAD và README vẫn liệt kê |
 | FINDING-7.10 | Thấp | 7 | `run_eval.py` chép tay TRAKE-DP + `_POOL_SIZE`/`_TRAKE_*` từ production, không test nào ép bản chép bằng bản gốc |
+| FINDING-7.11 | Thấp | 7 | `EVAL_GUIDE.md` bảng "Cỡ mẫu" vẫn ghi 38 câu (KIS 23/QA 5/TRAKE 10) trong khi bộ hiện là 91 (59/17/15); `tests/README.md` còn trỏ `multi_index.py` ở `tests/eval/` (đã chuyển sang `scripts/agent/tools/`) |
 | FINDING-8.4 | Thấp | 8 | `keyframeNeighbors()` + endpoint `GET /api/keyframes/{id}/neighbors` chết cả hai phía (không component nào gọi) |
 | FINDING-8.7 | Thấp | 8 | 7 chuỗi UI hiển thị tiếng Anh ("Run"/"Refresh"/"Export"/"quota"…) — trái luật UI tiếng Việt có dấu, repo-wide |
 | FINDING-8.8 | Thấp | 8 | Nhiều block CSS chết trong `app.css` (`.kis-body`, `.shortlist-*`, `.detail-strip`, `.strip-frame`…) không `.tsx` nào dùng |
@@ -5655,7 +5714,7 @@ key, hợp đúng "tầng mặc định cho test mới" của `tests/README.md` 
   `OPENROUTER_MODEL_CONTEST=""` phải `raise`, không phải `print` rồi tiếp (FINDING-4.1).
 - **Không mục `#### ` mồ côi / không finding dangling** trong `docs/reports/source-code-audit-*.md`:
   mọi `FINDING-x.y` được `xem`/`→` tham chiếu phải có một dòng định nghĩa `### ⚠️ FINDING-x.y`
-  hoặc `- **⚠️ FINDING-x.y` (bắt FINDING-7.8 / 7.11).
+  hoặc `- **⚠️ FINDING-x.y` (quy tắc này từng bắt được `FINDING-7.8` / `7.11` khi chúng còn dangling).
 
 Mỗi mục là một `def test_...` riêng với thông báo `assert` nói rõ finding tương ứng, để khi fail
 người đọc biết ngay đang vi phạm bất biến nào.
