@@ -362,5 +362,46 @@
       "Nghêu trắng",
       "con nghêu"
     ]
+  },
+  {
+    "query_id": "query-p1-3-qa",
+    "type": "QA",
+    "text_vi": "Hình ảnh một con cá được đặt lên cân, sau đó có cảnh một con cá khác cùng loại bị một người cầm đuôi. ",
+    "text_en": "An image of a fish being placed on a scale, followed by a scene of another fish of the same type being held by a person by its tail.",
+    "difficulty_tags": [
+      "temporal_order"
+    ],
+    "gt_video_id": "L21_V007",
+    "question": "Con số hiển thị cuối cùng trên cân là bao nhiêu?",
+    "gt_frame_start": 8833,
+    "gt_frame_end": 8843,
+    "gt_answer": "37.05",
+    "gt_answers": [
+      "37.05",
+      "37,05",
+      "37.05 kg",
+      "37,05 kg"
+    ]
+  },
+  {
+    "query_id": "query-p1-17-qa",
+    "type": "QA",
+    "text_vi": "Đoạn clip mô tả hậu quả của hiện tượng sạt lở đất nghiêm trọng, đất đá tràn xuống gây tắc nghẽn hoàn toàn một đoạn đường đèo. Trong một cảnh quay cận, có thể thấy một cột mốc đường bộ với phần đỉnh màu đỏ chỉ còn lộ ra phần trên, phần lớn đã bị đất đá vùi lấp. Ở cảnh quay cuối, một người đi xe máy đang vật lộn để điều khiển phương tiện vượt qua khu vực bùn lầy, trên chiếc xe máy có treo một vật màu xanh lá. Tên của con đèo là gì?",
+    "text_en": "The clip depicts the aftermath of a severe landslide, with soil and rocks completely blocking a mountain pass. In a close-up shot, a roadside milestone with a red top is mostly buried, with only the upper part visible. In the final shot, a motorcyclist struggles to navigate through the muddy area, with a green object hanging on the motorcycle. What is the name of the mountain pass?",
+    "difficulty_tags": [
+      "naming"
+    ],
+    "gt_video_id": "L22_V008",
+    "question": "Tên của con đèo là gì?",
+    "gt_frame_start": 5555,
+    "gt_frame_end": 6095,
+    "gt_answer": "Đèo Lê Ma",
+    "gt_answers": [
+      "Đèo Lê Ma",
+      "đèo Lê Ma",
+      "Le Ma",
+      "deo Le Ma",
+      "Đèo Lê Ma."
+    ]
   }
 ]

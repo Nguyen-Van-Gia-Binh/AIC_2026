@@ -412,5 +412,35 @@
         "gt_frame_end": 2237
       }
     ]
+  },
+  {
+    "query_id": "query-p1-16-trake",
+    "type": "TRAKE",
+    "text_vi": "Đoạn video bắt đầu bằng ảnh cận đầu một con lân trắng, mũi đỏ, bên cạnh lá cờ trắng viền đỏ.",
+    "text_en": "The video starts with a close-up of a white lion with a red nose, next to a white flag with a red border.",
+    "difficulty_tags": [
+      "action_sequence"
+    ],
+    "gt_video_id": "L24_V030",
+    "events": [
+      {
+        "text_vi": "Khoảnh khắc đầu tiên xuất hiện đầy đủ hai con rồng vàng đang xoay vòng.",
+        "text_en": "The first moment both golden dragons are fully visible and spinning.",
+        "gt_frame_start": 6993,
+        "gt_frame_end": 7003
+      },
+      {
+        "text_vi": "Khoảnh khắc đầu tiên con lân hoàn tất cú xoay người trên các thanh trụ (thời điểm đâu tiên các chân của lân đặt trên trụ sau khi xoay).",
+        "text_en": "The first moment the lion completes the spin on the pillars (the moment all four legs of the lion are on the pillars after the spin).",
+        "gt_frame_start": 9575,
+        "gt_frame_end": 9585
+      },
+      {
+        "text_vi": "Khoảnh khắc đầu tiên dùi chạm vào kẻng đồng múa lân.",
+        "text_en": "The first moment the drumsticks touch the bronze gong during the lion dance.",
+        "gt_frame_start": 15200,
+        "gt_frame_end": 15210
+      }
+    ]
   }
 ]

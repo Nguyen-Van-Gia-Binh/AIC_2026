@@ -2,8 +2,9 @@
 
 > **Ngày thực hiện:** 2026-08-31  
 > **Ngày cập nhật / khắc phục:** 2026-09-03  
+> **Ngày hợp nhất với origin/main:** 2026-09-03 (xem mục 7)  
 > **Trạng thái:** ✅ **ĐÃ KHẮC PHỤC TOÀN BỘ 100%**  
-> **Phạm vi:** Toàn bộ 89 câu chuẩn trong 3 file ground truth: [`eval_ground_truth_kis.json`](eval_ground_truth_kis.json) (59 câu), [`eval_ground_truth_qa.json`](eval_ground_truth_qa.json) (17 câu), [`eval_ground_truth_trake.json`](eval_ground_truth_trake.json) (13 câu).  
+> **Phạm vi:** Toàn bộ 103 câu chuẩn trong 3 file ground truth: [`eval_ground_truth_kis.json`](eval_ground_truth_kis.json) (70 câu), [`eval_ground_truth_qa.json`](eval_ground_truth_qa.json) (19 câu), [`eval_ground_truth_trake.json`](eval_ground_truth_trake.json) (14 câu).  
 > *(Ghi chú: Đã loại bỏ 2 câu thử nghiệm TRAKE `e-trake-thunghiem-002` và `e-trake-thunghiem-003` do không tìm thấy trong video gốc).*
 
 ---
@@ -75,3 +76,45 @@ Kế hoạch audit ngày 2026-08-31 đã được thực thi và nghiệm thu th
 1. Bộ 3 file ground truth KIS, QA, TRAKE sạch 100% lỗi cấu trúc.
 2. 3 bài test regression guard mới (`test_trake_events_khong_nguoc_va_khong_trong_video_id`, `test_qa_day_du_question_va_gt_answers`, `test_kis_toan_ven_du_lieu`) được thêm vào [tests/unit/test_eval_ground_truth.py](file:///c:/Users/admin/Documents/A_FPT/Tempory_Project/AIC2026/tests/unit/test_eval_ground_truth.py).
 3. Toàn bộ unit test repo (103/103 tests) vượt qua 100%.
+
+---
+
+## 7. Hợp nhất với `origin/main` khi merge `fix/phase2` → `main` (2026-09-03)
+
+Merge `fix/phase2` vào `main` bị conflict tại `tests/eval/eval_ground_truth_kis.json`, vì `origin/main`
+có 2 commit (`e0cbd70`, `d4a5601`) thêm 22 câu `query-p1-*` vào file monolith cũ
+`test_eval/Eval/eval_ground_truth.json` **sau khi** `fix/phase2` đã tách file đó thành 3 file split và
+xoá bản monolith. File monolith trên `origin/main` cũng có lỗi cú pháp JSON (thiếu dấu phẩy nối object,
+dòng ~1216) — không script nào từng load được nó.
+
+Đối chiếu 22 câu mới theo **nội dung** (không chỉ theo `query_id`, vì có đổi tên id ở phase trước):
+
+- **5 câu** trùng nội dung với các câu đã có sẵn trong bộ split dưới id khác
+  (`query-p1-1-kis`→`e-kis-ai-019`, `query-p1-4-kis`→`e-kis-ai-020`, `query-p1-5-kis`→`e-kis-ai-021`,
+  `query-p1-6-kis`→`e-kis-ai-022`, `query-p1-7-kis`→`e-kis-ai-023`) → bỏ, không thêm lại.
+- **1 câu** (`query-p1-1-kis`) còn bị lặp 2 lần ngay trong chính file gốc trên `origin/main`.
+- **1 câu** (`query-p1-14-kis`) trùng y hệt `query-p1-8-kis` (cùng `text_vi`, cùng `gt_video_id`
+  `L26_V171`, cùng frame `5410-5580`) → bỏ, giữ `query-p1-8-kis`.
+- **2 câu QA nghi vấn nhãn sai, TẠM LOẠI, chưa thêm vào bộ ground truth:**
+  - `query-p1-9-qa` — câu hỏi ("Con số trên biển báo bên trái cây cầu?") không liên quan gì đến
+    `query-p1-3-qa` ("Con số hiển thị cuối cùng trên cân?") nhưng có `gt_answer` giống hệt `"37.05"`.
+  - `query-p1-15-qa` — có `gt_frame_start`/`gt_frame_end` (`26192`–`26210`) giống hệt `query-p1-9-qa`
+    nhưng khác `gt_video_id` (`L21_V010` so với `L21_V007`).
+  - Cả hai cần đối chiếu lại video gốc trước khi quyết định giữ, sửa nhãn, hay xoá. **Chưa được xử lý
+    — không tính vào 103 câu hiện tại.**
+- **14 câu còn lại là dữ liệu mới hợp lệ**, đã được thêm vào 3 file split (11 KIS, 2 QA, 1 TRAKE):
+  `query-p1-3-qa`, `query-p1-8-kis`, `query-p1-10-kis`, `query-p1-11-kis`, `query-p1-12-kis`,
+  `query-p1-13-kis`, `query-p1-16-trake`, `query-p1-17-qa`, `query-p1-18-kis`, `query-p1-19-kis`,
+  `query-p1-20-kis`, `query-p1-22-kis`, `query-p1-24-kis`, `query-p1-25-kis`.
+  - `query-p1-16-trake`: 3 event có `gt_frame_start`/`gt_frame_end` dạng chuỗi (`"6993"`) trong file
+    gốc → ép về `int` cho khớp schema của `eval_ground_truth_trake.json`.
+  - `query-p1-3-qa` và `query-p1-17-qa`: có `gt_answer` nhưng `gt_answers: []` rỗng trong file gốc →
+    bổ sung các biến thể diễn đạt (dấu chấm/phẩy thập phân, không dấu, có đơn vị) theo đúng quy ước ở
+    mục 2.
+  - Tất cả 13 câu còn thiếu `difficulty_tags` đã được gán tag từ `TAG_CHUAN`
+    (`tests/eval/normalize_gt.py`) dựa trên đọc nội dung `text_vi` — **cần người thẩm định lại**, vì
+    đây là suy luận từ mô tả cảnh chứ không phải xem video gốc.
+
+Sau hợp nhất: KIS 59→70, QA 17→19, TRAKE 13→14, tổng 89→103. Đã cập nhật số liệu cứng trong
+`tests/unit/test_split_eval_gt.py::test_split_files_on_disk_match_expected_counts_and_types` theo đó.
+`tests/unit` 103/103 pass sau thay đổi.

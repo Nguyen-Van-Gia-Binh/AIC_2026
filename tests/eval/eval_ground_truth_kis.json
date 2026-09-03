@@ -738,5 +738,139 @@
     "gt_video_id": "L26_V041",
     "gt_frame_start": 3646,
     "gt_frame_end": 3646
+  },
+  {
+    "query_id": "query-p1-8-kis",
+    "type": "KIS",
+    "text_vi": "Người đầu bếp lần lượt đặt các miếng nguyên liệu dạng thanh và những lát cắt hình hoa vào một đĩa đang được hấp trong nồi.\nCác nguyên liệu được dùng đũa sắp xếp xen kẽ xung quanh phần thức ăn đã có sẵn trên đĩa.\nSau đó, đầu bếp dùng muỗng lấy thêm một loại nguyên liệu mềm từ tô thủy tinh.\nPhần nguyên liệu này được đặt vào giữa đĩa, xung quanh là các miếng dạng thanh và hình hoa đã được sắp xếp trước đó.",
+    "text_en": "The chef sequentially places stick-shaped ingredients and flower-shaped slices onto a plate being steamed in a pot.\nThe ingredients are arranged alternately around the existing food on the plate using chopsticks.\nThen, the chef uses a spoon to take an additional type of soft ingredient from a glass bowl.\nThis ingredient is placed in the center of the plate, surrounded by the previously arranged stick-shaped and flower-shaped pieces.",
+    "difficulty_tags": [
+      "action_sequence"
+    ],
+    "gt_video_id": "L26_V171",
+    "gt_frame_start": 5410,
+    "gt_frame_end": 5580
+  },
+  {
+    "query_id": "query-p1-10-kis",
+    "type": "KIS",
+    "text_vi": "Hành động cắt chùm nho bằng kéo từ giàn nho bằng một chiếc kéo màu đen. Có thể thấy có một sợi dây màu xanh dương được buộc vào cuống của chùm nho này trước khi nó được cắt.",
+    "text_en": "The action of cutting a bunch of grapes from the grapevine using black scissors. A blue string can be seen tied to the stem of this bunch of grapes before it is cut.",
+    "difficulty_tags": [
+      "fine_detail"
+    ],
+    "gt_video_id": "L29_V013",
+    "gt_frame_start": 11340,
+    "gt_frame_end": 11360
+  },
+  {
+    "query_id": "query-p1-11-kis",
+    "type": "KIS",
+    "text_vi": "Cảnh quay chậm tại vị trí vạch đích của cuộc đua xe đạp. Góc máy sát mặt đường bắt trọn khoảnh khắc về đích theo thứ tự nhất, nhì, ba lần lượt là 1 tay đua áo vàng quần đen, 1 tay đua áo xanh dương quần đen và 1 tay đua áo xanh dương quần đỏ",
+    "text_en": "Slow-motion footage at the finish line of a bicycle race. The camera angle close to the ground captures the moment the cyclists cross the finish line in the order of first, second, and third, respectively: a cyclist in a yellow jersey and black shorts, a cyclist in a blue jersey and black shorts, and a cyclist in a blue jersey and red shorts.",
+    "difficulty_tags": [
+      "multi_similar_object"
+    ],
+    "gt_video_id": "L23_V021",
+    "gt_frame_start": 6970,
+    "gt_frame_end": 6990
+  },
+  {
+    "query_id": "query-p1-12-kis",
+    "type": "KIS",
+    "text_vi": "Có thể thấy trong cảnh quay có 4 tài xế xe ôm công nghệ trong trạm xăng, trong đó 3 người đứng đợi còn 1 người lái xe từ trái sang phải khung hình. Trước đó là cảnh một người đậy nắp bình xăng xe máy của họ. Có thông tin về giá dầu mazut được hiển thị trong khung hình.",
+    "text_en": "In the footage, there are 4 ride-hailing motorbike drivers at a gas station, with 3 standing and waiting while 1 drives from the left to the right of the frame. Prior to this, there is a scene of someone closing the fuel tank cap of their motorbike. Information about the price of mazut oil is displayed in the frame.",
+    "difficulty_tags": [
+      "multi_similar_object",
+      "text_in_frame"
+    ],
+    "gt_video_id": "L22_V029",
+    "gt_frame_start": 6260,
+    "gt_frame_end": 6270
+  },
+  {
+    "query_id": "query-p1-13-kis",
+    "type": "KIS",
+    "text_vi": "Một người đứng dưới nước và rọi đèn. Tiếp theo là cảnh người này kéo lưới cá lúc bình minh, sau đó được một nhóm người khác tiến đến dùng máy quay ghi hình.",
+    "text_en": "A person stands in the water and shines a light. Next, there is a scene of this person pulling a fishing net at dawn, followed by a group of other people approaching with a camera to record the scene.",
+    "difficulty_tags": [
+      "action_sequence"
+    ],
+    "gt_video_id": "L29_V021",
+    "gt_frame_start": 5131,
+    "gt_frame_end": 5151
+  },
+  {
+    "query_id": "query-p1-18-kis",
+    "type": "KIS",
+    "text_vi": "Cảnh quay cho thấy hành động trình bày món ăn sau khi hoàn thành giai đoạn chế biến. Bún được cho đầu tiên vào một chén rỗng, sau đó đầu bếp lần lượt cho từng vá nước dùng cùng các nguyên liệu như thịt gà, cà rốt, sả, nấm mèo vào chén bún, và kết thúc bằng việc thả một cọng ngò lên trên cùng. Cảnh quay tiếp theo là cảnh zoom xa dần chén bún, ta thấy bên cạnh chén bún còn có 1 chén nước chấm nhỏ với 2 miếng ớt.",
+    "text_en": "The shot shows the action of presenting the dish after the cooking stage is completed. The noodles are first placed into an empty bowl, then the chef sequentially adds ladles of broth along with ingredients such as chicken, carrots, lemongrass, and wood ear mushrooms into the bowl, finishing by placing a sprig of cilantro on top. The next shot zooms out from the bowl, showing a small dipping sauce bowl with two pieces of chili next to the noodle bowl.",
+    "difficulty_tags": [
+      "action_sequence"
+    ],
+    "gt_video_id": "L26_V389",
+    "gt_frame_start": 5968,
+    "gt_frame_end": 6244
+  },
+  {
+    "query_id": "query-p1-19-kis",
+    "type": "KIS",
+    "text_vi": "Con lân do hai người điều khiển đang đứng thẳng và xoay vòng trên đỉnh cột. Sau vài giây nghỉ, con lân bất ngờ nhảy qua hai chiếc cột kế bên, chúi đầu xuống ngoạm lấy quả bí đỏ kèm bông hoa màu vàng. Cảnh quay kết thúc khi con lân tiếp tục nhảy sang các cột tiếp theo.",
+    "text_en": "The lion, controlled by two people, stands upright and spins on top of the pillar. After a few seconds of rest, the lion suddenly jumps over the two adjacent pillars, diving down to grab the pumpkin accompanied by a yellow flower. The shot ends as the lion continues to jump to the next pillars.",
+    "difficulty_tags": [
+      "action_sequence"
+    ],
+    "gt_video_id": "L24_V035",
+    "gt_frame_start": 14650,
+    "gt_frame_end": 14780
+  },
+  {
+    "query_id": "query-p1-20-kis",
+    "type": "KIS",
+    "text_vi": "Ba người đang đi bộ xuống một con dốc trong cơn mưa, có 2 người cầm dù, trong đó người cầm dù đi sau lại mặc một chiếc áo mưa có in hình con gấu ở sau lưng. Sau đó ta thấy nhiều người đang cùng nhau bước về hướng một căn nhà thông qua một con đường đất, bên cạnh là một cái ao.",
+    "text_en": "Three people are walking down a slope in the rain, with two of them holding umbrellas. The person holding the umbrella at the back is wearing a raincoat with a bear printed on the back. Later, many people are seen walking together towards a house along a dirt road, next to a pond.",
+    "difficulty_tags": [
+      "multi_object"
+    ],
+    "gt_video_id": "L21_V026",
+    "gt_frame_start": 7435,
+    "gt_frame_end": 7445
+  },
+  {
+    "query_id": "query-p1-22-kis",
+    "type": "KIS",
+    "text_vi": "Người phụ nữ mặc áo dài màu hồng, đeo kính đang giảng giải về các trường hợp sử dụng khác nhau của động từ 'remember' dựa trên mốc thời gian của hành động được nhắc tới.",
+    "text_en": "A woman wearing a pink áo dài and glasses is explaining the different usage cases of the verb 'remember' based on the timeline of the action being referred to.",
+    "difficulty_tags": [
+      "text_in_frame"
+    ],
+    "gt_video_id": "L25_V041",
+    "gt_frame_start": 16840,
+    "gt_frame_end": 17000
+  },
+  {
+    "query_id": "query-p1-24-kis",
+    "type": "KIS",
+    "text_vi": "Đoạn clip được cắt từ một phóng sự về một nhóm các nghệ nhân làm nghề đan lát các sản phẩm thủ công từ cây lục bình. Đầu tiên là một cảnh lia cam duy nhất từ trái sang phải, theo thứ tự ta thấy 4 sản phẩm: túi xách, chậu hoa, bộ ấm tách trà và túi xách. Ngay sau cảnh này, người phụ nữ bên trái lấy một tách trà trong bộ ấm tách và nâng niu trong khi nghe người phụ nữ bên phải trò chuyện.",
+    "text_en": "The clip is taken from a report about a group of artisans weaving handicraft products from water hyacinth. First, there is a single panning shot from left to right, showing four products in order: a handbag, a flower pot, a tea set, and another handbag. Immediately after this scene, the woman on the left takes a teacup from the tea set and cherishes it while listening to the woman on the right talk.",
+    "difficulty_tags": [
+      "multi_object",
+      "action_sequence"
+    ],
+    "gt_video_id": "L29_V001",
+    "gt_frame_start": 8468,
+    "gt_frame_end": 9200
+  },
+  {
+    "query_id": "query-p1-25-kis",
+    "type": "KIS",
+    "text_vi": "Hai bạn học sinh mặc đồng phục áo trắng, quần xanh, quàng khăn đỏ đang làm MC trên một sân khấu tại trường học, phía sau là một bộ trống cơ màu đỏ và một cây đàn piano.",
+    "text_en": "Two students wearing white shirts, blue pants, and red scarves are hosting on a school stage, with a red drum set and a piano behind them.",
+    "difficulty_tags": [
+      "multi_object"
+    ],
+    "gt_video_id": "L30_V003",
+    "gt_frame_start": 6550,
+    "gt_frame_end": 6680
   }
 ]

@@ -46,7 +46,11 @@ def test_split_ground_truth_preserves_all_records(tmp_path):
 
 
 def test_split_files_on_disk_match_expected_counts_and_types():
-    """Kiểm tra 3 file con trên đĩa đầy đủ 91 câu với đúng type tương ứng."""
+    """Kiểm tra 3 file con trên đĩa đầy đủ 103 câu với đúng type tương ứng.
+
+    (89 câu chuẩn hoá 2026-08-31 + 14 câu query-p1-* hợp nhất từ origin/main
+    khi merge fix/phase2 vào main 2026-09-03 — xem tests/eval/AUDIT_REPORT.md.)
+    """
     assert _KIS_GT.exists(), f"Thiếu file {_KIS_GT}"
     assert _QA_GT.exists(), f"Thiếu file {_QA_GT}"
     assert _TRAKE_GT.exists(), f"Thiếu file {_TRAKE_GT}"
@@ -56,10 +60,10 @@ def test_split_files_on_disk_match_expected_counts_and_types():
     trake = json.loads(_TRAKE_GT.read_text(encoding="utf-8"))
 
     # 1. Số lượng
-    assert len(kis) == 59
-    assert len(qa) == 17
-    assert len(trake) == 13
-    assert len(kis) + len(qa) + len(trake) == 89
+    assert len(kis) == 70
+    assert len(qa) == 19
+    assert len(trake) == 14
+    assert len(kis) + len(qa) + len(trake) == 103
 
     # 2. Type từng file
     assert all(d.get("type") == "KIS" for d in kis)
