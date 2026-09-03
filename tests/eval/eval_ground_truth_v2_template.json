@@ -1,0 +1,34 @@
+{
+  "query_id": "e-trake-thunghiem-001",
+  "type": "TRAKE",
+  "text_vi": "Đoạn video về quá trình nấu ăn một món ăn với nguyên liệu chính là măng tây.",
+  "text_en": "A cooking pan with food inside on a stove in a kitchen",
+  "difficulty_tags": [],
+  "gt_video_id": "",
+  "events": [
+    {
+      "text_vi": "Khoảnh khắc đầu tiên bột được bỏ vào tô măng tây.",
+      "text_en": "The first moment the batter is added to the bamboo basket.",
+      "gt_frame_start": "4708",
+      "gt_frame_end": "4718"
+    },
+    {
+      "text_vi": "Khoảnh khắc đầu tiên thấy miến măng tây đầu tiên tiếp xúc với dầu trong chảo.",
+      "text_en": "The first moment the măng tây is接触到 with oil in the pan.",
+      "gt_frame_start": "5140",
+      "gt_frame_end": "5050"
+    },
+    {
+      "text_vi": "Khoảnh khắc miếng măng tây đầu tiên rời khỏi chảo dầu.",
+      "text_en": "The first moment the măng tây is removed from the oil in the pan.",
+      "gt_frame_start": "5416",
+      "gt_frame_end": "5426"
+    },
+    {
+      "text_vi": "Khoảng khắc miếng măng tây cuối cùng rời chảo dầu và nằm hoàn toàn trên dĩa.",
+      "text_en": "The last moment the măng tây is removed from the oil in the pan and placed on the plate.",
+      "gt_frame_start": "5796",
+      "gt_frame_end": "5806"
+    }
+  ]
+}

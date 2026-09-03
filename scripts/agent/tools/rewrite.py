@@ -1,12 +1,12 @@
 """
-rewrite.py — Dich query tieng Viet sang tieng Anh + lam ro mo ta visual.
+rewrite.py — Dịch query tiếng Việt sang tiếng Anh + làm rõ mô tả visual.
 
-CLIP-family hieu tieng Anh tot hon nhieu. Mo ta visual-centric (vat the neo,
-mau sac, hanh dong, boi canh) se cho ket qua retrieval tot hon.
+CLIP-family hiểu tiếng Anh tốt hơn nhiều. Mô tả visual-centric (vật thể neo,
+màu sắc, hành động, bối cảnh) sẽ cho kết quả retrieval tốt hơn.
 
 Usage:
     from scripts.agent.tools.rewrite import rewrite_query
-    en = rewrite_query("Mot nguoi dang di xe dap tren duong nui")
+    en = rewrite_query("Một người đang đi xe đạp trên đường núi")
     # -> "a person cycling on a mountain road, outdoor scenery"
 """
 from __future__ import annotations
@@ -21,8 +21,8 @@ if str(_ROOT) not in sys.path:
 
 from scripts.agent.config import call_llm  # noqa: E402
 
-# Phan "rules" dung chung cho ca che do rewrite 1 cau (REWRITE_PROMPT) va nhieu cau
-# (REWRITE_CANDIDATES_PROMPT) — tach rieng de khong lap lai/lech nhau giua 2 prompt.
+# Phần "rules" dùng chung cho cả chế độ rewrite 1 câu (REWRITE_PROMPT) và nhiều câu
+# (REWRITE_CANDIDATES_PROMPT) — tách riêng để không lặp lại/lệch nhau giữa 2 prompt.
 REWRITE_INTRO = """\
 You are a visual search query optimizer for a video retrieval system using CLIP (image-text matching)
 on Vietnamese TV/news-style footage (cooking, wildlife, sports, education, disaster coverage, festivals).
@@ -79,16 +79,16 @@ Rules:
 Preferred format: "[distinctive anchor object/display] + [main action] + [people/clothing/colors] + [visible setting]"
 """
 
-# Duoi cho che do 1 cau (rewrite_query) — giu nguyen hanh vi cu.
+# Đuôi cho chế độ 1 câu (rewrite_query) — giữ nguyên hành vi cũ.
 _SINGLE_SUFFIX = """
 Query: {query}
 
 Rewritten query:"""
 
-# Duoi cho che do nhieu phuong an (rewrite_query_candidates) — moi phuong an la 1 dong danh so.
-# So luong KHONG co dinh — LLM tu quyet dinh can bao nhieu phuong an tuy do mo ho/ngu canh cua
-# query (co the chi 1 neu query da ro rang), toi da max_n, thay vi ep du so dong bang paraphrase
-# thua. Van chi 1 lan goi LLM (khong goi rieng cho tung phuong an) de do ton thoi gian/chi phi.
+# Đuôi cho chế độ nhiều phương án (rewrite_query_candidates) — mỗi phương án là 1 dòng đánh số.
+# Số lượng KHÔNG cố định — LLM tự quyết định cần bao nhiêu phương án tuỳ độ mơ hồ/ngữ cảnh của
+# query (có thể chỉ 1 nếu query đã rõ ràng), tối đa max_n, thay vì ép đủ số dòng bằng paraphrase
+# thừa. Vẫn chỉ 1 lần gọi LLM (không gọi riêng cho từng phương án) để đỡ tốn thời gian/chi phí.
 _CANDIDATES_SUFFIX = """
 Additionally: decide how many candidate rewrites are actually useful here, from 1 up to {max_n}.
 Only output MORE THAN ONE candidate if the query genuinely has multiple plausible interpretations or
@@ -106,25 +106,29 @@ N. <rewritten query>"""
 
 def rewrite_query(query: str, feedback: str | None = None, question: str | None = None) -> str:
     """
-    Dich va toi uu query cho CLIP search.
+    Dịch và tối ưu query cho CLIP/SigLIP search.
 
     Args:
-        query:    Query goc (tieng Viet hoac Anh).
-        feedback: Feedback tu lan search truoc (de cai thien, dung cho vong lap thu 2).
-        question: Cau hoi Q&A cu the neu co (dung cho pipeline_qa.py) — giup rewrite giu lai dung
-                  vat the/canh can nhin thay de tra loi, thay vi vo tinh bo qua no khi query mo ta
-                  nhieu canh noi tiep nhau.
+        query:    Query gốc (tiếng Việt hoặc Anh).
+        feedback: Feedback từ lần search trước (để cải thiện, dùng cho vòng lặp thứ 2).
+        question: Câu hỏi Q&A cụ thể nếu có (dùng cho pipeline_qa.py) — giúp rewrite giữ lại đúng
+                  vật thể/cảnh cần nhìn thấy để trả lời, thay vì vô tình bỏ qua nó khi query mô tả
+                  nhiều cảnh nối tiếp nhau.
 
     Returns:
-        Query tieng Anh da toi uu.
+        Query tiếng Anh đã tối ưu.
     """
     prompt = REWRITE_INTRO.format(n_desc="ONE") + _SINGLE_SUFFIX.format(query=query)
     prompt += _build_extra_context(question, feedback)
 
-    result = call_llm(prompt, model="text", temperature=0.2, max_tokens=60)
-    # Clean up: bo dau ngoac kep, xuong dong thua
-    result = result.strip().strip('"').strip("'").split("\n")[0].strip()
-    return result
+    try:
+        result = call_llm(prompt, model="text", temperature=0.2, max_tokens=60)
+        # Clean up: bỏ dấu ngoặc kép, xuống dòng thừa
+        result = result.strip().strip('"').strip("'").split("\n")[0].strip()
+        return result if result else query.strip()
+    except Exception as e:
+        print(f"[rewrite] call_llm lỗi ({type(e).__name__}: {e}), fallback về query gốc")
+        return query.strip()
 
 
 def rewrite_query_candidates(
@@ -134,20 +138,20 @@ def rewrite_query_candidates(
     question: str | None = None,
 ) -> list[str]:
     """
-    Sinh TOI DA max_n phuong an rewrite KHAC NHAU cho query — so luong thuc te do LLM tu quyet dinh
-    tuy theo query co nhieu cach hieu/nhieu vat the dang chu y hay khong (query ro rang -> co the
-    chi 1 phuong an), de nguoi dung chon 1 hoac tu viet lai trong UI (xem scripts/app.py) thay vi he
-    thong tu dong dung 1 cau rewrite roi search luon.
+    Sinh TỐI ĐA max_n phương án rewrite KHÁC NHAU cho query — số lượng thực tế do LLM tự quyết định
+    tuỳ theo query có nhiều cách hiểu/nhiều vật thể đáng chú ý hay không (query rõ ràng -> có thể
+    chỉ 1 phương án), để người dùng chọn 1 hoặc tự viết lại trong UI (xem frontend/) thay vì hệ
+    thống tự động dùng 1 câu rewrite rồi search luôn.
 
     Args:
-        query:    Query goc (tieng Viet hoac Anh).
-        max_n:    So phuong an toi da (mac dinh 3) — LLM co the tra ve it hon neu khong can thiet.
+        query:    Query gốc (tiếng Việt hoặc Anh).
+        max_n:    Số phương án tối đa (mặc định 3) — LLM có thể trả về ít hơn nếu không cần thiết.
         feedback: Xem rewrite_query().
         question: Xem rewrite_query().
 
     Returns:
-        list[str] do dai trong [1, max_n] — neu LLM loi hoac khong tra ve dong nao parse duoc,
-        fallback ve 1 phan tu la ket qua cua rewrite_query().
+        list[str] độ dài trong [1, max_n] — nếu LLM lỗi hoặc không trả về dòng nào parse được,
+        fallback về 1 phần tử là kết quả của rewrite_query().
     """
     prompt = REWRITE_INTRO.format(n_desc=f"1 to {max_n} DIFFERENT") + _CANDIDATES_SUFFIX.format(max_n=max_n, query=query)
     prompt += _build_extra_context(question, feedback)
@@ -156,18 +160,18 @@ def rewrite_query_candidates(
         result = call_llm(prompt, model="text", temperature=0.4, max_tokens=200)
         candidates = _parse_candidates(result)
     except Exception as e:
-        print(f"[rewrite] rewrite_query_candidates loi ({type(e).__name__}: {e}), fallback ve 1 cau")
+        print(f"[rewrite] rewrite_query_candidates lỗi ({type(e).__name__}: {e}), fallback về 1 câu")
         candidates = []
 
     if not candidates:
-        # Fallback: LLM khong tra ve dong nao parse duoc (hoac loi) -> dung lai rewrite 1 cau.
+        # Fallback: LLM không trả về dòng nào parse được (hoặc lỗi) -> dùng lại rewrite 1 câu.
         candidates = [rewrite_query(query, feedback=feedback, question=question)]
 
     return candidates[:max_n]
 
 
 def _build_extra_context(question: str | None, feedback: str | None) -> str:
-    """Doan prompt bo sung dung chung cho ca rewrite_query va rewrite_query_candidates."""
+    """Đoạn prompt bổ sung dùng chung cho cả rewrite_query và rewrite_query_candidates."""
     extra = ""
     if question:
         extra += (
@@ -185,9 +189,9 @@ _CANDIDATE_LINE_RE = re.compile(r"^\s*\d+[\.\)]\s*(.+?)\s*$")
 
 
 def _parse_candidates(raw: str) -> list[str]:
-    """Tach output nhieu dong dang '1. ...' / '2) ...' thanh list string sach (bo so thu tu,
-    ngoac kep thua). Bo qua dong khong khop pattern thay vi crash — LLM doi khi chen dong trong
-    hoac ghi chu ngoai y muon."""
+    """Tách output nhiều dòng dạng '1. ...' / '2) ...' thành list string sạch (bỏ số thứ tự,
+    ngoặc kép thừa). Bỏ qua dòng không khớp pattern thay vì crash — LLM đôi khi chèn dòng trống
+    hoặc ghi chú ngoài ý muốn."""
     candidates = []
     for line in raw.strip().splitlines():
         m = _CANDIDATE_LINE_RE.match(line)
@@ -202,10 +206,10 @@ def _parse_candidates(raw: str) -> list[str]:
 # ─── CLI test ──────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     test_queries = [
-        "Mot nguoi dang phat bieu tai cuoc hop bao ngoai troi, phia sau co nhieu cay xanh",
-        "Tre em dang choi bong da tren san co xanh",
+        "Một người đang phát biểu tại cuộc họp báo ngoài trời, phía sau có nhiều cây xanh",
+        "Trẻ em đang chơi bóng đá trên sân cỏ xanh",
         "A red sports car driving on a highway at night",
-        "Trong video ve le trao giai am nhac, nguoi phu nu mac vay do dang cam ly mau gi?",
+        "Trong video về lễ trao giải âm nhạc, người phụ nữ mặc váy đỏ đang cầm ly màu gì?",
     ]
     print("[rewrite] Testing query rewriter (1 cau)...\n")
     for q in test_queries:
@@ -214,7 +218,7 @@ if __name__ == "__main__":
         print(f"  EN: {en}")
         print()
 
-    print("[rewrite] Testing query rewriter (nhieu phuong an)...\n")
+    print("[rewrite] Testing query rewriter (nhiều phương án)...\n")
     for q in test_queries:
         cands = rewrite_query_candidates(q, max_n=3)
         print(f"  VI: {q[:60]}...")

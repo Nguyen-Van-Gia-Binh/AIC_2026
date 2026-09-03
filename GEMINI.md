@@ -54,9 +54,10 @@ Cấu hình API key: copy `.env.example` → `.env`, điền ít nhất `GEMINI_
   - `pipeline_kis.py` / `pipeline_qa.py` / `pipeline_trake.py`
   - `tools/` — `retrieve.py` (dense CLIP search), `rewrite.py` (VN→EN), `answer_qa.py`, `ocr_lookup.py`, `sparse_index.py` (BM25)
 - `scripts/submit/` — `build_submission.py` (sinh CSV/ZIP), `validate_submission.py`
-- `test_eval/` — Thư mục kiểm thử & đánh giá (2 nhánh độc lập):
-  - `Test/` — Harness đường production: `score_pipelines.py` (Final Score BTC thật), `test_smoke_tools.py`, `test_smoke_pipelines.py`, các test phase 3–6
-  - `Eval/` — Backbone bake-off (retrieval-only, không LLM): `run_eval.py` (so sánh embedding), `multi_index.py`, `widen_gt_windows.py`, `eval_ground_truth.json`
+- `tests/` — Thư mục kiểm thử & đánh giá:
+  - `e2e/` — Harness đường production: `score_pipelines.py` (Final Score BTC thật), `test_smoke_tools.py`, `test_smoke_pipelines.py`, các test phase 3–6
+  - `eval/` — Backbone bake-off & ground truth: `run_eval.py`, `gt_loader.py`, `eval_ground_truth_kis.json`, `eval_ground_truth_qa.json`, `eval_ground_truth_trake.json`
+  - `unit/` — Bộ unit tests bảo vệ toàn vẹn hệ thống
 - `data/` — **git-ignored**, dữ liệu ngoại tuyến (keyframe, embedding, objects JSON)
 - `kaggle_jobs/` — 4 job encode SOTA trên Kaggle GPU (thăm dò, ngoài pipeline chính)
 - `submissions/` — Output CSV/ZIP (`*.zip` git-ignored)

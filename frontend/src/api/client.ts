@@ -62,6 +62,13 @@ export const api = {
       body: JSON.stringify({ query, question }),
     }),
 
+  // Dich tho VN->EN, KHONG qua LLM — de doi chieu voi ban rewrite() da qua LLM toi uu.
+  translateRaw: (query: string) =>
+    request<{ translation: string }>("/translate_raw", {
+      method: "POST",
+      body: JSON.stringify({ query }),
+    }),
+
   kisSearch: (query: string, top_k = 20) =>
     request<{ hits: Hit[] }>("/kis/search", {
       method: "POST",

@@ -1,15 +1,15 @@
 """
-asr_lookup.py — Doc ASR transcript (PhoWhisper) cua BTC/tu trich xuat.
+asr_lookup.py — Đọc ASR transcript (PhoWhisper) của BTC/tự trích xuất.
 
-Khong can goi API. Tra ve doan transcript trong 1 khoang thoi gian quanh mot pts_time,
-dung de bo sung ngu canh cho LLM khi tra loi Q&A / cross-check TRAKE.
+Không cần gọi API. Trả về đoạn transcript trong 1 khoảng thời gian quanh một pts_time,
+dùng để bổ sung ngữ cảnh cho LLM khi trả lời Q&A / cross-check TRAKE.
 
 Data path: data/extracted/ASR_json_PhoWhisper_base/{video_id}.json
   JSON format: {"video_id": str, "segments": [{"start": float, "end": float, "text": str}, ...]}
-  (segments sap xep tang dan theo start, KHONG dam bao lien tuc 100%)
+  (segments sắp xếp tăng dần theo start, KHÔNG đảm bảo liên tục 100%)
 
-Luu y chat luong: PhoWhisper co the phien am sai/thieu dau cau — coi day la HINT, khong phai
-su that tuyet doi (giong cach OCR_HINT_TEMPLATE trong answer_qa.py duoc dung).
+Lưu ý chất lượng: PhoWhisper có thể phiên âm sai/thiếu dấu câu — coi đây là HINT, không phải
+sự thật tuyệt đối (giống cách OCR_HINT_TEMPLATE trong qa_prompts.py được dùng).
 """
 from __future__ import annotations
 
@@ -28,17 +28,17 @@ def get_transcript(
     window: float = DEFAULT_WINDOW_SECONDS,
 ) -> str:
     """
-    Tra ve transcript trong khoang [pts_time - window, pts_time + window].
+    Trả về transcript trong khoảng [pts_time - window, pts_time + window].
 
     Args:
         video_id: Vi du "L21_V001"
-        pts_time: Thoi diem cua frame (giay), lay tu hit["pts_time"] (xem retrieve.py)
-        window:   Bien do (giay) quanh pts_time de gom segment lien quan — mac dinh 7.5s,
-                  phong truong hop loi noi lien quan bi lech nhip so voi hinh anh.
+        pts_time: Thời điểm của frame (giây), lấy từ hit["pts_time"] (xem index_store.py)
+        window:   Biên độ (giây) quanh pts_time để gom segment liên quan — mặc định 7.5s,
+                  phòng trường hợp lời nói liên quan bị lệch nhịp so với hình ảnh.
 
     Returns:
-        str: Text cac segment giao voi khoang thoi gian, noi theo thu tu thoi gian
-             (cach nhau 1 khoang trang). Rong neu khong co file JSON hoac khong segment nao giao.
+        str: Text các segment giao với khoảng thời gian, nối theo thứ tự thời gian
+             (cách nhau 1 khoảng trắng). Rỗng nếu không có file JSON hoặc không segment nào giao.
     """
     json_path = ASR_DIR / f"{video_id}.json"
     if not json_path.exists():
@@ -64,13 +64,13 @@ def get_transcript_for_hits(
     window: float = DEFAULT_WINDOW_SECONDS,
 ) -> dict[int, str]:
     """
-    Lay transcript cho nhieu hit cung luc (dung sau khi retrieve).
+    Lấy transcript cho nhiều hit cùng lúc (dùng sau khi retrieve).
 
     Args:
-        hits: list[dict] tu fast_retrieve(), moi item can co 'video_id' va 'pts_time'
+        hits: list[dict] từ fast_retrieve(), mỗi item cần có 'video_id' và 'pts_time'
 
     Returns:
-        dict: {hit_index: str} — transcript theo thu tu hit
+        dict: {hit_index: str} — transcript theo thứ tự hit
     """
     result = {}
     for i, hit in enumerate(hits):
@@ -82,38 +82,4 @@ def get_transcript_for_hits(
             result[i] = ""
     return result
 
-
-# ─── CLI self-test (repo khong dung pytest — xem CLAUDE.md) ────────────────────
-def _run_self_tests() -> None:
-    # Test 1: pts_time=20.0, window=7.5 -> khoang [12.5, 27.5] giao voi segment 0 ([0, 15.1]) va
-    # segment 1 ([15.1, 32.06]) cua L21_V001 that (da extract vao data/extracted/) -> noi ca 2.
-    text = get_transcript("L21_V001", pts_time=20.0, window=7.5)
-    assert "chào mừng" in text, f"Phai chua text cua segment 0, duoc: {text!r}"
-    assert "sông cửu long" in text, f"Phai chua text cua segment 1, duoc: {text!r}"
-    print(f"[asr_lookup] Test overlap 2 segment: OK ({len(text)} ky tu)")
-
-    # Test 2: pts_time nam ngoai moi segment (qua lon) -> rong.
-    empty = get_transcript("L21_V001", pts_time=99999.0, window=7.5)
-    assert empty == "", f"Ngoai moi segment phai tra rong, duoc: {empty!r}"
-    print("[asr_lookup] Test ngoai khoang: OK (rong)")
-
-    # Test 3: video khong co file ASR -> rong, khong crash.
-    missing = get_transcript("L99_V999", pts_time=10.0)
-    assert missing == "", f"Video khong ton tai phai tra rong, duoc: {missing!r}"
-    print("[asr_lookup] Test video khong ton tai: OK (rong)")
-
-    # Test 4: batch helper cho nhieu hit cung luc.
-    hits = [
-        {"video_id": "L21_V001", "pts_time": 20.0},
-        {"video_id": "L21_V001", "pts_time": 99999.0},
-    ]
-    batch = get_transcript_for_hits(hits, window=7.5)
-    assert "chào mừng" in batch[0], f"Hit 0 phai co transcript, duoc: {batch[0]!r}"
-    assert batch[1] == "", f"Hit 1 (ngoai khoang) phai rong, duoc: {batch[1]!r}"
-    print("[asr_lookup] Test get_transcript_for_hits: OK")
-
-    print("[asr_lookup] Tat ca self-test PASS")
-
-
-if __name__ == "__main__":
-    _run_self_tests()
+# Bo test: tests/unit/test_asr_lookup.py

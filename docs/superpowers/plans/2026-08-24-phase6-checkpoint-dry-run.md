@@ -63,7 +63,7 @@ Bối cảnh: docstring đầu file vẫn ghi `fast_retrieve(100)` và `top-5 vi
 thật (dòng 161, 174) dùng `fast_retrieve(query_en, top_k=RETRIEVAL_POOL_SIZE)` (=500, import từ
 `rerank.py`) và `top_k_video` mặc định là 20, không phải 5.
 
-- [ ] **Step 1: Đọc lại đúng 2 dòng cần sửa**
+- [x] **Step 1: Đọc lại đúng 2 dòng cần sửa**
 
 Nội dung hiện tại (dòng 4-9):
 
@@ -76,7 +76,7 @@ Giai doan 1 - Retrieval:
   -> chon top-5 video candidates
 ```
 
-- [ ] **Step 2: Sửa lại cho khớp code thật**
+- [x] **Step 2: Sửa lại cho khớp code thật**
 
 ```python
 Workflow co dinh 2 giai doan (khong de LLM tu quyet dinh so buoc):
@@ -87,7 +87,7 @@ Giai doan 1 - Retrieval:
   -> chon top_k_video video candidates (mac dinh 20, xem run_trake())
 ```
 
-- [ ] **Step 3: Verify không đổi hành vi**
+- [x] **Step 3: Verify không đổi hành vi**
 
 Chạy self-test có sẵn của module (không tốn LLM call thật, chỉ chạy `_run_self_tests()` ở đầu
 `__main__`):
@@ -99,7 +99,7 @@ Chạy self-test có sẵn của module (không tốn LLM call thật, chỉ ch�
 Expected: không lỗi cú pháp (script này chỉ parse, không chạy toàn bộ pipeline — đủ để xác nhận sửa
 docstring không làm hỏng file, không cần load index/model).
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add scripts/agent/pipeline_trake.py
@@ -123,7 +123,7 @@ bằng cách bọc `sys.stdout` bằng 1 `TextIOWrapper` ép encoding `cp1252` (
 máy chạy plan này — máy này đã set sẵn UTF-8 nên không tự nhiên reproduce được), rồi xác nhận
 `sys.stdout.reconfigure(encoding="utf-8")` khắc phục.
 
-- [ ] **Step 1: Viết script tái hiện lỗi (trước khi sửa) để xác nhận chẩn đoán đúng**
+- [x] **Step 1: Viết script tái hiện lỗi (trước khi sửa) để xác nhận chẩn đoán đúng**
 
 Lưu tạm `scratch_repro.py` ở thư mục gốc repo:
 
@@ -141,7 +141,7 @@ Chạy: `.venv\Scripts\python.exe scratch_repro.py`
 Expected: `UnicodeEncodeError: 'charmap' codec can't encode character 'Đ'...` — xác nhận đúng lỗi
 PLAN.md mô tả trước khi sửa bất cứ gì.
 
-- [ ] **Step 2: Xoá script tái hiện lỗi**
+- [x] **Step 2: Xoá script tái hiện lỗi**
 
 ```bash
 rm scratch_repro.py
@@ -149,7 +149,7 @@ rm scratch_repro.py
 
 (Chỉ dùng để xác nhận chẩn đoán ở Step 1, không phải 1 phần deliverable.)
 
-- [ ] **Step 3: Thêm reconfigure stdout vào `retrieve.py`**
+- [x] **Step 3: Thêm reconfigure stdout vào `retrieve.py`**
 
 Thêm ngay sau khối import ở đầu file (sau dòng `import pandas as pd`, trước
 `_SCRIPTS_DIR = Path(...)`):
@@ -166,7 +166,7 @@ except Exception:
     pass
 ```
 
-- [ ] **Step 4: Verify lỗi đã hết với cùng kiểu mô phỏng ở Step 1**
+- [x] **Step 4: Verify lỗi đã hết với cùng kiểu mô phỏng ở Step 1**
 
 Lưu tạm `scratch_verify.py` ở thư mục gốc repo:
 
@@ -191,13 +191,13 @@ Expected: in ra `stdout encoding = utf-8` rồi dòng có dấu tiếng Việt k
 `_ensure_loaded()`/`fast_retrieve()` nên không tải index/model CLIP — verify nhanh, không cần
 `data/extracted/`.)
 
-- [ ] **Step 5: Xoá script verify tạm**
+- [x] **Step 5: Xoá script verify tạm**
 
 ```bash
 rm scratch_verify.py
 ```
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add scripts/agent/tools/retrieve.py
@@ -223,7 +223,7 @@ hiện tại `0.012`. Việc còn thiếu ở Phase 6 là chạy **nhiều** ng�
 nhất", chỉ in số cho người dùng đọc. Tái dùng `_run_pass`/`_rank_of_video`/`EVAL_SET_PATH` từ
 `test_phase4_trake.py` (DRY, cùng 1 nguồn logic tính điểm) thay vì viết lại.
 
-- [ ] **Step 1: Viết script với self-test bằng dữ liệu giả (không gọi model/index thật)**
+- [x] **Step 1: Viết script với self-test bằng dữ liệu giả (không gọi model/index thật)**
 
 ```python
 """
@@ -352,7 +352,7 @@ if __name__ == "__main__":
     main()
 ```
 
-- [ ] **Step 2: Chạy self-test (không đụng index/model thật)**
+- [x] **Step 2: Chạy self-test (không đụng index/model thật)**
 
 ```
 .venv\Scripts\python.exe scripts\test_phase6_margin_sweep.py --self-test
@@ -362,7 +362,7 @@ Expected: in bảng 2 dòng (margin=-1.0, margin=0.012), kết thúc `Self-test 
 khong phai ket qua that)`. **Không chạy `--self-test` bằng dữ liệu thật và không tự đọc/so sánh số ở
 bước này** — việc đó thuộc Task 4.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add scripts/test_phase6_margin_sweep.py
@@ -381,7 +381,7 @@ git commit -m "feat(phase6): add TRAKE_CROSSCHECK_MARGIN sweep tool (measurement
 **Interfaces:** Không đổi code nào — deliverable của task này là văn bản (danh sách lệnh + cách đọc
 kết quả) chèn vào PLAN.md, không phải hàm/module mới.
 
-- [ ] **Step 1: Thêm khối runbook vào PLAN.md**
+- [x] **Step 1: Thêm khối runbook vào PLAN.md**
 
 Chèn ngay trước dòng `Success: nộp đợt 4 với cả 5 cải tiến đã qua benchmark xác nhận không regress
 so với đợt 1.` ở cuối mục Phase 6:
@@ -432,7 +432,7 @@ Phase đó — tụt rõ rệt (không phải nhiễu do mẫu nhỏ/1 câu đ�
 điều tra nguyên nhân trước khi tiếp tục Phase 6.
 ```
 
-- [ ] **Step 2: Verify PLAN.md vẫn hợp lệ Markdown**
+- [x] **Step 2: Verify PLAN.md vẫn hợp lệ Markdown**
 
 ```
 .venv\Scripts\python.exe -c "import pathlib; s = pathlib.Path('PLAN.md').read_text(encoding='utf-8'); print(len(s), 'chars, OK doc duoc')"
@@ -440,7 +440,7 @@ Phase đó — tụt rõ rệt (không phải nhiễu do mẫu nhỏ/1 câu đ�
 
 Expected: in ra số ký tự, không lỗi encoding.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add PLAN.md
@@ -457,7 +457,7 @@ git commit -m "docs(phase6): add checkpoint-benchmark runbook (commands only, us
 
 **Interfaces:** Không đổi code — cùng dạng deliverable văn bản như Task 4.
 
-- [ ] **Step 1: Thêm khối runbook vào PLAN.md**
+- [x] **Step 1: Thêm khối runbook vào PLAN.md**
 
 ```markdown
 **Runbook dry-run contest mode (tự chạy, tự quan sát log — trước 03/09):**
@@ -492,13 +492,13 @@ git commit -m "docs(phase6): add checkpoint-benchmark runbook (commands only, us
    vấn đề gặp phải) vào PLAN.md Phase 6.
 ```
 
-- [ ] **Step 2: Verify PLAN.md vẫn hợp lệ Markdown**
+- [x] **Step 2: Verify PLAN.md vẫn hợp lệ Markdown**
 
 ```
 .venv\Scripts\python.exe -c "import pathlib; s = pathlib.Path('PLAN.md').read_text(encoding='utf-8'); print(len(s), 'chars, OK doc duoc')"
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add PLAN.md
@@ -520,7 +520,7 @@ sạch, 1 finding đã fix) nhưng bỏ qua review toàn nhánh cuối cùng. Vi
 chính xác retrieval — là review chất lượng code (đúng logic DP, đúng cross-check, không leak
 side-effect...) nên vẫn nằm trong phạm vi tôi tự làm được, không cần người dùng tự chạy.
 
-- [ ] **Step 1: Xác định phạm vi diff cần review**
+- [x] **Step 1: Xác định phạm vi diff cần review**
 
 ```bash
 git log --oneline -- scripts/agent/pipeline_trake.py scripts/agent/tools/rerank.py
@@ -529,17 +529,17 @@ git log --oneline -- scripts/agent/pipeline_trake.py scripts/agent/tools/rerank.
 Lấy commit đầu tiên chạm tới `pipeline_trake.py` trong Phase 4 (trước Phase 4, file này chỉ có greedy
 logic cũ) làm điểm base cho diff review.
 
-- [ ] **Step 2: Chạy review toàn nhánh**
+- [x] **Step 2: Chạy review toàn nhánh**
 
 Dùng skill `code-review` (level `high`, không cần `ultra` — thay đổi nằm trong 1 file chính, không
 cần multi-agent cloud review) trên diff từ base commit đó tới `HEAD` của `scripts/agent/pipeline_trake.py`
 (và `rerank.py` nếu diff động tới `RETRIEVAL_POOL_SIZE`).
 
-- [ ] **Step 3: Áp fix nếu có finding thật (không áp fix cho finding sai/không chắc)**
+- [x] **Step 3: Áp fix nếu có finding thật (không áp fix cho finding sai/không chắc)**
 
 Theo `superpowers:receiving-code-review` — verify kỹ thuật trước khi sửa, không sửa theo phản xạ.
 
-- [ ] **Step 4: Nếu có sửa, chạy lại self-test có sẵn của `pipeline_trake.py`**
+- [x] **Step 4: Nếu có sửa, chạy lại self-test có sẵn của `pipeline_trake.py`**
 
 ```
 .venv\Scripts\python.exe scripts\agent\pipeline_trake.py
@@ -547,7 +547,7 @@ Theo `superpowers:receiving-code-review` — verify kỹ thuật trước khi s�
 
 Expected: 6 self-test PASS (như đã ghi trong PLAN.md Phase 4), không lỗi mới phát sinh từ fix.
 
-- [ ] **Step 5: Commit (chỉ nếu có thay đổi thật)**
+- [x] **Step 5: Commit (chỉ nếu có thay đổi thật)**
 
 ```bash
 git add scripts/agent/pipeline_trake.py scripts/agent/tools/rerank.py
@@ -566,14 +566,14 @@ review toàn nhánh đã chạy và sạch (fold vào Task 7 dưới).
 
 **Interfaces:** Không đổi code — chỉ cập nhật trạng thái tài liệu.
 
-- [ ] **Step 1: Sau khi Task 1–6 xong, cập nhật mục Phase 6 trong PLAN.md**
+- [x] **Step 1: Sau khi Task 1–6 xong, cập nhật mục Phase 6 trong PLAN.md**
 
 Đánh dấu các gạch đầu dòng đã hoàn tất (docstring, encoding fix, margin-sweep tool, runbook,
 full-branch review) theo đúng văn phong "Đã làm:" đã dùng ở Phase 1–5, giữ nguyên các mục vẫn chờ
 người dùng tự chạy (checkpoint benchmark thật, dry-run thật, mở rộng eval TRAKE, freeze) ở trạng thái
 chưa tick — vì đây là việc người dùng tự làm, không phải tôi tự nhận đã xong thay họ.
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add PLAN.md

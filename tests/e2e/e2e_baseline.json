@@ -1,0 +1,15 @@
+{
+  "saved_at": "2026-08-31 14:29:24",
+  "note": "types=kis,qa,trake limit=0",
+  "n_by_type": {
+    "KIS": 23,
+    "QA": 5,
+    "TRAKE": 10
+  },
+  "finals": {
+    "ALL": 0.5078947368421053,
+    "KIS": 0.6521739130434783,
+    "QA": 0.0,
+    "TRAKE": 0.43
+  }
+}

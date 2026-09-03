@@ -1,7 +1,7 @@
 # AIC2026 — Architecture
 
 > Xem [PLAN.md](PLAN.md) cho tiến độ/việc cần làm, [CLAUDE.md](CLAUDE.md) cho quy ước code chung,
-> [DECISION.md](DECISION.md) cho lý do đằng sau các quyết định dưới đây.
+> [docs/decisions-log.md](docs/decisions-log.md) cho lý do đằng sau các quyết định dưới đây.
 >
 > **Đây là kiến trúc mục tiêu cho vòng hiện tại (đợt 4, 04/09/2026)** — mô tả cả phần đã có (baseline
 > đợt 1, đã nộp) lẫn phần đang triển khai thêm (6 hạng mục ưu tiên: config mode, risk-aware ranking,
@@ -15,7 +15,7 @@
 Người dùng (thí sinh)
         │  nhập query trên UI, rà soát/sửa kết quả (human-in-the-loop)
         ▼
-scripts/app.py  (Gradio, 4 tab: KIS / Q&A / TRAKE / Export)
+frontend/ (React + Vite)  ──HTTP──▶  scripts/api/ (FastAPI, routers: kis|qa|trake|queue|images|videos)
         │
    ┌────┴─────────────────┬──────────────────────┐
    ▼                      ▼                       ▼
@@ -32,41 +32,70 @@ pipeline_kis.py     pipeline_qa.py          pipeline_trake.py
    └──────────┬───────────┴───────────┬───────────┘
               ▼                       ▼
    agent/tools/retrieve.py     agent/tools/rewrite.py (đã thêm rule phủ định)
-   (CLIP cosine similarity      agent/tools/rank.py (mới — risk-aware rerank)
-    trên ma trận 177K keyframe) agent/tools/ocr_lookup.py (đọc Objects JSON, không đổi)
+   (CLIP cosine similarity      agent/tools/rerank.py (risk-aware rerank + NMS)
+    trên ma trận 177K keyframe) agent/tools/objects_lookup.py (đọc Objects JSON)
               │                 agent/config.py (call_llm() → LiteLLM → PROVIDER_CHAIN,
               │                  + AIC_MODE=test|contest chọn model — mới)
               ▼
         submit/build_submission.py → CSV (kis/qa/trake) → submit/validate_submission.py → zip
 ```
-
 ## 2. Trách nhiệm từng module
 
-| Path                                                                          | Vai trò                                                                                                                                                                                                                                                                                                                                                            | Vì sao ở đây                                                                                                          |
-| ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| [scripts/index.py](scripts/index.py)                                           | **[RETIRED 2026-08-28]** Từng build ma trận CLIP `(N,512)` + metadata từ `clip-features-32/`. Đã retire sau khi benchmark 33 query: `clip_vitb32` Final=0.290 vs `siglip`=0.549. `clip-features-32/` đã xóa. File giữ nguyên để không phá import chain. | Layer dữ liệu gốc — đã retire, không gọi từ production nữa                                                          |
-| [scripts/agent/tools/retrieve.py](scripts/agent/tools/retrieve.py)             | Per-task singleton: KIS/TRAKE/Q&A dùng `siglip` (`features_siglip/`). API: `fast_retrieve()`, `fast_retrieve_for_video()`, `fast_retrieve_qa()`. Escape-hatch: `AIC_RETRIEVE_MODEL` cho KIS/TRAKE, `AIC_QA_MODEL` cho Q&A. `clip_vitb32` đã retire 2026-08-28. | Điểm truy cập duy nhất tới ma trận vector — mọi pipeline đều gọi qua đây, không tự `build_index()` riêng |
-| [scripts/agent/config.py](scripts/agent/config.py)                             | `call_llm(...)` — bọc LiteLLM, fallback qua `PROVIDER_CHAIN`. **Thêm (mới):** `AIC_MODE=test\|contest` (mặc định `test`) chọn `OPENROUTER_MODEL` (rẻ, dev) hay `OPENROUTER_MODEL_CONTEST` (mạnh hơn, dùng khi nộp thật) — cùng pattern với `AIC_RETRIEVE_MODEL` (env var, default giữ hành vi cũ, opt-in rõ ràng).                                             | Nguồn cấu hình LLM duy nhất; `AIC_MODE` cho phép tách chi phí dev khỏi chất lượng lúc thi mà không sửa code pipeline |
-| **[scripts/agent/tools/rank.py](scripts/agent/tools/rank.py) (mới)**           | `apply_risk_aware_ranking(hits, top_k, query_text)` — hậu xử lý danh sách hit sau `fast_retrieve`: tự tin cao (margin video top-1/top-2 lớn) → đào thêm frame cùng video top-1 qua `fast_retrieve_for_video`, dồn nhiều dòng vào đó; tự tin thấp → áp trần số dòng/video, trải rủi ro ra nhiều video hơn.                                                        | Cô lập logic "đặt cược top-1 vs trải rủi ro" khỏi retrieval thuần — dùng chung được cho KIS lẫn Q&A                  |
-| [scripts/agent/tools/rewrite.py](scripts/agent/tools/rewrite.py)               | `rewrite_query(query, feedback=None)` — dịch VN→EN + tối ưu visual-centric cho CLIP, đã có sẵn: chọn 1 khoảnh khắc trọng tâm khi query tả nhiều mốc, giữ nguyên số đếm/màu sắc, đưa "anchor object" lên đầu câu. **Thêm (mới):** 1 rule xử lý phủ định (`"không có"`/`"without"` → mô tả lại thành cái ĐANG hiện diện, vì CLIP khớp mô tả dương tính, không khớp phủ định logic). | Tách riêng khỏi pipeline để dùng chung cho cả Q&A và TRAKE; chỉ thêm đúng phần đang thiếu, không viết lại prompt      |
-| [scripts/agent/tools/ocr_lookup.py](scripts/agent/tools/ocr_lookup.py)         | `get_objects()`, `get_objects_for_hits()`, `objects_contain_keywords()` — đọc Objects JSON (Faster R-CNN/OpenImages) offline. **Đây KHÔNG phải OCR thật** (không đọc chữ/số) dù tên module — giữ nguyên tên vì nhiều nơi đã import, không đổi.                                                                                                                    | Không tốn gọi API; nguồn "sự thật" để cross-check answer (Q&A) và cross-check video (TRAKE, mục dưới)            |
-| **[scripts/agent/tools/ocr_read.py](scripts/agent/tools/ocr_read.py) (mới)**   | `read_text_from_hits(hits, top_n=3)` — OCR thật (PaddleOCR, singleton nạp 1 lần) chạy **on-demand** chỉ trên tối đa 3 ảnh candidate của câu hỏi đang cần đọc chữ/số (tái dùng regex `_needs_text_reading` đã có trong `answer_qa.py`) — không precompute toàn bộ 177K keyframe.                                                                                 | Lấp khoảng trống: repo chưa từng có OCR thật, chỉ có Gemini Vision "đọc bằng mắt" — OCR làm tín hiệu phụ giảm ảo giác đọc sai số/chữ (bẫy QA-04/05/06) |
-| [scripts/agent/tools/answer_qa.py](scripts/agent/tools/answer_qa.py)           | `answer_from_hits()` — 2 tầng (objects JSON → LLM Vision) + `_crosscheck_answer()`. **Thêm (mới):** khi `_needs_text_reading()` đúng, chạy `ocr_read.read_text_from_hits()` trước, chèn kết quả (nếu có) làm gợi ý vào prompt Vision — OCR hỗ trợ, không thay thế lệnh gọi Vision, không đổi shape trả về (`answer, best_hit, confidence, method`). | Cô lập logic chống ảo giác (rủi ro AI-safety lớn nhất của bài Q&A); OCR chỉ là tín hiệu bổ sung, giữ nguyên interface |
-| [scripts/agent/pipeline_kis.py](scripts/agent/pipeline_kis.py)                 | `run_kis()` — gọi `fast_retrieve`, **rồi qua `rank.apply_risk_aware_ranking()` (mới)** trước khi trả về. Vẫn không LLM, không loop.                                                                                                                                                                                                                                | KIS không cần agent (xem §3); risk-aware ranking là hậu xử lý thuần, không phá tính chất "linear, no LLM" |
-| [scripts/agent/pipeline_qa.py](scripts/agent/pipeline_qa.py)                   | `run_qa()` — orchestrator: rewrite → retrieve → **rank (mới)** → answer → (nếu confidence<0.5) rewrite+feedback → retrieve → rank → answer lại                                                                                                                                                                                                                    | Orchestrator-workers pattern, có gate rõ ràng (không phải free-form agent loop)                                      |
-| [scripts/agent/pipeline_trake.py](scripts/agent/pipeline_trake.py)             | `run_trake()` — giai đoạn 1 chọn top-video (không đổi). **Giai đoạn 2 (đổi):** thay ràng buộc tăng dần kiểu tham lam (dễ vỡ khi không có candidate hợp lệ trong top-k) bằng **quy hoạch động** chọn chuỗi `frame_idx` tăng dần nghiêm ngặt có tổng score cao nhất; loại hẳn video không tìm được chuỗi hợp lệ thay vì trả về sai thứ tự. **Thêm (mới) — cross-check tầng 3:** khi margin score giữa video hạng 1/2 nhỏ, dùng `objects_contain_keywords()` (miễn phí, không LLM) đối chiếu object trong frame đã chọn với từ khoá của `events` để phá thế cân bằng. | Structured pipeline cố định, không để LLM tự quyết định số bước; DP đảm bảo đúng ràng buộc "thứ tự tăng dần" mà bản greedy cũ không đảm bảo được |
-| [scripts/submit/build_submission.py](scripts/submit/build_submission.py)       | `build_kis_csv/build_qa_csv/build_trake_csv/build_zip_submission`. Không đổi.                                                                                                                                                                                                                                                                                     | Điểm duy nhất sinh format nộp bài — pipeline không tự ghi CSV                                                     |
-| [scripts/submit/validate_submission.py](scripts/submit/validate_submission.py) | `validate_csv_file()`, `validate_zip()`. Không đổi.                                                                                                                                                                                                                                                                                                                | Lưới an toàn cuối trước khi nộp; chạy độc lập, không phụ thuộc pipeline                                     |
-| [scripts/app.py](scripts/app.py)                                               | Gradio UI — 4 tab, hàng đợi submission trong session, human-in-the-loop edit trước export. Không đổi.                                                                                                                                                                                                                                                              | UI **gọi** pipeline/submit, không chứa logic retrieval/answer riêng                                              |
+> Cập nhật 2026-08-31 sau đợt chuẩn hoá: `scripts/index.py` và `scripts/app.py` đã retire vào
+> `docs/_archive/`; `retrieve.py` tách làm 4; `answer_qa.py` tách làm 4; DP của TRAKE tách riêng.
+
+| Path | Vai trò | Vì sao ở đây |
+| --- | --- | --- |
+| `agent/tools/index_store.py` | Sở hữu ma trận embedding + metadata + text encoder (singleton/tiến trình). `get_index(qa)`, `preload()`, `row_to_hit()`, `key_index()`, `load_model()`, `encode_mean()`. | Một chủ duy nhất cho state; `row_to_hit()` là **điểm duy nhất** quy đổi `frame_id = frame_idx + 1` |
+| `agent/tools/retrieve.py` | `fast_retrieve()` (KIS/TRAKE), `fast_retrieve_qa()`, `fast_retrieve_for_video()` (alignment TRAKE), `fast_retrieve_multi()`. | Tầng truy vấn dense thuần, không giữ state |
+| `agent/tools/hybrid.py` | `hybrid_retrieve()` (dense + BM25 → RRF), `fast_retrieve_multi_model()`. | Lai ghép nhiều nguồn — mối quan tâm khác với truy vấn dense đơn |
+| `agent/tools/frames.py` | `get_neighbor_frames()`, `get_all_frames()`, `get_keyframe_path()`. | Tiện ích cho tầng UI, không phải kết quả truy vấn (không có score) |
+| `agent/tools/sparse_index.py` | BM25 offline trên Objects JSON + caption. CLI `--build` (~3,5 phút, bắt buộc 1 lần). | Bù đúng khoảng trống của SigLIP: tên object cụ thể, chữ/số |
+| `agent/tools/fusion.py` | RRF thuần: `reciprocal_rank_fusion()`, `rrf_fuse_hits()`. | **Module thuần** — eval và production dùng chung đúng một hàm |
+| `agent/tools/temporal_nms.py` | Khử trùng lặp thời gian, thuần. | **Module thuần** (như trên) |
+| `agent/tools/query_expand.py` | Multi-Aspect Prompt Expansion, template tất định (+ nhánh LLM tuỳ chọn). | **Module thuần**; mặc định TẮT vì đo thật cho thấy làm tụt điểm |
+| `agent/tools/rerank.py` | `apply_risk_aware_ranking()`: đặt cược / trải rủi ro theo margin, + Temporal NMS, + `_preserve_recall_tail()` giữ đuôi danh sách theo thứ tự retrieval gốc. | Cô lập chiến lược phân bổ 100 dòng khỏi retrieval thuần |
+| `agent/tools/objects_lookup.py` | Đọc Objects JSON (Faster R-CNN/OpenImages) offline. **KHÔNG phải OCR** — chỉ trả tên object. | Miễn phí; nguồn cross-check cho Q&A và TRAKE. (Tên cũ `ocr_lookup.py` gây hiểu nhầm, đã đổi 2026-08-31) |
+| `agent/tools/ocr_read.py` | OCR thật (PaddleOCR + VietOCR), chạy **on-demand** tối đa 3 ảnh; `rerank_by_ocr()`. | Lấp khoảng trống đọc chữ/số. ⚠️ Hiện không hoạt động — xem §5 |
+| `agent/tools/asr_lookup.py` | Tra transcript quanh một mốc thời gian. | Tín hiệu phụ miễn phí cho Q&A/TRAKE |
+| `agent/tools/rewrite.py` | `rewrite_query()` VN→EN + tối ưu visual-centric qua LLM; `rewrite_query_candidates()` cho UI. | Dùng chung cho Q&A và TRAKE |
+| `agent/tools/translate_raw.py` | Dịch thô VN→EN (deep-translator), **không** qua LLM. | Để người dùng đối chiếu bản dịch sát nghĩa với bản rewrite |
+| `agent/tools/answer_qa.py` | `answer_from_hits()` — 3 tầng (Objects JSON → Vision + evidence bundle → knowledge fallback) + `_crosscheck_answer()` + OCR Direct Overwrite. | Cô lập logic chống ảo giác — rủi ro lớn nhất của bài Q&A |
+| `agent/tools/qa_prompts.py` | 9 prompt template của nhánh Q&A. | Phần sửa nhiều nhất khi tinh chỉnh chất lượng; sửa ở đây LÀ đổi hành vi |
+| `agent/tools/qa_classify.py` | Nhận dạng loại câu hỏi: đếm vật thể / cần đọc chữ / hỏi số hiển thị. | Ba nhóm đi ba đường khác nhau trong `answer_from_hits()` |
+| `agent/tools/qa_normalize.py` | `canonicalize_answer()`, `is_non_answer()`, `normalize_answer()`, `extract_visual_count()`. | Chấm điểm BTC so khớp chuỗi — câu đúng ý mà bọc trong câu văn vẫn trượt |
+| `agent/tools/trake_align.py` | `find_best_increasing_chain()` (quy hoạch động), `rule_plausibility()`. | **Module thuần** — kiểm thử được không cần index/LLM |
+| `agent/config.py` | `call_llm()` — bọc LiteLLM, fallback `PROVIDER_CHAIN`, `AIC_MODE=test\|contest`. | Nguồn cấu hình LLM duy nhất |
+| `agent/pipeline_kis.py` | `run_kis()` — expand → hybrid_retrieve(pool=500) → risk-aware rank + NMS → rerank_by_ocr. **Không LLM, không loop ⇒ tất định.** | Task đóng, không cần agent (xem §3) |
+| `agent/pipeline_qa.py` | `run_qa()` — rewrite → retrieve → rank → answer theo từng cụm video → (confidence thấp) thử vòng 2. | Orchestrator-workers, có gate rõ ràng |
+| `agent/pipeline_trake.py` | `run_trake()` — Coverage Pooling → DP đơn điệu → cổng rule (miễn phí) → cổng LLM (chỉ khi #1–#2 sát nhau). | Pipeline cố định; ràng buộc thứ tự do thuật toán đảm bảo, không do LLM tự kiểm |
+| `api/` | FastAPI: `main.py`, `schemas.py`, `state.py`, `routers/{kis,qa,trake,queue,images,videos}.py`. | Tầng HTTP; gọi pipeline, không chứa logic retrieval riêng |
+| `submit/build_submission.py` | `build_kis_csv/build_qa_csv/build_trake_csv/build_zip_submission`. | Điểm duy nhất sinh format nộp bài |
+| `submit/validate_submission.py` | `validate_csv_file()`, `validate_zip()`. | Lưới an toàn cuối trước khi nộp |
+| `offline/` | `captions/` · `ocr/` · `shards/` · `analysis/` — chạy một lần, ghi vào `data/`. | Không nằm trên đường truy vấn; tách khỏi runtime để khỏi nhầm |
+
+### 2.1. Tham số đã hiệu chỉnh — và hiệu chỉnh trên thang đo nào
+
+| Tham số | Giá trị | Hiệu chỉnh trên | Ghi chú |
+| --- | --- | --- | --- |
+| `rerank.MARGIN_THRESHOLD` | 0.012 | cosine của `clip_vitb32` — **model đã retire 2026-08-28** | Thang cosine SigLIP hẹp hơn (~0.05–0.15). Giá trị chưa hiệu chỉnh lại trên thang mới ⇒ xem PLAN.md Pha 2 |
+| `rerank.RECALL_HEAD_N` | 20 | 18 câu KIS, 2026-08-31 | Final 0.667 → 0.722 |
+| `rerank.BET_VIDEO_SHARE` / `SPREAD_MAX_PER_VIDEO` | 0.5 / 3 | 18 câu KIS | |
+| `hybrid.SPARSE_TOP_K` | 50 | 18 câu KIS, 2026-08-28 | Đưa cả 500 ứng viên BM25 vào làm Final tụt 0.667 → 0.656 |
+| `temporal_nms.MIN_TIME_GAP` | 3.0 s | bước lấy keyframe BTC (~2,5–3 s) | Thực chất chỉ loại keyframe kề, không loại cảnh trùng dài |
+| `fusion.RRF_K` / `W_DENSE` / `W_SPARSE` | 60 / 0.75 / 0.25 | k=60 theo Cormack et al. 2009 | |
+| `pipeline_trake.GATE_MARGIN` | 0.02 | chưa có benchmark rộng | |
+| `pipeline_qa.MAX_ANSWER_CLUSTERS` | 3 | đánh đổi chi phí/độ phủ | ~97/100 dòng mang answer của video khác ⇒ xem PLAN.md Pha 2 |
 
 ## 3. Quyết định kiến trúc đã chốt
 
 - **Không dùng 1 kiến trúc agent chung cho cả 3 dạng bài** — chọn theo độ mở của task
-  (nguyên tắc từ `docs/Training/AIC2026_TongHop_LuatThi_va_KienTrucAgent.md`, dựa trên
+  (nguyên tắc từ `docs/training/AIC2026_TongHop_LuatThi_va_KienTrucAgent.md`, dựa trên
   "Building Effective AI Agents" của Anthropic):
-  - **KIS** = workflow tuyến tính, không LLM, có hậu xử lý ranking (rank.py). Task đóng, không cần agent.
-    ⚠️ **Đã lật một phần ở [§6.4](#64-quyết-định-kiến-trúc-v2) (2026-08-28)**: KIS được thêm một bước
-    VLM rerank một chiều (`vlm_rerank.py`). Phần "không có vòng lặp reflection" vẫn giữ nguyên.
+  - **KIS** = workflow tuyến tính, không LLM, có hậu xử lý ranking (`rerank.py`). Task đóng, không cần agent.
+    ⚠️ **Kế hoạch ở [§6.4](#64-quyết-định-kiến-trúc-v2) (2026-08-28)** là thêm một bước VLM rerank
+    một chiều (`vlm_rerank.py`) cho KIS. **Module này CHƯA tồn tại** (xem PLAN.md 10.4) — tính đến
+    2026-08-31, KIS vẫn hoàn toàn không gọi LLM, và đó là lý do golden snapshot của nó tất định.
   - **Q&A** = orchestrator-workers, loop có trần (`MAX_AGENT_LOOPS=2`), có gate confidence rõ ràng.
     Task mở vừa phải (không biết trước câu hỏi cần bao nhiêu tầng info) nhưng rủi ro sai cao
     (trả lời sai answer = R-Score về 0 dù đúng frame) nên **bắt buộc cross-check** trước khi trả lời.
@@ -89,23 +118,25 @@ pipeline_kis.py     pipeline_qa.py          pipeline_trake.py
   loại thẳng video không có chuỗi hợp lệ thay vì âm thầm trả sai.
 - **Anti-hallucination bắt buộc cho Q&A**: mọi answer từ tầng vision phải qua `_crosscheck_answer()`
   đối chiếu với Objects JSON trước khi coi là đáng tin (`confidence` cao/thấp theo kết quả cross-check).
-- **File-based, không DB**: toàn bộ state là file (`.npy`/`.csv` index, `test_eval/**/*.json`,
+- **File-based, không DB**: toàn bộ state là file (`.npy`/`.csv` index, `tests/**/*.json`,
   `submissions/*.csv|zip`). Hàng đợi submission trong `app.py` chỉ sống trong session Gradio (RAM).
 - **frame_id luôn tính từ `frame_idx + 1`** ngay tại `retrieve.py` (điểm duy nhất) — pipeline và UI
   phía sau không tự +1 lần nữa ở đâu khác.
 - **Human-in-the-loop là một phần thiết kế, không phải fallback**: `app.py` luôn cho sửa tay
   (dataframe) trước khi add-to-queue, đúng tinh thần luật thi cho phép con người rà soát.
 
-Lý do chi tiết đằng sau từng quyết định (kể cả các quyết định của round-1) → [DECISION.md](DECISION.md).
+Lý do chi tiết đằng sau từng quyết định (kể cả các quyết định của round-1) → [docs/decisions-log.md](docs/decisions-log.md).
 
 ## 4. Không được làm (forbidden)
 
 - Không gọi `litellm` (Gemini/Groq/NVIDIA NIM) trực tiếp bên ngoài `agent/config.py:call_llm()`.
 - Không viết CSV/ZIP submission ở đâu khác ngoài `submit/build_submission.py`.
 - Không để pipeline (`pipeline_kis/qa/trake.py`) tự thêm `.mp4` hoặc tự trừ/cộng `frame_id` — việc
-  chuẩn hoá `video_id`/`frame_id` chỉ xảy ra ở `retrieve.py` (đọc) và `build_submission.py` (ghi).
-- Không thêm code/comment tiếng Anh vào `scripts/app.py`, `scripts/index.py` — quy ước Vietnamese-only
-  của repo (xem `CLAUDE.md`).
+  quy đổi `frame_id = frame_idx + 1` chỉ xảy ra ở **một hàm duy nhất**:
+  `agent/tools/index_store.py:row_to_hit()` (đọc), và `submit/build_submission.py` (ghi).
+- Comment/docstring viết tiếng Việt **có dấu** trên toàn bộ `scripts/` (xem `CLAUDE.md`). Ngoại lệ
+  duy nhất: nội dung prompt gửi cho LLM (`tools/qa_prompts.py`, `TRAKE_CROSSCHECK_PROMPT`) viết tiếng
+  Anh — sửa một ký tự ở đó là đổi hành vi mô hình.
 - Không commit `.env` hoặc bất kỳ file nào chứa key thật (chỉ `.env.example` với placeholder được
   commit).
 - Không để TRAKE/Q&A pipeline chạy vòng lặp không giới hạn — mọi reflection loop phải có trần cứng
@@ -116,12 +147,13 @@ Lý do chi tiết đằng sau từng quyết định (kể cả các quyết đ�
   việc **SINH** nội dung hàng loạt bằng VLM/OCR (vẫn cấm). **ENCODE** văn bản đã có sẵn (caption
   Vintern-1B qua BGE-M3, ~10–15 phút GPU) không thuộc phạm vi cấm.
 - Không đổi ngưỡng risk-aware ranking / margin cross-check TRAKE mà không hiệu chỉnh lại bằng
-  `test_eval/Eval/run_eval.py` trên `test_eval/Eval/eval_ground_truth.json` trước.
+  `tests/eval/run_eval.py` trên `tests/eval/eval_ground_truth.json` trước.
 
 ## 5. Điểm giao tiếp (interface)
 
-- **Entry point ứng dụng**: `scripts/app.py` (Gradio, `python scripts/app.py`, mặc định
-  `http://127.0.0.1:7860`).
+- **Entry point ứng dụng**: backend `python -m uvicorn scripts.api.main:app --port 8000`
+  (health: `http://127.0.0.1:8000/api/health`) + frontend `cd frontend; npm run dev`
+  (`http://localhost:5173`, proxy `/api` → `:8000`). Gradio đã retire → `docs/_archive/app_gradio.py`.
 - **Entry point pipeline (dùng độc lập/CLI)** — chữ ký không đổi so với round-1:
   - `run_kis(query_text: str, top_k: int = 100) -> list[dict]`
   - `run_qa(query_text: str, question: str | None = None, top_k: int = 100) -> dict`
@@ -133,6 +165,9 @@ Lý do chi tiết đằng sau từng quyết định (kể cả các quyết đ�
 - **Không có database/API bên ngoài nào khác** ngoài LLM provider (qua LiteLLM) và OCR local
   (PaddleOCR, chạy trên máy, không phải API). Dữ liệu vào là file tĩnh dưới `data/extracted/`.
 - **External service**: LLM qua LiteLLM, theo chuỗi fallback `PROVIDER_CHAIN` trong `agent/config.py`.
+- ⚠️ **Phụ thuộc ngoài chưa được kiểm soát**: `tools/ocr_read.py` tải config VietOCR từ `vocr.vn`
+  lúc chạy. Chứng chỉ SSL của site đã hết hạn (phát hiện 2026-08-31) ⇒ OCR thật hiện KHÔNG hoạt
+  động; module bắt lỗi và chạy tiếp nên lỗi này vô hình. Xem PLAN.md Pha 2.
   Key trong `.env` (không commit); provider nào thiếu key sẽ tự bị bỏ qua trong chuỗi.
 
 ---
@@ -140,13 +175,13 @@ Lý do chi tiết đằng sau từng quyết định (kể cả các quyết đ�
 ## 6. Kiến trúc v2 (Phase 10 — chốt 2026-08-28)
 
 > Phần này **thay thế** hai quyết định ở §3/§4 (đánh dấu ⚠️ tại chỗ) và bổ sung 4 module mới. Lý do
-> đằng sau → [DECISION.md](DECISION.md). Việc cần làm → [PLAN.md](PLAN.md) Phase 10.
+> đằng sau → [docs/decisions-log.md](docs/decisions-log.md). Việc cần làm → [PLAN.md](PLAN.md) Phase 10.
 
 ### 6.1. Ba phát hiện đo được đã dẫn tới v2
 
 **(1) Trần điểm TRAKE ≈ 0.12 — nút thắt không nằm ở thuật toán chọn keyframe.**
 
-Luật BTC (`docs/Thong tin vong So tuyen AIC2026.md` §2.1.3): cửa sổ đáp án của mỗi mốc TRAKE
+Luật BTC (`docs/rules/Thong tin vong So tuyen AIC2026.md` §2.1.3): cửa sổ đáp án của mỗi mốc TRAKE
 "thường rất ngắn, thông thường là dưới 10 frame". Đo phân bố khoảng cách keyframe liên tiếp trên
 400 video / 90.519 gap của `data/extracted/map-keyframes/`:
 
@@ -178,7 +213,7 @@ thuyết thực sự khác nhau; dòng 21–100 là vé số, không đáng tinh
 - Máy chạy có **RTX 5050 Laptop, 8151 MiB VRAM, driver 592.82** (Blackwell, sm_120) nhưng venv đang
   cài `torch 2.13.0+cpu` ⇒ GPU chưa từng được dùng. Cần wheel `cu128`/`cu129`.
 - Mỗi gói đề chỉ có **~42–45 truy vấn** (`THUNGHIEM-bo-de-thi/bo_de_thi.csv` 42 dòng,
-  `test_eval/sotuyen1_bo_de_thi.csv` 45 dòng), và vòng sơ tuyển **chấm offline theo file nộp, không
+  `tests/data/sotuyen1_bo_de_thi.csv` 45 dòng), và vòng sơ tuyển **chấm offline theo file nộp, không
   giới hạn thời gian chạy**.
 
 Ước lượng khi GPU được bật: định vị dưới keyframe cho TRAKE ~20–30 s/truy vấn; cho KIS ~20 phút/gói
@@ -246,7 +281,7 @@ query ──► [4-leg hybrid retrieval] ─────────────
   định giả thuyết "cửa sổ dài" — tức đang cược một chiều vào ẩn số. `refine_frame` nâng `q` lên, và
   chỉ khi `q` cao thì việc rải mới đúng: **hai tham số này phải chỉnh cùng nhau, không tách rời**.
 - **PaddleOCR detection vẫn LUÔN chạy CPU, kể cả sau khi torch chuyển sang bản CUDA.** Xung đột DLL
-  `paddlepaddle-gpu` × `torch` trên Windows đã xác nhận (xem [EXPERIMENT.md](EXPERIMENT.md)); torch
+  `paddlepaddle-gpu` × `torch` trên Windows đã xác nhận (xem [docs/decisions-log.md](docs/decisions-log.md)); torch
   chạy CUDA làm rủi ro này **tăng**, không giảm. VietOCR (thuần torch, dùng chung torch đã import)
   vẫn an toàn trên GPU.
 - **Mọi bước v2 đều có công tắc bật/tắt và phải đo trước–sau** bằng Regression Guard đã dựng ở

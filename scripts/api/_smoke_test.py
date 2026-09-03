@@ -1,11 +1,11 @@
 """
-_smoke_test.py — Kiem tra toan bo backend API mot luot: KIS -> QA -> TRAKE -> queue -> export -> validate.
-Khong phai pytest (repo khong dung pytest o Phase 1 — xem CLAUDE.md) — script doc lap, chay tay.
+_smoke_test.py — Kiểm tra toàn bộ backend API một lượt: KIS -> QA -> TRAKE -> queue -> export -> validate.
+Không phải pytest (test tất định đã nằm ở tests/unit/) — script độc lập, chạy tay, gọi LLM thật.
 
 Usage:
     .venv\\Scripts\\python.exe scripts\\api\\_smoke_test.py
 
-Can OPENROUTER_API_KEY that (goi LLM that qua rewrite/qa/trake) va data/ da giai nen san.
+Cần OPENROUTER_API_KEY thật (gọi LLM thật qua rewrite/qa/trake) và data/ đã giải nén sẵn.
 """
 from __future__ import annotations
 
@@ -34,32 +34,32 @@ def main() -> None:
         assert len(kis_hits) == 5
         print(f"[smoke] kis/search OK ({len(kis_hits)} hits)")
 
-        # Anh keyframe that: 200 + image/jpeg cho hit co anh; 404 cho keyframe khong ton tai.
+        # Ảnh keyframe thật: 200 + image/jpeg cho hit có ảnh; 404 cho keyframe không tồn tại.
         h0 = kis_hits[0]
         r = c.get(f"/api/images/{h0['video_id']}/{h0['frame_idx']}")
         assert r.status_code == 200 and r.headers["content-type"] == "image/jpeg", r.text
-        assert len(r.content) > 1000, "file anh qua nho, co ve khong phai .jpg that"
+        assert len(r.content) > 1000, "file ảnh quá nhỏ, có vẻ không phải .jpg thật"
         print(f"[smoke] images OK ({h0['video_id']} frame_idx={h0['frame_idx']}, {len(r.content)} bytes)")
         r = c.get("/api/images/L99_V999/123456")
         assert r.status_code == 404
-        print("[smoke] images 404 (keyframe khong ton tai) OK")
+        print("[smoke] images 404 (keyframe không tồn tại) OK")
 
-        # Video goc: meta co fps > 0; GET kem header Range tra ve 206 + dung so byte yeu cau.
+        # Video gốc: meta có fps > 0; GET kèm header Range trả về 206 + đúng số byte yêu cầu.
         r = c.get(f"/api/videos/{h0['video_id']}/meta")
         assert r.status_code == 200, r.text
         vmeta = r.json()
         assert vmeta["fps"] > 0, vmeta
         print(f"[smoke] videos/meta OK (fps={vmeta['fps']}, duration={vmeta['duration']})")
         r = c.get(f"/api/videos/{h0['video_id']}", headers={"Range": "bytes=0-1023"})
-        assert r.status_code == 206, f"mong doi 206 Partial Content, nhan {r.status_code}"
-        assert len(r.content) == 1024, f"mong doi 1024 byte, nhan {len(r.content)}"
+        assert r.status_code == 206, f"mong đợi 206 Partial Content, nhận {r.status_code}"
+        assert len(r.content) == 1024, f"mong đợi 1024 byte, nhận {len(r.content)}"
         print(f"[smoke] videos Range OK (206, {len(r.content)} bytes)")
         r = c.get("/api/videos/L99_V999")
         assert r.status_code == 404
-        print("[smoke] videos 404 (video khong ton tai) OK")
+        print("[smoke] videos 404 (video không tồn tại) OK")
 
-        # Dai luot toan bo keyframe cua video (man chi tiet KIS): >= so keyframe cua rieng video do,
-        # co chua dung frame_idx cua hit dang xet.
+        # Dải lướt toàn bộ keyframe của video (màn chi tiết KIS): >= số keyframe của riêng video đó,
+        # có chứa đúng frame_idx của hit đang xét.
         r = c.get(f"/api/keyframes/{h0['video_id']}/all")
         assert r.status_code == 200, r.text
         all_kf = r.json()
@@ -69,7 +69,7 @@ def main() -> None:
         print(f"[smoke] keyframes/all OK ({len(all_kf)} keyframe cho {h0['video_id']})")
         r = c.get("/api/keyframes/L99_V999/all")
         assert r.status_code == 404
-        print("[smoke] keyframes/all 404 (video khong ton tai) OK")
+        print("[smoke] keyframes/all 404 (video không tồn tại) OK")
 
         r = c.post("/api/queue/" + SESSION + "/add", json={
             "query_id": "smoke-kis", "query_type": "kis",
@@ -79,7 +79,7 @@ def main() -> None:
         print("[smoke] queue add (kis) OK")
 
         r = c.post("/api/qa/run", json={
-            "query": "Mot nguoi dang phat bieu truoc dam dong, mac ao trang",
+            "query": "Một người đang phát biểu trước đám đông, mặc áo trắng",
             "question": "What color is the speaker's shirt?", "top_k": 10,
         })
         assert r.status_code == 200, r.text
@@ -131,7 +131,7 @@ def main() -> None:
         assert r.status_code == 200 and r.json() == []
         print("[smoke] queue clear OK")
 
-    print("\n[smoke] TAT CA BUOC PASS")
+    print("\n[smoke] TẤT CẢ BƯỚC PASS")
 
 
 if __name__ == "__main__":

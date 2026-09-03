@@ -23,3 +23,13 @@ providers_import.json
 
 # Graphify output
 graphify-out/
+
+# Venv hong de lai khi cai lai moi truong
+.venv-broken/
+
+# Manifest cua model da retire (sinh lai duoc bang kaggle_jobs/) — khong commit
+docs/_archive/manifest_*.csv
+
+# Backend logs
+logs/
+*.log
