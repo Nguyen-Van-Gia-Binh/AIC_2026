@@ -3,6 +3,7 @@ import { api } from "../api/client";
 import type { QaHit, QueueRow } from "../api/client";
 import { getSessionId } from "../session";
 import Thumb from "../components/Thumb";
+import QueryLengthHint from "../components/QueryLengthHint";
 import RewriteChips from "../components/RewriteChips";
 import TopKSlider from "../components/TopKSlider";
 import QaKeyframeDetail from "../components/QaKeyframeDetail";
@@ -26,6 +27,12 @@ export default function QaScreen({ active }: { active: boolean }) {
   const [queryId, setQueryId] = useState("");
   const [detailIdx, setDetailIdx] = useState<number | null>(null);
   const [dragFrom, setDragFrom] = useState<number | null>(null);
+  const [skipRewrite, setSkipRewrite] = useState(false);
+
+  function handlePickRewrite(pickedText: string) {
+    setQuery(pickedText);
+    setSkipRewrite(true);
+  }
 
   async function run() {
     if (!query.trim()) {
@@ -34,13 +41,15 @@ export default function QaScreen({ active }: { active: boolean }) {
     }
     setLoading(true);
     try {
-      const out = await api.qaRun(query, question || query, topK);
+      const chosenQueryEn = skipRewrite && query.trim() ? query.trim() : undefined;
+      const out = await api.qaRun(query, question || query, topK, chosenQueryEn);
       setHits(out.hits.map((h, i) => ({ ...h, _key: `${h.video_id}-${h.frame_id}-${i}` })));
       setAnswer(out.answer);
       setConfidence(out.confidence);
       setNLoops(out.n_loops);
       setDetailIdx(null);
-      setStatus(`✅ Độ tin cậy: ${(out.confidence * 100).toFixed(0)}% · Số vòng AI: ${out.n_loops}`);
+      const loopNote = chosenQueryEn ? "bỏ qua rewrite v1" : `số vòng AI: ${out.n_loops}`;
+      setStatus(`✅ Độ tin cậy: ${(out.confidence * 100).toFixed(0)}% · ${loopNote}`);
     } catch (e) {
       setStatus(`❌ Lỗi: ${(e as Error).message}`);
     } finally {
@@ -165,9 +174,25 @@ export default function QaScreen({ active }: { active: boolean }) {
         <div className="qa-col">
           <div className="field">
             <label>Mô tả cảnh (để tìm kiếm)</label>
-            <textarea className="input" value={query} onChange={(e) => setQuery(e.target.value)} />
+            <textarea
+              className="input"
+              value={query}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                if (!e.target.value.trim()) setSkipRewrite(false);
+              }}
+            />
           </div>
-          <RewriteChips query={query} question={question} onPick={setQuery} />
+          <QueryLengthHint text={query} />
+          <RewriteChips query={query} question={question} onPick={handlePickRewrite} />
+          <label className="skip-rewrite-toggle">
+            <input
+              type="checkbox"
+              checked={skipRewrite}
+              onChange={(e) => setSkipRewrite(e.target.checked)}
+            />
+            <span>⚡ Dùng câu trên tìm kiếm trực tiếp (bỏ qua bước LLM rewrite vòng 1)</span>
+          </label>
         </div>
 
         <div className="qa-col">

@@ -3,6 +3,7 @@ import { api } from "../api/client";
 import type { TrakeCandidate, QueueRow } from "../api/client";
 import { getSessionId } from "../session";
 import Thumb from "../components/Thumb";
+import QueryLengthHint from "../components/QueryLengthHint";
 import RewriteChips from "../components/RewriteChips";
 import TopKSlider from "../components/TopKSlider";
 import TrakeKeyframeDetail from "../components/TrakeKeyframeDetail";
@@ -28,11 +29,17 @@ export default function TrakeScreen({ active }: { active: boolean }) {
   const [submitMsg, setSubmitMsg] = useState("");
   const [dragFrom, setDragFrom] = useState<number | null>(null);
   const [detail, setDetail] = useState<Detail | null>(null);
+  const [skipGlobalRewrite, setSkipGlobalRewrite] = useState(false);
 
   const events = eventsText.split("\n").map((e) => e.trim()).filter(Boolean);
 
   function fidsOf(c: TrakeCandidate): string[] {
     return fidEdits[c.video_id] ?? c.frame_ids.map(String);
+  }
+
+  function handlePickGlobalRewrite(pickedText: string) {
+    setGlobalQuery(pickedText);
+    setSkipGlobalRewrite(true);
   }
 
   async function run() {
@@ -43,7 +50,8 @@ export default function TrakeScreen({ active }: { active: boolean }) {
     setLoading(true);
     setStatus("⏳ Đang tìm video ứng viên + căn từng khoảnh khắc…");
     try {
-      const out = await api.trakeRun(globalQuery, events, topKVideo);
+      const chosenQueryEn = skipGlobalRewrite && globalQuery.trim() ? globalQuery.trim() : undefined;
+      const out = await api.trakeRun(globalQuery, events, topKVideo, chosenQueryEn);
       setCandidates(out.candidates);
       setFidEdits(
         Object.fromEntries(out.candidates.map((c) => [c.video_id, c.frame_ids.map(String)]))
@@ -201,14 +209,26 @@ export default function TrakeScreen({ active }: { active: boolean }) {
             <textarea
               className="input"
               value={globalQuery}
-              onChange={(e) => setGlobalQuery(e.target.value)}
+              onChange={(e) => {
+                setGlobalQuery(e.target.value);
+                if (!e.target.value.trim()) setSkipGlobalRewrite(false);
+              }}
             />
           </div>
+          <QueryLengthHint text={globalQuery} />
           <RewriteChips
             query={globalQuery}
-            onPick={setGlobalQuery}
+            onPick={handlePickGlobalRewrite}
             note="Gợi ý chỉ áp cho mô tả tổng quát (dùng chọn video) — từng khoảnh khắc vẫn do pipeline tự rewrite."
           />
+          <label className="skip-rewrite-toggle">
+            <input
+              type="checkbox"
+              checked={skipGlobalRewrite}
+              onChange={(e) => setSkipGlobalRewrite(e.target.checked)}
+            />
+            <span>⚡ Dùng câu trên tìm video trực tiếp (bỏ qua LLM rewrite cho mô tả tổng quát)</span>
+          </label>
         </div>
 
         <div className="trake-col">
@@ -224,6 +244,12 @@ export default function TrakeScreen({ active }: { active: boolean }) {
               onChange={(e) => setEventsText(e.target.value)}
             />
           </div>
+          {events.some((e) => e.trim().split(/\s+/).length > 40) && (
+            <div className="query-hint query-hint-warning">
+              <span className="query-hint-icon">⚠️</span>
+              <span>Có mốc vượt quá 40 từ: Model SigLIP sẽ cắt bớt phần đuôi khi căn mốc thời gian.</span>
+            </div>
+          )}
           {events.length > 0 && (
             <div className="trake-events-preview">
               <ol>

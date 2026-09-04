@@ -4,6 +4,7 @@ import type { Hit, QueueRow } from "../api/client";
 import { getSessionId } from "../session";
 import KeyframeDetail from "../components/KeyframeDetail";
 import Thumb from "../components/Thumb";
+import QueryLengthHint from "../components/QueryLengthHint";
 import RewriteChips from "../components/RewriteChips";
 import TopKSlider from "../components/TopKSlider";
 
@@ -118,6 +119,7 @@ export default function KisScreen() {
         </button>
       </div>
 
+      <QueryLengthHint text={query} />
       <RewriteChips query={query} onPick={setQuery} />
       <TopKSlider label="Số kết quả (top-k)" value={topK} min={5} max={100} step={5} onChange={setTopK} />
 
