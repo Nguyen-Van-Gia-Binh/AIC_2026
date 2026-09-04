@@ -118,6 +118,7 @@ _VIETOCR_OFFLINE_CONFIG = {
 
 def _find_vietocr_weights() -> Path | None:
     candidates = [
+        _ROOT / "data" / "extracted" / "models" / "vietocr" / "vgg_transformer.pth",
         _ROOT / "data" / "models" / "vietocr" / "vgg_transformer.pth",
         _ROOT / "data" / "extracted" / "vgg_transformer.pth",
         Path.home() / ".cache" / "vietocr" / "vgg_transformer.pth",
@@ -149,7 +150,7 @@ def ocr_health() -> tuple[bool, str]:
     if pth is None:
         return False, (
             "Thiếu file weights VietOCR offline 'vgg_transformer.pth' "
-            "(cần chạy 'python scripts/offline/ocr/fetch_vietocr_assets.py' hoặc đặt vào data/models/vietocr/)"
+            "(cần chạy 'python scripts/offline/ocr/fetch_vietocr_assets.py' hoặc đặt vào data/extracted/models/vietocr/)"
         )
 
     return True, f"OCR Engine sẵn sàng (weights: {pth})"
