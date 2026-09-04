@@ -94,6 +94,17 @@ def canonicalize_answer(raw_answer: str, question: str = "", use_llm: bool = Tru
 
     short = normalize_answer(short)
     short = _CONVERSATIONAL_PREFIX.sub("", short).strip(" \t\"'.,;:")
+
+    # Chống BỊA số: nếu bản rút gọn là một chuỗi CHỮ SỐ thuần mà chuỗi đó KHÔNG hề xuất hiện trong
+    # answer gốc, thì extractor đã tự chế ra con số (đã xảy ra: answer mô tả "số hiệu trên xe" ->
+    # canonical trả '105'). Bỏ, giữ bản rule-based.
+    short_num = short.strip(" \t\"'.,;:%")
+    if re.fullmatch(r"\d+", short_num):
+        src = re.sub(r"\s", "", f"{raw_answer} {answer}")
+        if short_num not in src:
+            print(f"[qa_normalize] Canonical trả số {short_num!r} không có trong answer gốc — coi như bịa, giữ rule-based")
+            return answer
+
     # Chỉ nhận bản rút gọn nếu nó THỰC SỰ ngắn hơn và không rỗng — tránh LLM trả về lời giải thích.
     if short and len(short.split()) < len(answer.split()):
         print(f"[answer_qa] Canonical: {answer!r} -> {short!r}")

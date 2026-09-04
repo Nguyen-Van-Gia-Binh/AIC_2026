@@ -53,13 +53,16 @@ _CAPTION_CACHE: dict[str, dict[int, str] | None] = {}
 
 def _expand_cluster_window(hits: list[dict], pad: int = NEIGHBOR_KEYFRAMES,
                            cap: int = QA_EVIDENCE_TOP_N) -> list[dict]:
-    """Mở evidence của 1 cụm thành DẢI keyframe liền mạch phủ [min_n - pad, max_n + pad] CÙNG video.
+    """Mở evidence của 1 cụm thành DẢI keyframe liền mạch quanh khung retrieval MẠNH NHẤT.
 
-    Không chỉ ±pad quanh khung #1 — khung top retrieval hay lệch xa khung có chữ/số rõ nhất. Khi
-    phải cắt còn `cap`, ưu tiên: (1) khung retrieval tốt nhất, (2) khung SAU span, (3) khung trong
-    span, (4) khung trước span. Keyframe bù có score=0.0 (không phải kết quả truy vấn).
+    KHÔNG lấy span = [min_n, max_n] của mọi hit: hit BM25-only (score≈0) nằm lẻ ở rìa xa kéo span
+    rộng ra, đẩy neighbor liền kề của lõi ra ngoài `cap` (đã cắn câu "số hông xe": n=211 bị n=217..221
+    chiếm chỗ). Thay vào đó: neo vào khung điểm cao nhất, mở [neo - pad, neo + pad] phủ luôn các
+    khung retrieval mạnh nằm trong tầm với, rồi xếp theo |Δn| tăng dần (cùng khoảng cách thì khung
+    retrieval thật đứng trước). Keyframe bù có score=0.0 (không phải kết quả truy vấn).
     """
-    ns = sorted({int(h["n"]) for h in hits if h.get("n") is not None})
+    real = [h for h in hits if h.get("n") is not None]
+    ns = sorted({int(h["n"]) for h in real})
     if not ns:
         return hits[:cap]
     from scripts.agent.tools import index_store
@@ -69,8 +72,24 @@ def _expand_cluster_window(hits: list[dict], pad: int = NEIGHBOR_KEYFRAMES,
     except Exception:
         return hits[:cap]
     vid = hits[0].get("video_id", "")
-    by_n: dict[int, dict] = {int(h["n"]): h for h in hits if h.get("n") is not None}
-    for cand_n in range(max(0, ns[0] - pad), ns[-1] + pad + 1):
+
+    def _score(h: dict) -> float:
+        try:
+            return float(h.get("score") or 0.0)
+        except (TypeError, ValueError):
+            return 0.0
+
+    # Neo = khung điểm retrieval CAO NHẤT (không tin thứ tự list). Lõi "chắc" = khung có điểm thật
+    # (> eps) và nằm trong tầm với của neo — bỏ qua rìa BM25-only lẻ loi ở xa để không giãn span.
+    anchor_n = int(max(real, key=_score)["n"])
+    _EPS = 1e-6
+    reach = max(2 * pad, 4)
+    core_ns = [anchor_n] + [int(h["n"]) for h in real
+                            if _score(h) > _EPS and abs(int(h["n"]) - anchor_n) <= reach]
+    lo, hi = min(core_ns) - pad, max(core_ns) + pad
+
+    by_n: dict[int, dict] = {int(h["n"]): h for h in real}
+    for cand_n in range(max(0, lo), hi + 1):
         if cand_n in by_n:
             continue
         row_i = kidx.get((vid, cand_n))
@@ -79,14 +98,11 @@ def _expand_cluster_window(hits: list[dict], pad: int = NEIGHBOR_KEYFRAMES,
         h = index_store.row_to_hit(meta, row_i, 0.0)
         if h.get("jpg_path") and Path(h["jpg_path"]).exists():
             by_n[cand_n] = h
-    top_n0 = int(hits[0]["n"]) if hits and hits[0].get("n") is not None else ns[0]
-    retrieved_ns = {int(h["n"]) for h in hits if h.get("n") is not None}
-    after  = sorted(n for n in by_n if n > ns[-1])
-    # trong span: khung retrieval trước, khung lấp khe sau (đều theo n tăng dần)
-    core   = sorted((n for n in by_n if ns[0] <= n <= ns[-1] and n != top_n0),
-                    key=lambda n: (n not in retrieved_ns, n))
-    before = sorted((n for n in by_n if n < ns[0]), reverse=True)
-    order  = [top_n0] + after + core + before
+
+    retrieved_ns = {int(h["n"]) for h in real}
+    # neo trước; rồi |Δn| tăng dần; cùng |Δn| thì khung retrieval thật trước, sau đó n nhỏ trước.
+    order = sorted(by_n, key=lambda n: (n != anchor_n, abs(n - anchor_n),
+                                        n not in retrieved_ns, n))
     return [by_n[n] for n in order[:cap]]
 
 
@@ -362,6 +378,12 @@ def answer_from_hits(
                 # Cổng chống ảo giác: VLM tự nói không đọc/nhìn được -> KHÔNG nâng lên thành đáp án,
                 # hạ confidence để pipeline_qa thử vòng 2 (rewrite + retrieve lại) thay vì nộp chuỗi này.
                 print(f"[answer_qa] Vision trả lời không xác định ({ans2!r}) -> hạ confidence")
+                conf = min(conf, 0.3)
+            elif (not visual_count and asks_displayed_number(question)
+                  and not any(ch.isdigit() for ch in ans2)):
+                # Câu hỏi hỏi CON SỐ hiển thị nhưng VLM trả lời KHÔNG có chữ số nào (mô tả lòng vòng
+                # "số hiệu trên xe", chữ Hán, "biển số"...) -> chưa đọc được số -> hạ conf cho vòng 2.
+                print(f"[answer_qa] Hỏi con số nhưng vision trả lời không có chữ số ({ans2!r}) -> hạ confidence")
                 conf = min(conf, 0.3)
             return {
                 "answer":     visual_count_answer if visual_count else canonicalize_answer(ans2, question),

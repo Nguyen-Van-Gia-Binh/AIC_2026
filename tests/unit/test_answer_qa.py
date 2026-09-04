@@ -69,6 +69,51 @@ def test_canonical_qua_llm_va_tu_choi_ban_dai_hon(monkeypatch) -> None:
     )
 
 
+def test_canonical_khong_bia_so(monkeypatch) -> None:
+    # VLM mô tả lòng vòng, không nêu số sạch; canonical LLM "chế" ra '105' -> phải bị từ chối.
+    ramble = ("Dựa trên hình ảnh, hông chiếc xe màu trắng có in dòng chữ Hán kèm số hiệu; "
+              "nếu xét riêng con số trên thân xe thì đó là ký hiệu biển số / số hiệu của xe")
+    monkeypatch.setattr(qa_normalize, "call_llm", lambda *a, **k: "105")
+    got = canonicalize_answer(ramble, "Con số trên hông xe là số mấy?")
+    assert got != "105" and "105" not in got  # số bịa bị từ chối, giữ bản rule-based
+
+    # Nhưng nếu con số THỰC SỰ có trong answer gốc thì vẫn rút gọn bình thường.
+    has_num = "Nhìn kỹ khung hình thứ ba, con số sơn trên hông xe màu trắng là 1204 rõ ràng"
+    monkeypatch.setattr(qa_normalize, "call_llm", lambda *a, **k: "1204")
+    assert canonicalize_answer(has_num, "Con số trên hông xe là số mấy?") == "1204"
+
+
+def test_expand_cluster_window_neo_khung_diem_cao_bo_ria_rac(monkeypatch) -> None:
+    # Kịch bản đã cắn câu "số hông xe": lõi retrieval n≈202-209, thêm 3 khung BM25-only lẻ ở xa
+    # (n=217 điểm thấp, n=218/219 điểm 0). Cửa sổ phải neo vào n=209 (điểm cao nhất), kéo được
+    # n=210/211 vào, và KHÔNG để n=218/219 chiếm chỗ.
+    from scripts.agent.tools import answer_qa, index_store
+
+    scored = {202: 0.157, 203: 0.189, 204: 0.160, 205: 0.161,
+              206: 0.187, 209: 0.198, 217: 0.164, 218: 0.0, 219: 0.0}
+    hits = [{"n": n, "video_id": "L21_V009", "jpg_path": f"/fake/{n}.jpg", "score": s}
+            for n, s in scored.items()]
+
+    monkeypatch.setattr(index_store, "get_index", lambda qa=False: (None, object(), None))
+    monkeypatch.setattr(index_store, "key_index",
+                        lambda qa=False: {("L21_V009", k): k for k in range(180, 240)})
+    monkeypatch.setattr(index_store, "row_to_hit",
+                        lambda meta, row_i, score: {"n": row_i, "video_id": "L21_V009",
+                                                    "jpg_path": f"/fake/{row_i}.jpg", "score": score})
+
+    class _P:
+        def __init__(self, *_a): ...
+        def exists(self): return True
+    monkeypatch.setattr(answer_qa, "Path", _P)
+
+    out = answer_qa._expand_cluster_window(hits, pad=2, cap=10)
+    out_ns = [h["n"] for h in out]
+    assert out_ns[0] == 209                      # neo = khung điểm cao nhất
+    assert 210 in out_ns and 211 in out_ns       # neighbor liền kề đã vào
+    assert 218 not in out_ns and 219 not in out_ns  # rìa BM25-only bị đẩy khỏi cap
+    assert len(out_ns) <= 10
+
+
 def test_cong_chong_ao_giac() -> None:
     assert is_non_answer("The text is not legible in any frame") is True
     assert is_non_answer("Không nhìn rõ biển số") is True
