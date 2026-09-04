@@ -14,6 +14,9 @@ type RankedQaHit = QaHit & { _key: string };
 
 export default function QaScreen({ active }: { active: boolean }) {
   const [query, setQuery] = useState("");
+  // Cau tieng Anh dung THANG lam query_en (bam bong bong "Dich tho"): backend bo qua rewrite,
+  // <=64 token embed thang, >64 token tu tach cau con + RRF. Xoa khi sua lai o mo ta.
+  const [sceneEn, setSceneEn] = useState("");
   const [question, setQuestion] = useState("");
   const [topK, setTopK] = useState(20);
   const [hits, setHits] = useState<RankedQaHit[]>([]);
@@ -34,7 +37,7 @@ export default function QaScreen({ active }: { active: boolean }) {
     }
     setLoading(true);
     try {
-      const out = await api.qaRun(query, question || query, topK);
+      const out = await api.qaRun(query, question || query, topK, sceneEn || undefined);
       setHits(out.hits.map((h, i) => ({ ...h, _key: `${h.video_id}-${h.frame_id}-${i}` })));
       setAnswer(out.answer);
       setConfidence(out.confidence);
@@ -165,9 +168,34 @@ export default function QaScreen({ active }: { active: boolean }) {
         <div className="qa-col">
           <div className="field">
             <label>Mô tả cảnh (để tìm kiếm)</label>
-            <textarea className="input" value={query} onChange={(e) => setQuery(e.target.value)} />
+            <textarea
+              className="input"
+              value={query}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                if (sceneEn) setSceneEn(""); // sua mo ta -> huy cau tieng Anh da dong cung
+              }}
+            />
           </div>
-          <RewriteChips query={query} question={question} onPick={setQuery} />
+          <RewriteChips
+            query={query}
+            question={question}
+            onPick={setQuery}
+            onUseRawEn={setSceneEn}
+          />
+          {sceneEn && (
+            <div className="rewrite-original">
+              <span className="rewrite-original-label">⏩ Tìm bằng (bỏ rewrite):</span>
+              <span className="rewrite-original-text">{sceneEn}</span>
+              <button
+                className="rewrite-original-close"
+                title="Bỏ, quay lại rewrite tự động"
+                onClick={() => setSceneEn("")}
+              >
+                ×
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="qa-col">

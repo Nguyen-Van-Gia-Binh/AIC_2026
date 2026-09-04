@@ -3,7 +3,9 @@ pipeline_qa.py — Pipeline Q&A: Orchestrator + Tool-use, tối đa 2 vòng veri
 
 Workflow (BẢN ĐẶC TẢ §4):
   query_vi
-    -> rewrite_query()            -> query_en
+    -> rewrite_query()            -> query_en   (bỏ qua nếu caller đã truyền query_en sẵn:
+                                                 <=64 token embed thẳng, >64 token embed verbatim;
+                                                 AIC_QA_SPLIT_LONG=1 -> tách câu con + RRF)
     -> hybrid_retrieve(qa=True)   -> pool 500 (dense + BM25, dung hợp RRF — §2)
     -> apply_risk_aware_ranking() -> top-100 hits (xếp theo rrf_score)
     -> answer_by_video_cluster()  -> MỖI video trong top cụm có answer RIÊNG của nó (§4.1)
@@ -24,6 +26,7 @@ Output: list[dict] {video_id, frame_id, answer, score} đã sắp xếp
 """
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
@@ -34,10 +37,17 @@ if str(_ROOT) not in sys.path:
 from scripts.agent.config import MAX_AGENT_LOOPS
 from scripts.agent.tools.hybrid import hybrid_retrieve
 from scripts.agent.tools.rewrite import rewrite_query
+from scripts.agent.tools.subquery import count_tokens, split_subqueries, MAX_ENCODER_TOKENS
 from scripts.agent.tools.answer_qa import answer_from_hits
 from scripts.agent.tools.rerank import apply_risk_aware_ranking, RETRIEVAL_POOL_SIZE
 
 CONFIDENCE_THRESHOLD = 0.5  # Dưới ngưỡng này: thử lại vòng 2
+
+# query_en dài > 64 token (giới hạn encoder SigLIP): TẮT mặc định -> encode verbatim, encoder tự
+# cắt còn 64. BẬT (AIC_QA_SPLIT_LONG=1) -> tách câu con theo dấu chấm + dung hợp RRF từng câu.
+# Đo trên tests/eval/rewrite_eval.py: split+RRF cho câu dài ~ trung tính-đến-hơi-âm trên bộ eval
+# curated, nên để thử nghiệm sau cờ thay vì bật thẳng.
+_SPLIT_LONG_QUERY = os.environ.get("AIC_QA_SPLIT_LONG", "").strip().lower() in ("1", "true", "yes", "on")
 
 # Số cụm video (top theo điểm) được trích xuất answer RIÊNG (§4.1):
 # - 3 cụm đầu: chạy đủ Tầng 1 + Tầng 2 Vision (VLM/OCR).
@@ -46,8 +56,10 @@ FULL_ANSWER_CLUSTERS = 3
 CHEAP_ANSWER_CLUSTERS = 12
 MAX_ANSWER_CLUSTERS = FULL_ANSWER_CLUSTERS + CHEAP_ANSWER_CLUSTERS  # 15 cụm
 
-# Số keyframe tốt nhất CỦA MỖI CỤM đưa vào answer_from_hits().
-CLUSTER_TOP_FRAMES = 5
+# Số keyframe tốt nhất CỦA MỖI CỤM đưa vào answer_from_hits(). Đặt 8 (tăng từ 5): retrieval hay
+# trúng đúng đoạn video nhưng lệch vài keyframe so với khung rõ nhất (vd số nhỏ trên hông xe) —
+# đưa thêm keyframe cho tầng Vision/OCR chọn. answer_from_hits còn tự bù keyframe lân cận nữa.
+CLUSTER_TOP_FRAMES = 8
 
 
 def _cluster_by_video(hits: list[dict], score_key: str = "rrf_score") -> list[tuple[str, list[dict]]]:
@@ -106,11 +118,14 @@ def run_qa(
         query_text: Mô tả cảnh cần tìm (tiếng Việt hoặc Anh).
         question:   Câu hỏi cụ thể (nếu None, dùng query_text làm question).
         top_k:      Số kết quả retrieve tối đa (100 theo rule BTC).
-        query_en:   Nếu có (vd. người dùng đã xem/sửa câu rewrite trong UI — xem
-                    agent/tools/rewrite.py rewrite_query_candidates() + frontend/), bỏ qua rewrite
-                    vòng 1 và dùng thẳng giá trị này để retrieve. Vòng 2 (confidence thấp) vẫn tự
-                    rewrite lại bình thường từ query_text gốc — đây là auto-retry nội bộ, không phải
-                    bước preview thủ công.
+        query_en:   Nếu có (vd. người dùng bấm bong bóng "Dịch thô" trong UI), bỏ qua rewrite
+                    vòng 1 và dùng thẳng câu này để retrieve:
+                      - <= 64 token  -> embed thẳng.
+                      - > 64 token   -> embed verbatim (encoder SigLIP tự cắt còn 64). Đặt env
+                        AIC_QA_SPLIT_LONG=1 để đổi sang tách câu con + RRF (thử nghiệm — xem
+                        _SPLIT_LONG_QUERY và tests/eval/rewrite_eval.py).
+                    Vòng 2 (confidence thấp) vẫn tự rewrite lại từ query_text gốc — auto-retry
+                    nội bộ, không phải bước preview thủ công.
         use_hybrid: Bật nhánh Sparse BM25 + RRF (§2). Tắt = chỉ dense như trước.
 
     Returns:
@@ -130,15 +145,36 @@ def run_qa(
         raw = hybrid_retrieve(q_en, top_k=pool_size, use_sparse=use_hybrid, qa=True)
         return apply_risk_aware_ranking(raw, top_k=top_k, query_text=q_en, score_key="rrf_score")
 
+    def _retrieve_and_rank_multi(subs: list[str]) -> list[dict]:
+        """Thử nghiệm (AIC_QA_SPLIT_LONG=1): retrieve RIÊNG từng câu con rồi dung hợp THỨ HẠNG bằng
+        RRF ở mức frame — cho query_en dài quá 64 token của encoder."""
+        from scripts.agent.tools.fusion import rrf_fuse_hits
+        streams = [hybrid_retrieve(s, top_k=pool_size, use_sparse=use_hybrid, qa=True) for s in subs]
+        fused = rrf_fuse_hits(streams, top_k=pool_size)
+        for h in fused:
+            h["rrf_score"] = h["score"]  # rrf_fuse_hits ghi điểm RRF vào 'score'
+        return apply_risk_aware_ranking(fused, top_k=top_k, query_text=subs[0], score_key="rrf_score")
+
     # ─── Vòng 1 ────────────────────────────────────────────────────────────────
+    subs_v1: list[str] | None = None
     if query_en:
-        print(f"[qa] Vòng 1: dùng query_en có sẵn (bỏ qua rewrite): {query_en!r}", flush=True)
+        n_tok = count_tokens(query_en)
+        if n_tok <= MAX_ENCODER_TOKENS:
+            print(f"[qa] Vòng 1: dùng query_en sẵn, {n_tok} token ≤ {MAX_ENCODER_TOKENS} "
+                  f"-> embed thẳng, bỏ rewrite: {query_en!r}", flush=True)
+        elif _SPLIT_LONG_QUERY and len(split_subqueries(query_en)) >= 2:
+            subs_v1 = split_subqueries(query_en)
+            print(f"[qa] Vòng 1: query_en sẵn dài {n_tok} token, AIC_QA_SPLIT_LONG=on "
+                  f"-> tách {len(subs_v1)} câu con (RRF từng câu): {subs_v1!r}", flush=True)
+        else:
+            print(f"[qa] Vòng 1: query_en sẵn dài {n_tok} token -> embed verbatim "
+                  f"(encoder cắt còn {MAX_ENCODER_TOKENS}): {query_en!r}", flush=True)
     else:
         print("[qa] Vòng 1: rewrite + retrieve...", flush=True)
         query_en = rewrite_query(query_text, question=question)
         print(f"[qa]   query_en: {query_en!r}")
 
-    hits = _retrieve_and_rank(query_en)
+    hits = _retrieve_and_rank_multi(subs_v1) if subs_v1 else _retrieve_and_rank(query_en)
     print(f"[qa]   Retrieved: {len(hits)} hits, top score={hits[0]['score']:.4f}" if hits
           else "[qa]   Retrieved: 0 hits")
 

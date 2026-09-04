@@ -11,10 +11,13 @@ type Props = {
   query: string;
   question?: string;
   onPick: (text: string) => void;
+  // Neu co: chip "Dich tho" goi ham nay thay vi onPick -> cau dich tho duoc dung lam query_en
+  // (embed thang, KHONG qua rewrite; cau >64 token se tu tach cau con o backend).
+  onUseRawEn?: (text: string) => void;
   note?: string; // chu thich nho (vd TRAKE: chi ap cho mo ta tong quat)
 };
 
-export default function RewriteChips({ query, question, onPick, note }: Props) {
+export default function RewriteChips({ query, question, onPick, onUseRawEn, note }: Props) {
   const [candidates, setCandidates] = useState<string[]>([]);
   const [rawTranslation, setRawTranslation] = useState("");
   const [original, setOriginal] = useState(""); // cau truoc lan bam Goi y/Dich tho gan nhat
@@ -90,8 +93,12 @@ export default function RewriteChips({ query, question, onPick, note }: Props) {
         <div className="rewrite-chips">
           <button
             className="chip chip-raw"
-            onClick={() => onPick(rawTranslation)}
-            title="Bấm để dùng câu dịch thô này (không qua LLM)"
+            onClick={() => (onUseRawEn ?? onPick)(rawTranslation)}
+            title={
+              onUseRawEn
+                ? "Bấm để tìm bằng câu dịch thô này — embed thẳng, bỏ rewrite (câu >64 token tự tách câu con)"
+                : "Bấm để dùng câu dịch thô này (không qua LLM)"
+            }
           >
             🌐 {rawTranslation}
           </button>

@@ -42,8 +42,52 @@ from scripts.agent.tools.asr_lookup import get_transcript
 
 QA_EVIDENCE_TOP_N = 10
 
+# Đệm keyframe (±pad) quanh SPAN retrieval của cụm, bù vào evidence bundle của câu hỏi cần đọc
+# chữ/số. Retrieval hay trúng đúng đoạn nhưng khung có chữ/số rõ nhất lệch vài keyframe — thường
+# là NGAY SAU span (chi tiết lộ ra ở cuối cảnh, vd số hông xe khi xe quay ngang).
+NEIGHBOR_KEYFRAMES = 2
+
 _CAPTION_JSONL_DIR = _ROOT / "data" / "extracted" / "caption_vintern1b"
 _CAPTION_CACHE: dict[str, dict[int, str] | None] = {}
+
+
+def _expand_cluster_window(hits: list[dict], pad: int = NEIGHBOR_KEYFRAMES,
+                           cap: int = QA_EVIDENCE_TOP_N) -> list[dict]:
+    """Mở evidence của 1 cụm thành DẢI keyframe liền mạch phủ [min_n - pad, max_n + pad] CÙNG video.
+
+    Không chỉ ±pad quanh khung #1 — khung top retrieval hay lệch xa khung có chữ/số rõ nhất. Khi
+    phải cắt còn `cap`, ưu tiên: (1) khung retrieval tốt nhất, (2) khung SAU span, (3) khung trong
+    span, (4) khung trước span. Keyframe bù có score=0.0 (không phải kết quả truy vấn).
+    """
+    ns = sorted({int(h["n"]) for h in hits if h.get("n") is not None})
+    if not ns:
+        return hits[:cap]
+    from scripts.agent.tools import index_store
+    try:
+        _, meta, _ = index_store.get_index(qa=True)
+        kidx = index_store.key_index(qa=True)
+    except Exception:
+        return hits[:cap]
+    vid = hits[0].get("video_id", "")
+    by_n: dict[int, dict] = {int(h["n"]): h for h in hits if h.get("n") is not None}
+    for cand_n in range(max(0, ns[0] - pad), ns[-1] + pad + 1):
+        if cand_n in by_n:
+            continue
+        row_i = kidx.get((vid, cand_n))
+        if row_i is None:
+            continue
+        h = index_store.row_to_hit(meta, row_i, 0.0)
+        if h.get("jpg_path") and Path(h["jpg_path"]).exists():
+            by_n[cand_n] = h
+    top_n0 = int(hits[0]["n"]) if hits and hits[0].get("n") is not None else ns[0]
+    retrieved_ns = {int(h["n"]) for h in hits if h.get("n") is not None}
+    after  = sorted(n for n in by_n if n > ns[-1])
+    # trong span: khung retrieval trước, khung lấp khe sau (đều theo n tăng dần)
+    core   = sorted((n for n in by_n if ns[0] <= n <= ns[-1] and n != top_n0),
+                    key=lambda n: (n not in retrieved_ns, n))
+    before = sorted((n for n in by_n if n < ns[0]), reverse=True)
+    order  = [top_n0] + after + core + before
+    return [by_n[n] for n in order[:cap]]
 
 
 def _trace_evidence(stage: str, candidates: list[dict], objects: list[str] | None = None,
@@ -231,14 +275,21 @@ def answer_from_hits(
     # --- Tầng 2: Vision với evidence bundle ---
     # Gửi top-10 candidate và mọi nguồn bằng chứng để LLM tự đánh giá mức độ liên quan.
     vision_hits = [h for h in candidates if h.get("jpg_path") and Path(h["jpg_path"]).exists()][:QA_EVIDENCE_TOP_N]
+
+    # Câu hỏi cần đọc chữ/số: mở evidence thành dải keyframe liền mạch phủ span retrieval ± pad
+    # (khung có chữ/số rõ nhất hay lệch vài keyframe, thường ngay SAU span).
+    if vision_hits and skip_objects_tier:
+        vision_hits = _expand_cluster_window(vision_hits)
+
     if vision_hits:
         evidence_bundle, image_paths = _build_evidence_bundle(vision_hits)
 
         # OCR thật — chỉ chạy khi câu hỏi thực sự cần đọc chữ/số (điều kiện tái sử dụng từ
-        # skip_objects_tier ở trên), chỉ làm gợi ý phụ cho Vision, không thay thế nó.
+        # skip_objects_tier ở trên), chỉ làm gợi ý phụ cho Vision, không thay thế nó. top_n=6:
+        # phủ khung retrieval tốt nhất + phần đuôi (đã được _expand_cluster_window xếp lên đầu).
         ocr_hint = ""
         if skip_objects_tier:
-            ocr_results = read_text_from_hits(vision_hits, top_n=3)
+            ocr_results = read_text_from_hits(vision_hits, top_n=6)
             formatted = format_ocr_hint(ocr_results)
             if formatted:
                 ocr_hint = OCR_HINT_TEMPLATE.format(ocr_lines=formatted)

@@ -76,6 +76,28 @@ def test_cong_chong_ao_giac() -> None:
     assert is_non_answer("màu trắng") is False
 
 
+def test_cong_chong_ao_giac_mau_phu_dinh_dai() -> None:
+    # VLM hay trả câu phủ định dài dòng — trước đây lọt lưới, giữ conf 0.85, chặn vòng 2.
+    assert is_non_answer(
+        "Dựa trên các khung hình video, phần hông xe màu trắng không hiển thị rõ con số nào."
+    ) is True
+    assert is_non_answer("Không hiển thị") is True
+    assert is_non_answer("không hiện số nào") is True
+    assert is_non_answer("The number on the side of the car is not shown") is True
+    assert is_non_answer("No number is visible in the frame") is True
+    assert is_non_answer("Không có dữ liệu") is True
+    # Câu phủ định dài, "không" cách "con số nào" cả chục từ (mẫu VLM hay trả).
+    assert is_non_answer(
+        "Dựa vào các hình ảnh được cung cấp, không có chi tiết nào hiển thị phần hông "
+        "xe màu trắng hoặc con số nào được viết trên đó."
+    ) is True
+    # Không được nuốt nhầm đáp án thật có chứa "số".
+    assert is_non_answer("số 5") is False
+    assert is_non_answer("63A-01258") is False
+    assert is_non_answer("The number is 1204") is False
+    assert is_non_answer("số nào cũng được, đáp án là 7") is False
+
+
 def test_ocr_direct_overwrite_rat_chat() -> None:
     assert ocr_direct_answer("Biển số xe là gì?", {0: ["AG 09399"], 1: ["AG 09399"]}) == "09399"
     assert ocr_direct_answer("Biển số xe là gì?", {0: ["09399"], 1: ["12627"]}) is None, (

@@ -59,6 +59,10 @@ if str(_ROOT) not in sys.path:
 
 SCORE_THRESH = 0.5  # lọc box detection điểm tin cậy thấp — giống hệt run_ocr_shard_local.py/colab_jobs
 
+# Chữ/số nhỏ (số hông xe, biển số ở xa): crop cao dưới ngưỡng này -> phóng to (INTER_CUBIC, tối đa
+# 4x) trước khi đưa vào VietOCR, để recognizer có thêm điểm ảnh thay vì tự thu nhỏ từ crop tí hon.
+MIN_RECOG_HEIGHT = 48
+
 _DETECTOR = None
 _RECOGNIZER = None
 _ENGINE_LOAD_FAILED = False
@@ -174,8 +178,17 @@ def _get_engine():
         # ConvertPirAttribute2RuntimeAttribute not support [pir::ArrayAttribute<pir::DoubleAttribute>]"
         # (xác nhận bằng test trực tiếp 2026-08-28) — không liên quan gì tới xung đột DLL torch/paddle
         # đã biết, đây là lỗi riêng của backend oneDNN với model này.
-        _DETECTOR = TextDetection(device="cpu", enable_mkldnn=False)
-        print("[ocr_read] Detector san sang (cpu, mkldnn=False).")
+        # limit_side_len=1280 (mặc định model ~960): giữ thêm độ phân giải cho chữ/số NHỎ (biển số,
+        # số hông xe) — keyframe ~1280px không bị thu nhỏ trước khi detect. box_thresh thấp hơn một
+        # chút để không rớt box mờ. Fallback nếu bản paddleocr không nhận các tham số này.
+        try:
+            _DETECTOR = TextDetection(
+                device="cpu", enable_mkldnn=False,
+                limit_side_len=1280, limit_type="max", box_thresh=0.5,
+            )
+        except TypeError:
+            _DETECTOR = TextDetection(device="cpu", enable_mkldnn=False)
+        print("[ocr_read] Detector san sang (cpu, mkldnn=False, limit_side_len=1280).")
 
         from vietocr.tool.predictor import Predictor
         from vietocr.tool.config import Cfg
@@ -293,6 +306,11 @@ def _ocr_single_image(image_path: str) -> list[str]:
         for box in dt_polys:
             box_arr = np.array(box, dtype=np.float32)
             crop_bgr = _get_rotate_crop_image(img_bgr, box_arr)
+            h_crop = crop_bgr.shape[0]
+            if 0 < h_crop < MIN_RECOG_HEIGHT:
+                scale = min(MIN_RECOG_HEIGHT / h_crop, 4.0)
+                crop_bgr = cv2.resize(crop_bgr, None, fx=scale, fy=scale,
+                                      interpolation=cv2.INTER_CUBIC)
             crop_rgb = cv2.cvtColor(crop_bgr, cv2.COLOR_BGR2RGB)
             crop_pil = Image.fromarray(crop_rgb)
             try:

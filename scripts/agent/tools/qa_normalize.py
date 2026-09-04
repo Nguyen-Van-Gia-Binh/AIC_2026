@@ -37,8 +37,16 @@ _CONVERSATIONAL_PREFIX = re.compile(
 # Dấu hiệu VLM/OCR KHÔNG đọc được — không được biến thành 1 đáp án "có vẻ đúng" (chống ảo giác §4.2).
 _NON_ANSWER_HINTS = re.compile(
     r"(cannot\s+(?:be\s+)?(?:determine|tell|read|see)|can't\s+(?:tell|read|see)|not\s+visible|"
-    r"not\s+legible|unable\s+to|no\s+visible|unclear|khong\s+(?:nhìn|thấy|rõ|xác\s+định|đọc)|"
-    r"không\s+(?:nhìn|thấy|rõ|xác\s+định|đọc)|không\s+có\s+thông\s+tin)",
+    r"not\s+legible|unable\s+to|no\s+visible|unclear|not\s+(?:shown|displayed|clearly\s+visible)|"
+    r"does\s+not\s+(?:show|display|contain|appear)|no\s+(?:number|digit|text|numbers)\b|"
+    # "không/khong" + (động từ tri giác | 'hiển thị' | 'hiện') — bắt "không hiển thị (rõ) con số"
+    r"kh(?:ô|o)ng\s+(?:nhìn|thấy|rõ|xác\s+định|đọc|hiển\s+thị|hiện)|"
+    r"kh(?:ô|o)ng\s+có\s+(?:thông\s+tin|dữ\s+liệu|đủ\s+dữ\s+liệu)|"
+    # "con số nào (được) viết/ghi/hiển thị..." — đuôi phủ định điển hình của VLM, bất kể cách "không" bao xa
+    r"(?:con\s+số|chữ|ký\s+tự)\s+nào\s+(?:được\s+|có\s+thể\s+)?(?:viết|ghi|hiển\s+thị|thể\s+hiện|nhìn\s+thấy|đọc)|"
+    r"(?:hoặc|hay)\s+(?:con\s+số|chữ|ký\s+tự)\s+nào|"
+    # "không <tối đa 8 từ> con số/số nào/chữ nào/ký tự nào"
+    r"kh(?:ô|o)ng\s+\S+(?:\s+\S+){0,8}?\s+(?:con\s+số|số\s+nào|chữ\s+nào|ký\s+tự\s+nào))",
     re.IGNORECASE,
 )
 
