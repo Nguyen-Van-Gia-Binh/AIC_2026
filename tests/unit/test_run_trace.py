@@ -9,7 +9,7 @@ import json
 
 import pytest
 
-from scripts.agent.tools.run_trace import NULL_TRACE, RunTrace, current_trace
+from scripts.agent.tools.run_trace import NULL_TRACE, RunTrace, current_trace, summarize_hits
 
 
 def _load(tmp_path, trace: RunTrace) -> dict:
@@ -106,6 +106,19 @@ def test_exception_trong_with_van_ghi_file(tmp_path) -> None:
             raise RuntimeError("mid")
     data = _load(tmp_path, t)
     assert any(e["type"] == "RuntimeError" for e in data["errors"])
+
+
+def test_summarize_hits_giu_dung_truong_can() -> None:
+    hits = [
+        {"video_id": "L01_V001", "frame_id": 42, "score": 0.87654, "rrf_score": 0.01234, "junk": 1},
+        {"video_id": "L02_V003", "frame_id": 7, "score": 0.5, "answer": "màu đỏ"},
+    ]
+    rows = summarize_hits(hits, 20)
+    assert rows[0] == {"rank": 1, "video_id": "L01_V001", "frame_id": 42,
+                       "score": 0.8765, "rrf_score": 0.01234}
+    assert rows[1]["rank"] == 2 and rows[1]["answer"] == "màu đỏ"
+    assert "rrf_score" not in rows[1]
+    assert len(summarize_hits(hits, 1)) == 1
 
 
 def test_null_trace_moi_thao_tac_deu_no_op() -> None:

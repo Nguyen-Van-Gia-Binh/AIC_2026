@@ -44,19 +44,7 @@ from scripts.agent.tools.hybrid import hybrid_retrieve
 from scripts.agent.tools.rerank import apply_risk_aware_ranking, RETRIEVAL_POOL_SIZE
 from scripts.agent.tools.query_expand import expand_aspects
 from scripts.agent.tools.ocr_read import query_likely_has_readable_text, rerank_by_ocr
-from scripts.agent.tools.run_trace import NULL_TRACE, RunTrace
-
-
-def _cand_rows(hits: list[dict], n: int = 20) -> list[dict]:
-    """Rút gọn danh sách ứng viên cho dấu vết run — chỉ giữ các trường cần để truy lỗi."""
-    rows = []
-    for rank, h in enumerate(hits[:n], 1):
-        rows.append({
-            "rank": rank, "video_id": h.get("video_id"), "frame_id": h.get("frame_id"),
-            "score": round(float(h.get("score", 0.0)), 4),
-            "rrf_score": round(float(h.get("rrf_score", 0.0)), 5),
-        })
-    return rows
+from scripts.agent.tools.run_trace import NULL_TRACE, RunTrace, summarize_hits
 
 
 def run_kis(
@@ -104,7 +92,7 @@ def run_kis(
     print(f"[kis] Lấy {len(results)} ứng viên thô (pool={pool_size}), rerank cắt về top_k={top_k}")
     tr.record("retrieval", {
         "backbone": "siglip", "pool_size": pool_size, "use_hybrid": use_hybrid,
-        "candidates": _cand_rows(results),
+        "candidates": summarize_hits(results, 20),
     })
 
     with tr.stage("rank"):
@@ -120,7 +108,7 @@ def run_kis(
                 results, query_text, top_n_ocr=min(20, len(results)), score_key="rrf_score",
             )
 
-    tr.record("rerank", {"final": _cand_rows(results, 10)})
+    tr.record("rerank", {"final": summarize_hits(results, 10)})
     if results:
         tr.set_result(video_id=results[0].get("video_id"),
                       frame_ids=[results[0].get("frame_id")])

@@ -102,7 +102,8 @@ def _llm_crosscheck_chain(query_en: str, event_queries_en: list[str], chain: lis
     prompt = TRAKE_CROSSCHECK_PROMPT.format(query=query_en, events_block="\n".join(lines))
 
     try:
-        response = call_llm(prompt, model="text", temperature=0.0, max_tokens=20)
+        response = call_llm(prompt, model="text", temperature=0.0, max_tokens=20,
+                            purpose="trake_crosscheck")
     except Exception as error:
         print(f"[trake]   LLM crosscheck lỗi ({type(error).__name__}: {error}), dùng điểm trung lập {DEFAULT_LLM_CROSSCHECK_SCORE}")
         return DEFAULT_LLM_CROSSCHECK_SCORE
@@ -196,6 +197,14 @@ def run_trake(
     )[:top_k_video]
     print(f"[trake]   Top {len(top_videos)} videos (phu {[coverage_count[v] for v in top_videos]}"
           f"/{n_events} moc): {top_videos}")
+    tr.record("retrieval", {
+        "method": "multi_event_coverage_pooling",
+        "candidates": [
+            {"rank": i, "video_id": v, "coverage": coverage_count[v],
+             "coverage_score": round(coverage_score[v], 4)}
+            for i, v in enumerate(top_videos[:20], 1)
+        ],
+    })
     tr.record("trake", {
         "events": list(events),
         "global_query": query_en,
@@ -271,6 +280,18 @@ def run_trake(
         else:
             print(f"[trake]   margin #1-#2 = {margin:.4f} > {GATE_MARGIN} -> bỏ qua cổng LLM "
                   f"(video dan dau da cach biet)")
+
+    tr.record("rerank", {
+        "gate_opened": gate_opened,
+        "margin_top2": round(video_results[0]["score"] - video_results[1]["score"], 4)
+        if len(video_results) >= 2 else None,
+        "final": [
+            {"rank": i, "video_id": vr["video_id"], "frame_ids": vr["frame_ids"],
+             "trake_score": round(vr["trake_score"], 4), "rule_score": round(vr["rule_score"], 3),
+             "llm_score": vr["llm_score"], "score": round(vr["score"], 4)}
+            for i, vr in enumerate(video_results[:10], 1)
+        ],
+    })
 
     # Mỗi video là 1 phương án; giữ trần 100 dòng theo rule BTC.
     results = []

@@ -79,6 +79,7 @@ def canonicalize_answer(raw_answer: str, question: str = "", use_llm: bool = Tru
         short = call_llm(
             CANONICAL_PROMPT.format(question=question or "(none)", answer=answer),
             model="text", temperature=0.0, max_tokens=40,
+            purpose="qa_normalize",
         )
     except Exception as error:
         print(f"[qa_normalize] Canonical extractor lỗi ({type(error).__name__}: {error}) — giữ answer rule-based")

@@ -122,7 +122,8 @@ def rewrite_query(query: str, feedback: str | None = None, question: str | None 
     prompt += _build_extra_context(question, feedback)
 
     try:
-        result = call_llm(prompt, model="text", temperature=0.2, max_tokens=60)
+        result = call_llm(prompt, model="text", temperature=0.2, max_tokens=60,
+                          purpose="rewrite")
         # Clean up: bỏ dấu ngoặc kép, xuống dòng thừa
         result = result.strip().strip('"').strip("'").split("\n")[0].strip()
         return result if result else query.strip()
@@ -157,7 +158,8 @@ def rewrite_query_candidates(
     prompt += _build_extra_context(question, feedback)
 
     try:
-        result = call_llm(prompt, model="text", temperature=0.4, max_tokens=200)
+        result = call_llm(prompt, model="text", temperature=0.4, max_tokens=200,
+                          purpose="rewrite_candidates")
         candidates = _parse_candidates(result)
     except Exception as e:
         print(f"[rewrite] rewrite_query_candidates lỗi ({type(e).__name__}: {e}), fallback về 1 câu")

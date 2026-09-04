@@ -52,6 +52,24 @@ def current_trace() -> "RunTrace | None":
     return _CURRENT.get()
 
 
+def summarize_hits(hits: list[dict], n: int = 20) -> list[dict]:
+    """Rút gọn danh sách hit cho dấu vết run — chỉ giữ các trường cần để truy lỗi."""
+    rows: list[dict] = []
+    for rank, h in enumerate(hits[:n], 1):
+        row = {
+            "rank": rank,
+            "video_id": h.get("video_id"),
+            "frame_id": h.get("frame_id"),
+            "score": round(float(h.get("score", 0.0)), 4),
+        }
+        if "rrf_score" in h:
+            row["rrf_score"] = round(float(h.get("rrf_score", 0.0)), 5)
+        if h.get("answer") is not None:
+            row["answer"] = h["answer"]
+        rows.append(row)
+    return rows
+
+
 def _host_tag() -> str:
     raw = re.sub(r"[^A-Za-z0-9]", "", socket.gethostname() or "").lower()
     return raw[:12] or "host"
@@ -201,61 +219,110 @@ class RunTrace:
     def _render_txt(self) -> str:
         d = self._data
         tot = d["totals"]
-        lines: list[str] = []
-        lines.append(f"run_id : {d['run_id']}")
-        lines.append(
+        L: list[str] = []
+        L.append(f"run_id : {d['run_id']}")
+        L.append(
             f"type   : {d['query_type'].upper():6s} mode={d['aic_mode'] or '?'}   "
             f"wall={tot['wall_ms'] / 1000:.1f}s   llm={tot['llm_calls']} calls / "
             f"{tot['llm_ms'] / 1000:.1f}s"
         )
-        lines.append(f"query  : {d['query_text']!r}")
-        lines.append("")
+        L.append(f"query  : {d['query_text']!r}")
+        if d["params"]:
+            L.append(f"params : {d['params']}")
+        L.append("")
 
         if d["stages"]:
-            seg = " · ".join(f"{s['name']} {s['ms']:.0f}ms" for s in d["stages"])
-            lines.append(f"[stages]  {seg}")
-        if d["retrieval"]:
-            r = d["retrieval"]
-            top = (r.get("candidates") or [])[:3]
-            vids = ", ".join(str(c.get("video_id")) for c in top)
-            lines.append(f"[retrieve] backbone={r.get('backbone')}  top=[{vids}]")
-        if d["rerank"]:
-            rr = d["rerank"]
-            lines.append(
-                f"[rerank]  margin_top2={rr.get('margin_top2')}  "
-                f"gate_opened={rr.get('gate_opened')}"
-            )
-        if d["qa"]:
-            q = d["qa"]
-            lines.append(
-                f"[qa]      tier={q.get('tier')}  source={q.get('evidence_source')}  "
-                f"answer={q.get('normalized') or q.get('answer_raw')!r}"
-            )
-        if d["trake"]:
-            tk = d["trake"]
-            lines.append(
-                f"[trake]   events={len(tk.get('events') or [])}  "
-                f"candidates={tk.get('video_candidates')}"
-            )
+            seg = " · ".join(f"{s['name']} {s['ms']:.0f}ms{'' if s['ok'] else ' LỖI'}"
+                             for s in d["stages"])
+            L.append(f"[stages]   {seg}")
+
+        # ── Tiền xử lý (rewrite / event queries) ──
+        qa = d["qa"] or {}
+        tk = d["trake"] or {}
+        if qa.get("rewrite"):
+            L.append(f"[rewrite]  query_en = {qa['rewrite']!r}")
+        if tk.get("global_query"):
+            L.append(f"[rewrite]  global_query = {tk['global_query']!r}")
+        for i, (ev, eq) in enumerate(zip(tk.get("events") or [], tk.get("event_queries") or []), 1):
+            L.append(f"           event {i}: {ev!r} -> {eq!r}")
+
+        # ── Truy hồi: danh sách ứng viên + điểm ──
+        r = d["retrieval"] or {}
+        cands = r.get("candidates") or []
+        if cands:
+            hdr = f"[retrieve] {r.get('backbone') or r.get('method') or ''}"
+            if r.get("round"):
+                hdr += f"  (vòng {r['round']})"
+            if r.get("query_en"):
+                hdr += f"  q={r['query_en']!r}"
+            L.append(hdr)
+            for c in cands:
+                if "coverage" in c:
+                    L.append(f"   #{c['rank']:>2}  {c['video_id']:<10}  phủ {c['coverage']} mốc"
+                             f"  cov_score={c.get('coverage_score')}")
+                else:
+                    extra = f"  rrf={c['rrf_score']}" if "rrf_score" in c else ""
+                    L.append(f"   #{c['rank']:>2}  {c['video_id']:<10}  frame={c.get('frame_id')}"
+                             f"  cos={c.get('score')}{extra}")
+
+        # ── Rerank / cổng ──
+        rr = d["rerank"] or {}
+        if rr:
+            head = "[rerank]"
+            if rr.get("margin_top2") is not None:
+                head += f"  margin_top2={rr['margin_top2']}"
+            if "gate_opened" in rr:
+                head += f"  gate_opened={rr['gate_opened']}"
+            if rr.get("round"):
+                head += f"  (vòng {rr['round']})"
+            L.append(head)
+            for c in rr.get("final") or []:
+                if "trake_score" in c:
+                    L.append(f"   #{c['rank']:>2}  {c['video_id']:<10}  frames={c['frame_ids']}"
+                             f"  trake={c['trake_score']} rule={c['rule_score']} "
+                             f"llm={c['llm_score']} -> {c['score']}")
+                else:
+                    L.append(f"   #{c['rank']:>2}  {c['video_id']:<10}  frame={c.get('frame_id')}"
+                             f"  -> {c.get('score')}")
+
+        # ── Q&A: answer theo từng video ──
+        if qa:
+            L.append(f"[qa]       tier={qa.get('tier')}  source={qa.get('evidence_source')}  "
+                     f"conf={qa.get('confidence')}  n_loops={qa.get('n_loops')}")
+            L.append(f"           answer = {qa.get('normalized') or qa.get('answer_raw')!r}")
+            for vid, ans in (qa.get("answers_by_video") or {}).items():
+                if ans:
+                    L.append(f"           {vid:<10} -> {ans!r}")
+
+        # ── TRAKE ──
+        if tk:
+            L.append(f"[trake]    events={len(tk.get('events') or [])}  "
+                     f"candidates={tk.get('video_candidates')}")
+            al = tk.get("alignment")
+            if al:
+                L.append(f"           alignment: {al.get('video_id')} frames={al.get('frame_ids')} "
+                         f"score={al.get('score')}")
+
+        # ── Từng lần gọi LLM: mục đích + câu trả lời ──
         if d["llm_calls"]:
+            L.append("[llm]")
             for c in d["llm_calls"]:
-                lines.append(
-                    f"[llm #{c['seq']}] {c['purpose']} ({c['model']}, key {c['key_index']}, "
-                    f"{c['ms']:.0f}ms)"
-                )
+                cand = f" [{c['candidate']}]" if c.get("candidate") else ""
+                L.append(f"   #{c['seq']:>2} {c['purpose']}{cand}  "
+                         f"({c['model']}, key {c['key_index']}, {c['ms']:.0f}ms)")
+                resp = (c.get("response") or "").replace("\n", " ⏎ ")
+                L.append(f"        -> {resp!r}")
 
         res = d["result"]
-        lines.append("")
-        lines.append(
-            f"[result]  video={res.get('video_id')}  frames={res.get('frame_ids')}  "
-            f"answer={res.get('answer')!r}"
-        )
+        L.append("")
+        L.append(f"[result]   video={res.get('video_id')}  frames={res.get('frame_ids')}  "
+                 f"answer={res.get('answer')!r}")
         if d["errors"]:
             for e in d["errors"]:
-                lines.append(f"[error]   {e['stage']}: {e['type']}: {e['message']}")
+                L.append(f"[error]    {e['stage']}: {e['type']}: {e['message']}")
         else:
-            lines.append("[errors]  none")
-        return "\n".join(lines) + "\n"
+            L.append("[errors]   none")
+        return "\n".join(L) + "\n"
 
 
 class _NullTrace:

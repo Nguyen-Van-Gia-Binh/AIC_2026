@@ -94,7 +94,8 @@ def expand_aspects_llm(query_text: str, max_aspects: int = 3) -> list:
     try:
         from scripts.agent.config import call_llm
         raw = call_llm(
-            EXPAND_ASPECTS_PROMPT.format(query=q), model="text", temperature=0.2, max_tokens=200
+            EXPAND_ASPECTS_PROMPT.format(query=q), model="text", temperature=0.2, max_tokens=200,
+            purpose="kis_expand_aspects",
         )
     except Exception as error:
         print(f"[query_expand] LLM lỗi ({type(error).__name__}: {error}) -> dùng template tất định")

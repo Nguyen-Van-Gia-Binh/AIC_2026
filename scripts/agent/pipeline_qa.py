@@ -36,7 +36,7 @@ from scripts.agent.tools.hybrid import hybrid_retrieve
 from scripts.agent.tools.rewrite import rewrite_query
 from scripts.agent.tools.answer_qa import answer_from_hits
 from scripts.agent.tools.rerank import apply_risk_aware_ranking, RETRIEVAL_POOL_SIZE
-from scripts.agent.tools.run_trace import NULL_TRACE, RunTrace
+from scripts.agent.tools.run_trace import NULL_TRACE, RunTrace, summarize_hits
 
 CONFIDENCE_THRESHOLD = 0.5  # Dưới ngưỡng này: thử lại vòng 2
 
@@ -128,12 +128,21 @@ def run_qa(
 
     tr = trace if trace is not None else NULL_TRACE
     pool_size = max(top_k, RETRIEVAL_POOL_SIZE)
+    _round = [0]
 
     def _retrieve_and_rank(q_en: str) -> list[dict]:
+        _round[0] += 1
         with tr.stage("retrieve"):
             raw = hybrid_retrieve(q_en, top_k=pool_size, use_sparse=use_hybrid, qa=True)
         with tr.stage("rank"):
-            return apply_risk_aware_ranking(raw, top_k=top_k, query_text=q_en, score_key="rrf_score")
+            ranked = apply_risk_aware_ranking(raw, top_k=top_k, query_text=q_en, score_key="rrf_score")
+        tr.record("retrieval", {
+            "backbone": "siglip2", "pool_size": pool_size, "use_hybrid": use_hybrid,
+            "round": _round[0], "query_en": q_en,
+            "candidates": summarize_hits(raw, 20),
+        })
+        tr.record("rerank", {"round": _round[0], "final": summarize_hits(ranked, 10)})
+        return ranked
 
     # ─── Vòng 1 ────────────────────────────────────────────────────────────────
     if query_en:

@@ -202,7 +202,8 @@ def answer_from_hits(
             _trace_evidence("objects", candidates, unique_objects[:30], transcript=transcript1)
             _trace_prompt("objects", prompt1)
             try:
-                ans1 = call_llm(prompt1, model="text", temperature=0.1, max_tokens=80)
+                ans1 = call_llm(prompt1, model="text", temperature=0.1, max_tokens=80,
+                                purpose="qa_tier1_objects")
                 print(f"[qa] LLM response (objects): {ans1!r}")
             except Exception as e:
                 print(f"[qa] LLM lỗi ở Tầng 1 Objects ({type(e).__name__}: {e})")
@@ -275,6 +276,7 @@ def answer_from_hits(
                 model="vision",
                 temperature=0.1,
                 max_tokens=80,
+                purpose="qa_tier2_vision",
             )
             print(f"[qa] LLM response (vision): {ans2!r}")
             if visual_count:
@@ -286,6 +288,7 @@ def answer_from_hits(
                     try:
                         repaired = call_llm(
                             repair_prompt, model="text", temperature=0.0, max_tokens=10,
+                            purpose="qa_visual_count_repair",
                         )
                         _trace_prompt("visual-count-repair", repair_prompt)
                         print(f"[qa] LLM response (visual-count-repair): {repaired!r}")
@@ -325,7 +328,8 @@ def answer_from_hits(
     try:
         knowledge_prompt = KNOWLEDGE_FALLBACK_PROMPT.format(question=question)
         knowledge_answer = normalize_answer(
-            call_llm(knowledge_prompt, model="text", temperature=0.0, max_tokens=80)
+            call_llm(knowledge_prompt, model="text", temperature=0.0, max_tokens=80,
+                     purpose="qa_knowledge_fallback")
         )
         if knowledge_answer.upper() == "CANNOT_ANSWER":
             knowledge_answer = "N/A"
@@ -352,7 +356,8 @@ def _crosscheck_answer(question: str, answer: str, objects: list[str], transcrip
         transcript=transcript or "none",
     )
     try:
-        result = call_llm(prompt, model="text", temperature=0.0, max_tokens=20)
+        result = call_llm(prompt, model="text", temperature=0.0, max_tokens=20,
+                          purpose="qa_crosscheck")
         return result.strip().upper().startswith("YES")
     except Exception as e:
         print(f"[qa] LLM crosscheck lỗi ({type(e).__name__}: {e})")
