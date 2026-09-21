@@ -44,7 +44,7 @@ def test_rerank_khong_co_token_thi_giu_nguyen_thu_tu_va_bonus_0() -> None:
     assert all(h.get("ocr_bonus", 0.0) == 0.0 for h in out)
 
 
-def test_video_chua_co_file_offline_tra_none_de_trigger_fallback() -> None:
+def test_video_chua_co_file_offline_tra_none() -> None:
     assert _load_offline_text_map(
         "__video_khong_ton_tai__", _OCR_JSONL_DIR, _OFFLINE_OCR_CACHE, "ocr_text"
     ) is None
@@ -61,3 +61,40 @@ def test_rerank_khong_ghi_de_score_goc() -> None:
     for h in out:
         key = h["video_id"] + "/" + str(h["n"])
         assert h["score"] == goc[key], f"score goc bi ghi de o {key}"
+
+
+# ─── Đường query CHỈ đọc OCR offline, không bao giờ OCR realtime ────────────────
+# Lý do: OCR realtime tốn ~37s/ảnh trên máy này (detection bị ép CPU vì xung đột DLL
+# paddle/torch), khiến QA mất 400s+/câu trong khi LLM chỉ chiếm ~40s. Xem docstring ocr_read.py.
+
+def _no_realtime_ocr(_path: str):
+    raise AssertionError("Đường query đã gọi OCR realtime — phải chỉ đọc OCR offline")
+
+
+def test_read_text_from_hits_khong_chay_ocr_realtime(monkeypatch, tmp_path) -> None:
+    """Có jpg tồn tại thật nhưng video chưa có OCR offline -> trả rỗng, KHÔNG OCR ảnh."""
+    monkeypatch.setattr("scripts.agent.tools.ocr_read._ocr_single_image", _no_realtime_ocr)
+    jpg = tmp_path / "frame.jpg"
+    jpg.write_bytes(b"khong-phai-anh-that")
+    hits = [_fake_hit(str(jpg), "__video_khong_ton_tai__", 1)]
+    assert read_text_from_hits(hits) == {}
+
+
+def test_read_text_from_hits_doc_tu_ocr_offline(monkeypatch) -> None:
+    """Video đã có OCR offline -> lấy text từ đó (không cần jpg_path)."""
+    monkeypatch.setitem(_OFFLINE_OCR_CACHE, "L99_V001", {7: "AG-09399", 8: ""})
+    hits = [_fake_hit(None, "L99_V001", 7), _fake_hit(None, "L99_V001", 8)]
+    # n=8 có bản ghi nhưng text rỗng (ảnh không có chữ) -> không xuất hiện trong kết quả
+    assert read_text_from_hits(hits) == {0: ["AG-09399"]}
+
+
+def test_rerank_khong_chay_ocr_realtime(monkeypatch, tmp_path) -> None:
+    """Query có token cụ thể + jpg tồn tại, nhưng không có OCR offline -> không OCR realtime."""
+    monkeypatch.setattr("scripts.agent.tools.ocr_read._ocr_single_image", _no_realtime_ocr)
+    jpg = tmp_path / "frame.jpg"
+    jpg.write_bytes(b"khong-phai-anh-that")
+    hits = [_fake_hit(str(jpg), "__video_khong_ton_tai__", 1, score=0.30),
+            _fake_hit(str(jpg), "__video_khong_ton_tai__", 2, score=0.29)]
+    out = rerank_by_ocr(hits, 'tấm bia ghi năm "1997"', top_n_ocr=2)
+    assert len(out) == 2
+    assert all(h.get("ocr_bonus", 0.0) == 0.0 for h in out)

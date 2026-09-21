@@ -16,11 +16,12 @@ auto-translate gọi `agent/tools/rewrite.py`), không phải trong pipeline nà
 Multi-Aspect Expansion ở đây dùng template tất định (`query_expand.expand_aspects`), KHÔNG gọi
 `expand_aspects_llm()`.
 
-Bước cuối rerank_by_ocr() KHÔNG phải LLM — chỉ OCR that (PaddleOCR Detection + VietOCR Recognition,
-xem agent/tools/ocr_read.py) hoặc tra OCR/caption offline trên top_n_ocr candidate ĐÃ matching sẵn,
-và CHỈ chạy khi query có dấu hiệu chứa chữ/số cụ thể (biển số, năm, tỷ số...) — CLIP/SigLIP giỏi về
-ngữ nghĩa nhưng không đọc được text cụ thể trên khung hình. An toàn tuyệt đối: không match gì thì trả
-về nguyên thứ tự cũ, không có rủi ro regression.
+Bước cuối rerank_by_ocr() KHÔNG phải LLM và KHÔNG chạy OCR realtime (bỏ 2026-09-04 — xem
+agent/tools/ocr_read.py): chỉ TRA OCR/caption offline đã có sẵn trên top_n_ocr candidate ĐÃ matching
+sẵn, và CHỈ chạy khi query có dấu hiệu chứa chữ/số cụ thể (biển số, năm, tỷ số...) — CLIP/SigLIP giỏi
+về ngữ nghĩa nhưng không đọc được text cụ thể trên khung hình. An toàn tuyệt đối: không match gì thì
+trả về nguyên thứ tự cũ, không có rủi ro regression. Hiện 0/873 video có OCR offline nên bước này
+thực tế chỉ còn nguồn caption cho tới khi batch job OCR chạy xong.
 
 Mọi bước mới đều có công tắc riêng (`use_hybrid`/`use_expansion`/`use_nms`) để đo trước-sau bằng
 tests/e2e/score_pipelines.py — xem Regression Guard trong BẢN ĐẶC TẢ §6.

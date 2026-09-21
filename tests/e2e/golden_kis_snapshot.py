@@ -5,8 +5,9 @@ Vì sao cần: `run_eval.py` chạy trên `multi_index.py` — module đó CỐ 
 nên nó không hề chạm `retrieve.py` / `rerank.py` / pipeline nào. Nó không phát hiện được regression
 do refactor tầng production.
 
-`run_kis()` thì KHÔNG gọi LLM (`expand_aspects` là template tất định, `rerank_by_ocr` là PaddleOCR
-chạy cục bộ) nên nó tất định — chạy hai lần ra đúng một kết quả. Một lượt gọi phủ:
+`run_kis()` thì KHÔNG gọi LLM (`expand_aspects` là template tất định, `rerank_by_ocr` chỉ tra
+OCR/caption offline — không chạy OCR realtime từ 2026-09-04) nên nó tất định VÀ nhanh — chạy hai lần
+ra đúng một kết quả. Một lượt gọi phủ:
     index_store -> retrieve -> hybrid -> sparse_index -> fusion -> rerank -> temporal_nms -> ocr_read
 
 Cách dùng:

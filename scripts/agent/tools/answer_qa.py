@@ -235,8 +235,9 @@ def answer_from_hits(
     if vision_hits:
         evidence_bundle, image_paths = _build_evidence_bundle(vision_hits)
 
-        # OCR thật — chỉ chạy khi câu hỏi thực sự cần đọc chữ/số (điều kiện tái sử dụng từ
-        # skip_objects_tier ở trên), chỉ làm gợi ý phụ cho Vision, không thay thế nó.
+        # Tra OCR OFFLINE (không chạy OCR realtime — xem ocr_read.py) — chỉ khi câu hỏi thực sự cần
+        # đọc chữ/số (điều kiện tái sử dụng từ skip_objects_tier ở trên), chỉ làm gợi ý phụ cho
+        # Vision, không thay thế nó. Video chưa có OCR offline thì đơn giản là không có gợi ý.
         ocr_hint = ""
         if skip_objects_tier:
             ocr_results = read_text_from_hits(vision_hits, top_n=3)

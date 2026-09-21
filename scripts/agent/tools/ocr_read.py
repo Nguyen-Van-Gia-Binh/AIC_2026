@@ -1,6 +1,18 @@
 """
-ocr_read.py — OCR thật (PaddleOCR Detection + VietOCR Recognition) chạy on-demand trên các keyframe
-candidate ĐÃ được retrieval/matching chọn ra (KHÔNG precompute cho toàn bộ 177K keyframe).
+ocr_read.py — OCR thật (PaddleOCR Detection + VietOCR Recognition).
+
+QUAN TRỌNG — ĐƯỜNG QUERY KHÔNG BAO GIỜ OCR REALTIME (đổi 2026-09-04). read_text_from_hits() và
+rerank_by_ocr() CHỈ tra text đã có sẵn trong data/extracted/ocr_text_paddleocr/{video_id}.jsonl;
+video chưa có file thì coi như không có text và bỏ qua.
+
+Lý do (đo thật 2026-09-04): detection ở đây bị ép chạy CPU (xem đoạn dưới), tốn ~37s/ảnh. Một câu
+QA chạy 3 cụm vision × ~8 ảnh nên mất 400s+/câu trong khi phần LLM chỉ chiếm ~40s — tức >88% thời
+gian là OCR. Trace đối chiếu: KIS không chạm OCR mất 0,2-2,6s, KIS chạm OCR mất 27,9s.
+
+_get_engine()/_ocr_single_image() VẪN GIỮ nhưng chỉ dùng cho batch job offline
+(scripts/offline/ocr/run_ocr_shard_local.py chạy process riêng, có GPU) và khối __main__ demo dưới
+cùng file. Khi batch job chạy xong và merge_ocr.py đổ dữ liệu vào ocr_text_paddleocr/, cả 2 hàm
+trên tự có text mà KHÔNG cần sửa code.
 
 Pipeline hybrid: PaddleOCR chỉ làm DETECTION (tìm vị trí có chữ, TextDetection API, model
 PP-OCRv6_medium_det) + VietOCR làm RECOGNITION riêng cho tiếng Việt (vgg_transformer) — ĐÃ XÁC NHẬN
@@ -14,13 +26,13 @@ trên Windows XUNG ĐỘT DLL thật sự với torch trong CÙNG 1 process (Win
 CPU thuần (không -gpu) thì KHÔNG dùng DLL CUDA riêng nên không xung đột. VietOCR (thuần torch, dùng
 CHUNG 1 torch đã import sẵn) thì AN TOÀN chạy GPU — không phải cài torch thứ 2, không xung đột.
 
-Được dùng ở 2 chỗ:
+Được dùng ở 2 chỗ (cả 2 đều chỉ đọc text offline):
   1. answer_qa.py — chỉ kích hoạt khi câu hỏi thực sự cần đọc chữ/số (needs_text_reading()), làm gợi
      ý CHÈN VÀO prompt cho LLM Vision, không tự động trở thành câu trả lời (vẫn qua _crosscheck_answer).
-  2. pipeline_kis.py / pipeline_trake.py — sau khi đã có danh sách ứng viên, đẩy
-     sách hits từ fast_retrieve() (đã matching xong bằng CLIP/SigLIP), OCR top_n candidate đầu và ĐẨY
-     LÊN ĐẦU các candidate có chữ/số KHỚP THỰC SỰ với token văn bản trong query — xem rerank_by_ocr()
-     và query_likely_has_readable_text() bên dưới. Chỉ kích hoạt khi query có dấu hiệu cần đọc chữ/số
+  2. pipeline_kis.py / pipeline_trake.py — sau khi đã có danh sách ứng viên từ fast_retrieve() (đã
+     matching xong bằng CLIP/SigLIP), tra text của top_n candidate đầu và CỘNG BONUS cho candidate có
+     chữ/số KHỚP THỰC SỰ với token văn bản trong query — xem rerank_by_ocr() và
+     query_likely_has_readable_text() bên dưới. Chỉ kích hoạt khi query có dấu hiệu cần đọc chữ/số
      — CLIP/SigLIP giỏi về ngữ nghĩa nhưng KHÔNG đọc được chữ/số cụ thể (biển số, tỷ số, giá tiền...).
 
 Kết quả OCR CHỈ LÀ GỢI Ý/tín hiệu phụ — không bao giờ tự thay thế kết quả CLIP/SigLIP gốc, chỉ sắp
@@ -311,23 +323,34 @@ def _ocr_single_image(image_path: str) -> list[str]:
 
 def read_text_from_hits(hits: list[dict], top_n: int = 3) -> dict[int, list[str]]:
     """
-    Chạy OCR trên tối đa top_n candidate hit đầu tiên có jpg_path tồn tại trên đĩa.
+    Tra text OCR ĐÃ CÓ SẴN OFFLINE cho tối đa top_n candidate hit đầu tiên.
+
+    CHỈ đọc data/extracted/ocr_text_paddleocr/{video_id}.jsonl (do batch job sinh ra — xem
+    scripts/offline/ocr/merge_ocr.py). Video chưa có file thì BỎ QUA, KHÔNG OCR realtime: OCR
+    realtime tốn ~37s/ảnh trên máy này nên không được phép nằm trên đường query (xem docstring
+    đầu file). Khi batch job chạy xong, hàm này tự có dữ liệu mà không cần sửa code.
 
     Args:
-        hits:  list[dict] từ fast_retrieve()/fast_retrieve_for_video(), cần có trường 'jpg_path'.
-        top_n: Số ảnh tối đa cần OCR (mặc định 3 — giới hạn chi phí/thời gian on-demand).
+        hits:  list[dict] từ fast_retrieve()/fast_retrieve_for_video(), cần có 'video_id' và 'n'.
+        top_n: Số candidate tối đa cần tra (mặc định 3).
 
     Returns:
         dict[int, list[str]]: {hit_index: [text_line, ...]}. Chỉ hit đọc được >=1 dòng chữ mới có
-        mặt trong dict — dùng để format_ocr_hint() phân biệt được "không OCR được gì" (dict rỗng).
+        mặt trong dict — dùng để format_ocr_hint() phân biệt được "không đọc được gì" (dict rỗng).
     """
     result: dict[int, list[str]] = {}
     for i, hit in enumerate(hits[:top_n]):
-        jpg_path = hit.get("jpg_path")
-        if jpg_path and Path(jpg_path).exists():
-            lines = _ocr_single_image(jpg_path)
-            if lines:
-                result[i] = lines
+        video_id = hit.get("video_id", "")
+        n = hit.get("n")
+        if not video_id or n is None:
+            continue
+        # _load_offline_text_map() định nghĩa ở phần dưới file (mục "Tra JSON OCR/caption offline").
+        offline = _load_offline_text_map(video_id, _OCR_JSONL_DIR, _OFFLINE_OCR_CACHE, "ocr_text")
+        if not offline:
+            continue
+        text = (offline.get(int(n)) or "").strip()
+        if text:
+            result[i] = [text]
     return result
 
 
@@ -439,14 +462,16 @@ def rerank_by_ocr(
     chênh lệch score quá lớn (khác với bản trước đẩy lên đầu bất kể score — xem thiết kế đã chốt với
     user 2026-08-28, "cộng bonus" thay vì "đẩy lên đầu").
 
-    Nguồn text ưu tiên theo thứ tự (mỗi candidate xét độc lập):
+    Nguồn text ưu tiên theo thứ tự (mỗi candidate xét độc lập) — TẤT CẢ đều offline:
       1. OCR JSON offline (data/extracted/ocr_text_paddleocr/{video_id}.jsonl, từ merge_ocr.py) nếu
          video đã có sẵn (batch job đã chạy tới) — tức thời, không tốn chi phí OCR realtime.
-      2. Nếu video CHƯA có OCR JSON offline -> OCR REALTIME ảnh đó (như bản trước), đảm bảo vẫn có
-         tín hiệu ngay cả khi batch job chưa chạy tới video này (hiện 0/873 đã merge — 2026-08-28).
-      3. Caption JSON offline (data/extracted/caption_vintern1b/{video_id}.jsonl, tu merge_captions.py)
-         — CHỈ dùng khi (1)/(2) không khớp gì, cộng bonus NHỎ HƠN (CAPTION_BONUS_FRACTION < OCR_..)
+      2. Caption JSON offline (data/extracted/caption_vintern1b/{video_id}.jsonl, tu merge_captions.py)
+         — CHỈ dùng khi (1) không khớp gì, cộng bonus NHỎ HƠN (CAPTION_BONUS_FRACTION < OCR_..)
          vì caption mô tả cảnh chung chung, không phiên âm chính xác ký tự.
+
+    Video chưa có OCR offline thì KHÔNG có tín hiệu OCR — cố ý, KHÔNG fallback OCR realtime nữa
+    (bỏ 2026-09-04, xem docstring đầu file: ~37s/ảnh). Hiện 0/873 video đã merge, nên trên thực tế
+    bước này chỉ còn nguồn caption cho tới khi batch job OCR chạy xong.
 
     An toàn: nếu không có token văn bản cụ thể trong query, hoặc không candidate nào khớp, TRẢ VỀ
     HITS VỚI SCORE Y NGUYÊN (bonus=0 không đổi thứ tự) — không có rủi ro regression.
@@ -495,21 +520,14 @@ def rerank_by_ocr(
     for hit in candidates:
         vid = hit.get("video_id", "")
         n = hit.get("n")
-        jpg_path = hit.get("jpg_path")
         hit_out = dict(hit)
         bonus = 0.0
         match_source = None
 
         offline_ocr = _load_offline_text_map(vid, _OCR_JSONL_DIR, _OFFLINE_OCR_CACHE, "ocr_text") if vid else None
-        if offline_ocr is not None and n in offline_ocr:
-            ocr_text = offline_ocr[n]
-        elif jpg_path and Path(jpg_path).exists():
-            lines = _ocr_single_image(jpg_path)
-            ocr_text = " ".join(lines)
-            if lines:
-                hit_out["ocr_lines"] = lines
-        else:
-            ocr_text = ""
+        # Video chưa có OCR offline -> coi như không có text, KHÔNG OCR realtime (xem docstring
+        # đầu file: realtime ~37s/ảnh, không được nằm trên đường query).
+        ocr_text = offline_ocr[n] if offline_ocr is not None and n in offline_ocr else ""
 
         if _any_token_matches(ocr_text):
             bonus = OCR_BONUS_FRACTION * top_score
@@ -549,19 +567,29 @@ if __name__ == "__main__":
         return {"video_id": video_id, "n": n, "frame_idx": n, "frame_id": n + 1,
                 "pts_time": 0.0, "score": score, "jpg_path": str(_ROOT_DIR / jpg_rel_path)}
 
-    print("[ocr_read] === Demo 1: OCR ảnh thật có chữ ===")
-    known_hits = [
-        _demo_hit("data/extracted/keyframes/L22/L22_V001/120.jpg"),   # GT: "DIANA 1961 1997"
-        _demo_hit("data/extracted/keyframes/L28/L28_V003/190.jpg"),   # GT: "AG-09399" / "AG-12627"
-        _demo_hit("data/extracted/keyframes/L27/L27_V001/110.jpg"),   # GT: "CHÚA XỨ THÁNH MẪU"
+    # Demo 1 gọi THẲNG _ocr_single_image() chứ không qua read_text_from_hits(): hàm đó nay chỉ tra
+    # JSONL offline (xem docstring đầu file), nên không còn dùng để thử engine OCR được nữa.
+    print("[ocr_read] === Demo 1: engine OCR thật trên ảnh có chữ (chậm ~37s/ảnh, CPU detection) ===")
+    known_jpgs = [
+        ("data/extracted/keyframes/L22/L22_V001/120.jpg", "DIANA 1961 1997"),
+        ("data/extracted/keyframes/L28/L28_V003/190.jpg", "AG-09399 / AG-12627"),
+        ("data/extracted/keyframes/L27/L27_V001/110.jpg", "CHÚA XỨ THÁNH MẪU"),
     ]
-    ocr_out = read_text_from_hits(known_hits, top_n=3)
-    for i, hit in enumerate(known_hits):
-        print(f"  candidate #{i+1} ({Path(hit['jpg_path']).name}): {ocr_out.get(i, [])}")
+    demo_ocr: dict[int, list[str]] = {}
+    for i, (rel_path, ground_truth) in enumerate(known_jpgs):
+        lines = _ocr_single_image(str(_ROOT_DIR / rel_path))
+        if lines:
+            demo_ocr[i] = lines
+        print(f"  candidate #{i+1} ({Path(rel_path).name}): {lines}   [GT: {ground_truth}]")
     print("  format_ocr_hint():")
-    print(format_ocr_hint(ocr_out))
+    print(format_ocr_hint(demo_ocr))
 
-    print("[ocr_read] === Demo 2: rerank_by_ocr trên ảnh thật ===")
+    print("[ocr_read] === Demo 2: rerank_by_ocr đọc OCR offline (không chạy engine) ===")
+    # Nạp thẳng cache offline để demo được logic cộng bonus kể cả khi batch job OCR chưa chạy —
+    # trên máy đã merge xong ocr_text_paddleocr/ thì bỏ 3 dòng này đi vẫn ra kết quả tương đương.
+    _OFFLINE_OCR_CACHE["L27_V001"] = {110: "CHÚA XỨ THÁNH MẪU"}
+    _OFFLINE_OCR_CACHE["L22_V001"] = {120: "DIANA 1961 1997"}
+    _OFFLINE_OCR_CACHE["L28_V003"] = {190: "AG-09399 AG-12627"}
     hits_demo = [
         _demo_hit("data/extracted/keyframes/L27/L27_V001/110.jpg", "L27_V001", 110, score=0.30),
         _demo_hit("data/extracted/keyframes/L22/L22_V001/120.jpg", "L22_V001", 120, score=0.29),
@@ -571,4 +599,4 @@ if __name__ == "__main__":
     print("  Thứ tự sau rerank: " + str(
         [(h["video_id"] + "/" + str(h["n"]), round(h["score"], 4),
           h.get("ocr_bonus", 0.0), h.get("ocr_match_source")) for h in out]))
-    print("  Tự kiểm tra bằng mắt: L22_V001/120 (chứa '1997' theo GT) có được đẩy lên đầu không?")
+    print("  Tự kiểm tra bằng mắt: L22_V001/120 (chứa '1997') có được đẩy lên đầu không?")
